@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "runwhen-local.fullname" . }}
+  labels:
+    {{- include "runwhen-local.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "runwhen-local.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "runwhen-local.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "runwhen-local.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env: 
+          - name: AUTORUN_WORKSPACE_BUILDER_INTERVAL
+            value: "{{ .Values.autoRun.discoveryInterval }}"
+          ports:
+            - name: mkdocs
+              containerPort: 8081
+              protocol: TCP
+            - name: django
+              containerPort: 8000
+              protocol: TCP
+            - name: neo4j
+              containerPort: 7687
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: mkdocs
+          readinessProbe:
+            tcpSocket:
+              port: 7687
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 3
+            initialDelaySeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+          - name: shared-volume
+            mountPath: "/shared"
+          - name: secret-volume
+            mountPath: "/shared/kubeconfig"
+            subPath: "kubeconfig"
+          - name: configmap-volume
+            mountPath: "/shared/workspaceInfo.yaml"
+            subPath: "workspaceInfo.yaml"
+      volumes:
+      - name: shared-volume
+        emptyDir: {}
+      - name: secret-volume
+        secret:
+          secretName: {{ .Values.discoveryKubeconfig.secretName }}
+          items:
+            - key: {{ .Values.discoveryKubeconfig.secretKey }}
+              path: {{ .Values.discoveryKubeconfig.secretPath }}
+      - name: configmap-volume
+        configMap:
+          name: runwhen-local-workspaceinfo
+          items:
+            - key: workspaceInfo.yaml
+              path: workspaceInfo.yaml
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
