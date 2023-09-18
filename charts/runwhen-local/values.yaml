@@ -1,5 +1,4 @@
-
-# RunWhen Local is intended to run with a single replica, as multiple instances 
+# RunWhen Local is intended to run with a single replica, as multiple instances
 # will continue to perform discovery against your clusters
 replicaCount: 1
 
@@ -59,38 +58,38 @@ tolerations: []
 
 affinity: {}
 
-# RunWhen Local requires a kubeconfig to discover 
+# RunWhen Local requires a kubeconfig to discover
 # resouces from 1 or more clusters - please create
 # this kubernetessecret and specify the values below
 
-discoveryKubeconfig: 
+discoveryKubeconfig:
   secretName: runwhen-local-kubeconfig
   secretKey: kubeconfig
   secretPath: kubeconfig
 
 ### RunWhen Local Runtime Configuration
 # autoRun: start discovery on deployment, and re-run discovery evey discoveryInterval seconds
-autoRun: 
+autoRun:
   discoveryInterval: 1800                 # seconds to wait until a new discovery
 
 ###### workspaceInfo
 # Currently this holds details such as custom variables & upload configuration
 # Note: This section will soon be split into two separate configuration files
-# 
+#
 ###### Custom Variables
 # Custom variables are used to help tailor the generated content when we can't
 # automatically infer from the discovered resources (such as specifying a prometheus
-# provider, cloud provider, or kubernetes distribution & binary (mostly for oc vs 
+# provider, cloud provider, or kubernetes distribution & binary (mostly for oc vs
 # kubectl users))
 
 ###### Upload configuration
-# The upload configuration applies only to users to leverage RunWhen Local as an 
+# The upload configuration applies only to users to leverage RunWhen Local as an
 # onboarding tool into RunWhen Platform (https://www.runwhen.com for more details)
 # When uploading discovered resources and configuration information to RunWhen Platform,
 # workspaceName, token, workspaceOwnerEmail, defaultLocation and papiURL are mandtatory
-# can can be obtained immediately after creating a RunWhen Platform workspace. 
+# can can be obtained immediately after creating a RunWhen Platform workspace.
 
-workspaceInfo: 
+workspaceInfo:
   workspaceName: undefined
   token: undefined
   workspaceOwnerEmail: tester@my-company.com
@@ -104,21 +103,20 @@ workspaceInfo:
   custom:
     kubernetes_distribution: Kubernetes
     kubernetes_distribution_binary: kubectl
-    
+
     # Possible values are gcp, aws, azure, none
     cloud_provider: gcp
-    
+
     # Possible values are gmp, promql, none
     prometheus_provider: gmp
 
-    # If using GCP and wanting to use GCP integrations  
-    # gcp_project_id: undefined 
-    
+    # If using GCP and wanting to use GCP integrations
+    # gcp_project_id: undefined
+
     #### RunWhen Platform only
     # Secret names are used when integrating the RunWhen Platform
-    # with your enviornment. Configuration data will reference these 
+    # with your enviornment. Configuration data will reference these
     # secret names - and so secrets uploaded to RunWhen Platform must
     # be given the same name
     kubeconfig_secret_name: kubeconfig
     # gcp_ops_suite_sa: ops-suite-sa
- 
