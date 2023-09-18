@@ -7,9 +7,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: "0"
 
       - name: Install Helm
         uses: azure/setup-helm@v3
@@ -30,7 +30,7 @@ jobs:
           fi
 
       - name: Run chart-testing (lint)
-        run: ct lint
+        run: ct lint --debug
 
       # - name: Create kind cluster
       #   uses: helm/kind-action@v1.8.0
