@@ -105,10 +105,10 @@ workspaceInfo:
     kubernetes_distribution_binary: kubectl
 
     # Possible values are gcp, aws, azure, none
-    cloud_provider: gcp
+    # cloud_provider: gcp
 
     # Possible values are gmp, promql, none
-    prometheus_provider: gmp
+    # prometheus_provider: gmp
 
     # If using GCP and wanting to use GCP integrations
     # gcp_project_id: undefined
