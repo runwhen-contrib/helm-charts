@@ -21,12 +21,30 @@ serviceAccount:
   # If not set and create is true, a name is generated using the fullname template
   name: ""
 
+
+serviceAccountRoles:
+  namespaceRoleView:
+    enabled: true
+    namespaces: []
+  clusterRoleView:
+    enabled: true
+  advancedClusterRole:
+    enabled: true
+    rules: []
+    # - apiGroups: [""]
+    #   resources: ["pods", "pods/log", "events", "configmaps", "services", "replicationcontrollers"]
+    #   verbs: ["get", "watch", "list"]
+    # - apiGroups: ["batch"]
+    #   resources: ["*"]
+    #   verbs: ["get", "watch", "list"]
+
+
 podAnnotations: {}
 
 
 service:
   type: ClusterIP
-  port: 80
+  port: 8081
 
 ingress:
   enabled: false
@@ -38,7 +56,7 @@ ingress:
     - host: chart-example.local
       paths:
         - path: /
-          pathType: ImplementationSpecific
+          pathType: Prefix
   tls: []
   #  - secretName: chart-example-tls
   #    hosts:
@@ -60,7 +78,7 @@ affinity: {}
 
 # RunWhen Local requires a kubeconfig to discover
 # resouces from 1 or more clusters - please create
-# this kubernetessecret and specify the values below
+# this kubernetes secret and specify the values below
 
 discoveryKubeconfig:
   secretName: runwhen-local-kubeconfig
@@ -89,12 +107,14 @@ autoRun:
 # workspaceName, token, workspaceOwnerEmail, defaultLocation and papiURL are mandtatory
 # can can be obtained immediately after creating a RunWhen Platform workspace.
 
+uploadInfo: []
+  # workspaceName: undefined
+  # token: undefined
+  # workspaceOwnerEmail: tester@my-company.com
+  # papiURL: undefined
+  # defaultLocation: undefined
 workspaceInfo:
   workspaceName: undefined
-  token: undefined
-  workspaceOwnerEmail: tester@my-company.com
-  papiURL: undefined
-  defaultLocation: undefined
   defaultLOD: 2                 # This setting will discover all namespaces not specified in namespaceLODs with the greatest level of detail/depth
   namespaceLODs:                # Specific discovery depth overrides on a per-namespace basis. 0 = ignore, 1 = simple/basic discovery, 2 = detailed discovery
     kube-system: 0

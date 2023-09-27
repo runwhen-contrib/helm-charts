@@ -7,4 +7,8 @@ data:
   workspaceInfo.yaml: |
     {{- toYaml . | nindent 4 }}
   {{- end }}
+  {{- with .Values.uploadInfo }}
+  uploadInfo.yaml: |
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 
