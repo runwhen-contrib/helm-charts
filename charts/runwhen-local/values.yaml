@@ -24,12 +24,12 @@ serviceAccount:
 
 serviceAccountRoles:
   namespaceRoleView:
-    enabled: true
+    enabled: false
     namespaces: []
   clusterRoleView:
     enabled: true
   advancedClusterRole:
-    enabled: true
+    enabled: false
     rules: []
     # - apiGroups: [""]
     #   resources: ["pods", "pods/log", "events", "configmaps", "services", "replicationcontrollers"]
