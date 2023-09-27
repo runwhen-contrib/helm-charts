@@ -34,6 +34,8 @@ spec:
           env: 
           - name: AUTORUN_WORKSPACE_BUILDER_INTERVAL
             value: "{{ .Values.autoRun.discoveryInterval }}"
+          - name: RW_LOCAL_TERMINAL_DISABLED
+            value: "{{ .Values.terminal.disabled }}"
           ports:
             - name: mkdocs
               containerPort: 8081

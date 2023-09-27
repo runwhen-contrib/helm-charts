@@ -93,6 +93,9 @@ discoveryKubeconfig:
 # autoRun: start discovery on deployment, and re-run discovery evey discoveryInterval seconds
 autoRun:
   discoveryInterval: 1800                 # seconds to wait until a new discovery
+# terminal: Enable or disable the in-browser terminal (unauthentication connection to container shell)
+terminal:
+  disabled: true
 
 ###### Upload configuration
 # The upload configuration applies only to users to leverage RunWhen Local as an
