@@ -50,6 +50,9 @@ spec:
             httpGet:
               path: /
               port: mkdocs
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
           readinessProbe:
             tcpSocket:
               port: 7687
