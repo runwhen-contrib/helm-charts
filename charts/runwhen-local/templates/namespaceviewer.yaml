@@ -1,5 +1,6 @@
 {{- if .Values.serviceAccountRoles.namespaceRoleView.enabled -}}
-{{- range $ns := .Values.serviceAccountRoles.namespaceRoleView.namespaces }}
+{{- $allNamespaces := prepend .Release.Namespace .Values.serviceAccountRoles.namespaceRoleView.namespaces }}
+{{- range $ns := $allNamespaces }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
