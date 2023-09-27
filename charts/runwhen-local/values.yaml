@@ -115,8 +115,6 @@ uploadInfo: []
 # provider, cloud provider, or kubernetes distribution & binary (mostly for oc vs
 # kubectl users))
 
-
-
 workspaceInfo:
   workspaceName: undefined
   defaultLOD: 2                 # This setting will discover all namespaces not specified in namespaceLODs with the greatest level of detail/depth

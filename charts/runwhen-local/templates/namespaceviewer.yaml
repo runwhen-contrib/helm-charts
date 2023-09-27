@@ -1,12 +1,13 @@
 {{- if .Values.serviceAccountRoles.namespaceRoleView.enabled -}}
-{{- $allNamespaces := prepend .Release.Namespace .Values.serviceAccountRoles.namespaceRoleView.namespaces }}
+{{- $releaseNamespace := list .Release.Namespace }}
+{{- $allNamespaces := concat $releaseNamespace .Values.serviceAccountRoles.namespaceRoleView.namespaces }}
 {{- range $ns := $allNamespaces }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   namespace: {{ $ns }}
-  name: {{ include "runwhen-local.serviceAccountName" . }}-namespace-view
+  name: {{ include "runwhen-local.serviceAccountName" $ }}-namespace-view
 rules:
 - apiGroups: [""] 
   resources: ["*"]
@@ -15,15 +16,15 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: {{ include "runwhen-local.serviceAccountName" . }}-view-rb
+  name: {{ include "runwhen-local.serviceAccountName" $ }}-view-rb
   namespace: {{ $ns }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: {{ include "runwhen-local.serviceAccountName" . }}-namespace-view
+  name: {{ include "runwhen-local.serviceAccountName" $ }}-namespace-view
 subjects:
   - kind: ServiceAccount
-    name: {{ include "runwhen-local.serviceAccountName" . }}
-    namespace: {{ .Release.Namespace }}
+    name: {{ include "runwhen-local.serviceAccountName" $ }}
+    namespace: {{ $.Release.Namespace }}
 {{- end }}
 {{- end }}
