@@ -90,16 +90,6 @@ discoveryKubeconfig:
 autoRun:
   discoveryInterval: 1800                 # seconds to wait until a new discovery
 
-###### workspaceInfo
-# Currently this holds details such as custom variables & upload configuration
-# Note: This section will soon be split into two separate configuration files
-#
-###### Custom Variables
-# Custom variables are used to help tailor the generated content when we can't
-# automatically infer from the discovered resources (such as specifying a prometheus
-# provider, cloud provider, or kubernetes distribution & binary (mostly for oc vs
-# kubectl users))
-
 ###### Upload configuration
 # The upload configuration applies only to users to leverage RunWhen Local as an
 # onboarding tool into RunWhen Platform (https://www.runwhen.com for more details)
@@ -113,6 +103,18 @@ uploadInfo: []
   # workspaceOwnerEmail: tester@my-company.com
   # papiURL: undefined
   # defaultLocation: undefined
+
+
+###### workspaceInfo
+# Currently this holds details such as custom variables & upload configuration
+# Note: This section will soon be split into two separate configuration files
+#
+###### Custom Variables
+# Custom variables are used to help tailor the generated content when we can't
+# automatically infer from the discovered resources (such as specifying a prometheus
+# provider, cloud provider, or kubernetes distribution & binary (mostly for oc vs
+# kubectl users))
+
 workspaceInfo:
   workspaceName: undefined
   defaultLOD: 2                 # This setting will discover all namespaces not specified in namespaceLODs with the greatest level of detail/depth
