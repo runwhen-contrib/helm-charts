@@ -133,6 +133,7 @@ uploadInfo: []
 
 workspaceInfo:
   workspaceName: undefined
+  workspaceOwnerEmail: tester@my-company.com
   defaultLOD: 2                 # This setting will discover all namespaces not specified in namespaceLODs with the greatest level of detail/depth
   namespaceLODs:                # Specific discovery depth overrides on a per-namespace basis. 0 = ignore, 1 = simple/basic discovery, 2 = detailed discovery
     kube-system: 0
