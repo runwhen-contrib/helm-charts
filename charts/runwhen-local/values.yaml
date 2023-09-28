@@ -132,6 +132,7 @@ uploadInfo: []
 # kubectl users))
 
 workspaceInfo:
+  defaultLocation: undefined
   workspaceName: undefined
   workspaceOwnerEmail: tester@my-company.com
   defaultLOD: 2                 # This setting will discover all namespaces not specified in namespaceLODs with the greatest level of detail/depth
