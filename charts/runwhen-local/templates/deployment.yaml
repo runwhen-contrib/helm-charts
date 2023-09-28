@@ -51,14 +51,14 @@ spec:
               path: /
               port: mkdocs
             initialDelaySeconds: 10
-            periodSeconds: 10
-            failureThreshold: 9
+            periodSeconds: 20
+            failureThreshold: 20
           readinessProbe:
             tcpSocket:
               port: 7687
             initialDelaySeconds: 10
             periodSeconds: 5
-            failureThreshold: 3
+            failureThreshold: 5
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
