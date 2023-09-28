@@ -3,6 +3,22 @@ entries:
   runwhen-local:
   - apiVersion: v2
     appVersion: 0.3.4
+    created: "2023-09-28T16:12:51.61035597Z"
+    description: A Helm chart RunWhen Local - A community powered troubleshooting
+      cheat sheet
+    digest: 6d669308da3d84e4a849d3ba70623fc23befccde8429d4a6f27a6cc05f0eefd6
+    icon: https://storage.googleapis.com/runwhen-nonprod-shared-images/icons/runwhen_icon.png
+    maintainers:
+    - email: shea.stewart@runwhen.com
+      name: stewartshea
+      url: www.runwhen.com
+    name: runwhen-local
+    type: application
+    urls:
+    - https://github.com/runwhen-contrib/helm-charts/releases/download/runwhen-local-0.0.17/runwhen-local-0.0.17.tgz
+    version: 0.0.17
+  - apiVersion: v2
+    appVersion: 0.3.4
     created: "2023-09-28T14:02:20.124887215Z"
     description: A Helm chart RunWhen Local - A community powered troubleshooting
       cheat sheet
@@ -81,4 +97,4 @@ entries:
     urls:
     - https://github.com/runwhen-contrib/helm-charts/releases/download/runwhen-local-0.0.12/runwhen-local-0.0.12.tgz
     version: 0.0.12
-generated: "2023-09-28T14:02:20.124906115Z"
+generated: "2023-09-28T16:12:51.61037497Z"
