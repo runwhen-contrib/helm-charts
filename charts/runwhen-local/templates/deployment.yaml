@@ -64,21 +64,25 @@ spec:
           volumeMounts:
           - name: shared-volume
             mountPath: "/shared"
+          {{- if .Values.discoveryKubeconfig.secretProvided.enabled -}}
           - name: secret-volume
             mountPath: "/shared/kubeconfig"
             subPath: "kubeconfig"
+          {{- end }}
           - name: configmap-volume
             mountPath: "/shared/workspaceInfo.yaml"
             subPath: "workspaceInfo.yaml"
       volumes:
       - name: shared-volume
         emptyDir: {}
+      {{- if .Values.discoveryKubeconfig.secretProvided.enabled -}}
       - name: secret-volume
         secret:
-          secretName: {{ .Values.discoveryKubeconfig.secretName }}
+          secretName: {{ .Values.discoveryKubeconfig.secretProvided.secretName }}
           items:
-            - key: {{ .Values.discoveryKubeconfig.secretKey }}
-              path: {{ .Values.discoveryKubeconfig.secretPath }}
+            - key: {{ .Values.discoveryKubeconfig.secretProvided.secretKey }}
+              path: {{ .Values.discoveryKubeconfig.secretProvided.secretPath }}
+      {{- end }}
       - name: configmap-volume
         configMap:
           name: runwhen-local-workspaceinfo
