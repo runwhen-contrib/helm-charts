@@ -52,7 +52,7 @@ spec:
               port: mkdocs
             initialDelaySeconds: 10
             periodSeconds: 10
-            failureThreshold: 3
+            failureThreshold: 9
           readinessProbe:
             tcpSocket:
               port: 7687
