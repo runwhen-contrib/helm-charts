@@ -36,6 +36,10 @@ spec:
             value: "{{ .Values.autoRun.discoveryInterval }}"
           - name: RW_LOCAL_TERMINAL_DISABLED
             value: "{{ .Values.terminal.disabled }}"
+          - name: RW_LOCAL_UPLOAD_ENABLED
+            value: "{{ .Values.autoRun.uploadEnabled }}"
+          - name: RW_LOCAL_UPLOAD_MERGE_MODE
+            value: "{{ .Values.autoRun.uploadMergeMode }}"
           ports:
             - name: mkdocs
               containerPort: 8081

@@ -99,8 +99,13 @@ discoveryKubeconfig:
 
 ### RunWhen Local Runtime Configuration
 # autoRun: start discovery on deployment, and re-run discovery evey discoveryInterval seconds
+# also supports upload configuration for continuous updates of RunWhen Platform Workspace
+# upload is disabled by default; requires a valid uploadInfo.yaml
 autoRun:
   discoveryInterval: 14400                 # seconds to wait until a new discovery
+  uploadEnabled: false                     # upload configuration to RunWhen Platform
+  uploadMergeMode: "keep-uploaded"         # 'keep-uploaded' or 'keep-existing'
+
 
 # terminal: Enable or disable the in-browser terminal (unauthentication connection to container shell)
 terminal:
