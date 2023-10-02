@@ -76,6 +76,13 @@ spec:
           - name: configmap-volume
             mountPath: "/shared/workspaceInfo.yaml"
             subPath: "workspaceInfo.yaml"
+          {{- with .Values.uploadInfo }}
+          {{- if . }}
+          - name: configmap-volume
+            mountPath: "/shared/uploadInfo.yaml"
+            subPath: "uploadInfo.yaml"
+          {{- end }}
+          {{- end }}
       volumes:
       - name: shared-volume
         emptyDir: {}
@@ -93,6 +100,12 @@ spec:
           items:
             - key: workspaceInfo.yaml
               path: workspaceInfo.yaml
+            {{- with .Values.uploadInfo }}
+            {{- if . }}
+            - key: uploadInfo.yaml
+              path: uploadInfo.yaml
+            {{- end }}
+            {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
