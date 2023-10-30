@@ -59,7 +59,7 @@ spec:
             failureThreshold: 20
           readinessProbe:
             tcpSocket:
-              port: 7687
+              port: 8000
             initialDelaySeconds: 10
             periodSeconds: 5
             failureThreshold: 5
