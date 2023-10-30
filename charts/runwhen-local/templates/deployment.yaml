@@ -47,9 +47,6 @@ spec:
             - name: django
               containerPort: 8000
               protocol: TCP
-            - name: neo4j
-              containerPort: 7687
-              protocol: TCP
           livenessProbe:
             httpGet:
               path: /
@@ -59,7 +56,7 @@ spec:
             failureThreshold: 20
           readinessProbe:
             tcpSocket:
-              port: 7687
+              port: 8000
             initialDelaySeconds: 10
             periodSeconds: 5
             failureThreshold: 5

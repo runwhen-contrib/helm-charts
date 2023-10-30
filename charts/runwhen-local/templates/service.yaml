@@ -15,9 +15,5 @@ spec:
       protocol: TCP
       port: 8000
       targetPort: 8000
-    - name: neo4j
-      protocol: TCP
-      port: 7687
-      targetPort: 7687
   selector:
     {{- include "runwhen-local.selectorLabels" . | nindent 4 }}
