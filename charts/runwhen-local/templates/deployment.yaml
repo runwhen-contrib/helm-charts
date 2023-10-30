@@ -47,9 +47,6 @@ spec:
             - name: django
               containerPort: 8000
               protocol: TCP
-            - name: neo4j
-              containerPort: 7687
-              protocol: TCP
           livenessProbe:
             httpGet:
               path: /
