@@ -65,7 +65,7 @@ spec:
           volumeMounts:
           - name: shared-volume
             mountPath: "/shared"
-          {{- if .Values.discoveryKubeconfig.secretProvided.enabled -}}
+          {{- if .Values.discoveryKubeconfig.secretProvided.enabled }}
           - name: secret-volume
             mountPath: "/shared/kubeconfig"
             subPath: "kubeconfig"
@@ -83,7 +83,7 @@ spec:
       volumes:
       - name: shared-volume
         emptyDir: {}
-      {{- if .Values.discoveryKubeconfig.secretProvided.enabled -}}
+      {{- if .Values.discoveryKubeconfig.secretProvided.enabled }}
       - name: secret-volume
         secret:
           secretName: {{ .Values.discoveryKubeconfig.secretProvided.secretName }}
