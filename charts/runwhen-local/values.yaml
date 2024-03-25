@@ -165,3 +165,28 @@ workspaceInfo:
     # be given the same name
     kubeconfig_secret_name: kubeconfig
     # gcp_ops_suite_sa: ops-suite-sa
+
+runner:
+  enabled: false
+  metrics:
+    url: "https://runner-cortex-tenant.jpye.dev.runwhen.com/push"
+
+grafana-agent:
+  agent:
+    mode: 'flow'
+    configMap:
+      create: false
+      name: grafana-agent
+      key: config.river
+    mounts:
+      extra:
+        - name: tls-secret-volume
+          mountPath: /tls
+          readOnly: true
+  controller:
+    type: deployment
+    volumes:
+      extra:
+        - name: tls-secret-volume
+          secret:
+            secretName: runner-metrics-tls
