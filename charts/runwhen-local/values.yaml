@@ -128,7 +128,7 @@ terminal:
 # provider, cloud provider, or kubernetes distribution & binary (mostly for oc vs
 # kubectl users))
 
-workspaceName: undefined
+workspaceName: t-runwhen-shared
 
 runwhenLocalConfig:
   useExistingConfigMap: false
@@ -146,18 +146,18 @@ runwhenLocalConfig:
       workspaceInfo.yaml: |
         # Information about the RunWhen workspace
         defaultLocation: undefined
-        workspaceName: my-workspace
+        workspaceName: t-runwhen-shared
         workspaceOwnerEmail: tester@my-company.com
         # More workspace config
         # Information about cloud platforms to scan to discover resources
         defaultLOD: 2
-        cloudConfig:
-          kubernetes:
-            # kubeconfigFile: /shared/kubeconfig
-            namespaceLODs:
-              kube-system: 0
-              kube-public: 0
-              kube-node-lease: 0
+        # cloudConfig:
+        #   kubernetes:
+        #     kubeconfigFile: /shared/in_cluster_kubeconfig.yaml
+        #     namespaceLODs:
+        #       kube-system: 0
+        #       kube-public: 0
+        #       kube-node-lease: 0
         custom: []
 
 runner:

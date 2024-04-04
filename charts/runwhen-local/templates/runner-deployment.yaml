@@ -37,6 +37,11 @@ spec:
           value: "{{ include "runwhen-local.workspaceName" . }}"
         - name: RUNNER_CONTROL_ADDR
           value: "{{ .Values.runner.controlAddr | default "https://runner.beta.runwhen.com" }}"
+        - name: RUNNER_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
