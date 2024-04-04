@@ -118,58 +118,54 @@ terminal:
 # workspaceName, token, workspaceOwnerEmail, defaultLocation and papiURL are mandtatory
 # can can be obtained immediately after creating a RunWhen Platform workspace.
 
-uploadInfo: []
-  # workspaceName: undefined
-  # token: undefined
-  # workspaceOwnerEmail: tester@my-company.com
-  # papiURL: undefined
-  # defaultLocation: undefined
-
-
 ###### workspaceInfo
 # Currently this holds details such as custom variables & upload configuration
 # Note: This section will soon be split into two separate configuration files
-#
+# See https://docs.runwhen.com/public/v/runwhen-local/user-guide/user_guide-advanced_configuration/workspaceinfo-customization
 ###### Custom Variables
 # Custom variables are used to help tailor the generated content when we can't
 # automatically infer from the discovered resources (such as specifying a prometheus
 # provider, cloud provider, or kubernetes distribution & binary (mostly for oc vs
 # kubectl users))
 
-workspaceInfo:
-  defaultLocation: undefined
-  workspaceName: undefined
-  workspaceOwnerEmail: tester@my-company.com
-  defaultLOD: 2                 # This setting will discover all namespaces not specified in namespaceLODs with the greatest level of detail/depth
-  namespaceLODs:                # Specific discovery depth overrides on a per-namespace basis. 0 = ignore, 1 = simple/basic discovery, 2 = detailed discovery
-    kube-system: 0
-    kube-public: 0
-    kube-node-lease: 0
-  custom:
-    kubernetes_distribution: Kubernetes
-    kubernetes_distribution_binary: kubectl
+workspaceName: undefined
 
-    # Possible values are gcp, aws, azure, none
-    # cloud_provider: gcp
-
-    # Possible values are gmp, promql, none
-    # prometheus_provider: gmp
-
-    # If using GCP and wanting to use GCP integrations
-    # gcp_project_id: undefined
-
-    #### RunWhen Platform only
-    # Secret names are used when integrating the RunWhen Platform
-    # with your enviornment. Configuration data will reference these
-    # secret names - and so secrets uploaded to RunWhen Platform must
-    # be given the same name
-    kubeconfig_secret_name: kubeconfig
-    # gcp_ops_suite_sa: ops-suite-sa
+runwhenLocalConfig:
+  useExistingConfigMap: false
+  existingConfigMapName: ""
+  configMap:
+    create: true
+    name: runwhen-configmap
+    data:
+      uploadInfo.yaml: |
+        # workspaceName: undefined
+        # token: undefined
+        # workspaceOwnerEmail: tester@my-company.com
+        # papiURL: undefined
+        # defaultLocation: undefined
+      workspaceInfo.yaml: |
+        # Information about the RunWhen workspace
+        defaultLocation: undefined
+        workspaceName: my-workspace
+        workspaceOwnerEmail: tester@my-company.com
+        # More workspace config
+        # Information about cloud platforms to scan to discover resources
+        defaultLOD: 2
+        cloudConfig:
+          kubernetes:
+            # kubeconfigFile: /shared/kubeconfig
+            namespaceLODs:
+              kube-system: 0
+              kube-public: 0
+              kube-node-lease: 0
+        custom: []
 
 runner:
   enabled: false
+  image: "us-docker.pkg.dev/runwhen-nonprod-shared/public-images/runner:test"
+  controlAddr: "https://runner.test.runwhen.com"
   metrics:
-    url: "https://runner-cortex-tenant.jpye.dev.runwhen.com/push"
+    url: "https://runner-cortex-tenant.test.runwhen.com/push"
 
 grafana-agent:
   agent:

@@ -23,16 +23,16 @@ data:
 
     prometheus.remote_write "runwhen" {
         endpoint {
-            url = "{{ .Values.runner.metrics.url }}
+            url = "{{ .Values.runner.metrics.url }}"
             tls_config {
             ca_file = "/tls/ca.crt"
             cert_file = "/tls/tls.crt"
             key_file =  "/tls/tls.key"
-            insecure_skip_verify	= true
+            insecure_skip_verify    = true
             }
         }
         external_labels = {
-            workspace = "{{ tpl .Values.workspaceInfo.workspaceName . }}",
+            workspace = "{{ include "runwhen-local.workspaceName" . }}",
         }
     }
 {{- end }}

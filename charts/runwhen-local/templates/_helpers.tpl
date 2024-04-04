@@ -60,3 +60,10 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Reuse workspacename.
+*/}}
+{{- define "runwhen-local.workspaceName" -}}
+{{ .Values.workspaceName }}
+{{- end -}}

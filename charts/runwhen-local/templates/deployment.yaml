@@ -93,16 +93,17 @@ spec:
       {{- end }}
       - name: configmap-volume
         configMap:
-          name: runwhen-local-workspaceinfo
-          items:
-            - key: workspaceInfo.yaml
-              path: workspaceInfo.yaml
-            {{- with .Values.uploadInfo }}
-            {{- if . }}
-            - key: uploadInfo.yaml
-              path: uploadInfo.yaml
-            {{- end }}
-            {{- end }}
+          name: {{ if .Values.runwhenLocalConfig.useExistingConfigMap }}{{ .Values.runwhenLocalConfig.existingConfigMapName }}{{ else }}{{ .Values.runwhenLocalConfig.configMap.name }}{{ end }}
+
+          # items:
+          #   - key: workspaceInfo.yaml
+          #     path: workspaceInfo.yaml
+          #   {{- with .Values.uploadInfo }}
+          #   {{- if . }}
+          #   - key: uploadInfo.yaml
+          #     path: uploadInfo.yaml
+          #   {{- end }}
+          #   {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
