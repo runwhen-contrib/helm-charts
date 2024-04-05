@@ -46,7 +46,7 @@ spec:
       restartPolicy: Always
       schedulerName: default-scheduler
       securityContext: {}
-      serviceAccount: runner-sa
-      serviceAccountName: runner-sa
+      serviceAccount: runner
+      serviceAccountName: runner
       terminationGracePeriodSeconds: 30
 {{- end }}
