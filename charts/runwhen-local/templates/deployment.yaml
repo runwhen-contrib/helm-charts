@@ -40,6 +40,10 @@ spec:
             value: "{{ .Values.autoRun.uploadEnabled }}"
           - name: RW_LOCAL_UPLOAD_MERGE_MODE
             value: "{{ .Values.autoRun.uploadMergeMode }}"
+          {{ if .Values.runwhenLocalConfig.debugLogs }}
+          - name: DEBUG_LOGGING
+            value: "true"
+          {{ end }}
           ports:
             - name: mkdocs
               containerPort: 8081

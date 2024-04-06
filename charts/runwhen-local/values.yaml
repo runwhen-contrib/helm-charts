@@ -133,6 +133,7 @@ workspaceName: t-runwhen-shared
 runwhenLocalConfig:
   useExistingConfigMap: false
   existingConfigMapName: ""
+  debugLogs: true
   configMap:
     create: true
     name: runwhen-configmap
