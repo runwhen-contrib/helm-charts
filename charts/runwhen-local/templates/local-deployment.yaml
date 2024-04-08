@@ -1,3 +1,4 @@
+{{- if .Values.runwhenLocal.enabled -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -5,42 +6,42 @@ metadata:
   labels:
     {{- include "runwhen-local.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.replicaCount }}
+  replicas: 1
   selector:
     matchLabels:
       {{- include "runwhen-local.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- with .Values.podAnnotations }}
+      {{- with .Values.runwhenLocal.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
         {{- include "runwhen-local.selectorLabels" . | nindent 8 }}
     spec:
-      {{- with .Values.imagePullSecrets }}
+      {{- with .Values.runwhenLocal.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "runwhen-local.serviceAccountName" . }}
+      serviceAccountName: {{ .Values.runwhenLocal.serviceAccount.name }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+            {{- toYaml .Values.runwhenLocal.securityContext | nindent 12 }}
+          image: "{{ .Values.runwhenLocal.image.repository }}:{{ .Values.runwhenLocal.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.runwhenLocal.image.pullPolicy }}
           env: 
           - name: AUTORUN_WORKSPACE_BUILDER_INTERVAL
-            value: "{{ .Values.autoRun.discoveryInterval }}"
+            value: "{{ .Values.runwhenLocal.autoRun.discoveryInterval }}"
           - name: RW_LOCAL_TERMINAL_DISABLED
-            value: "{{ .Values.terminal.disabled }}"
+            value: "{{ .Values.runwhenLocal.terminal.disabled }}"
           - name: RW_LOCAL_UPLOAD_ENABLED
-            value: "{{ .Values.autoRun.uploadEnabled }}"
+            value: "{{ .Values.runwhenLocal.autoRun.uploadEnabled }}"
           - name: RW_LOCAL_UPLOAD_MERGE_MODE
-            value: "{{ .Values.autoRun.uploadMergeMode }}"
-          {{ if .Values.runwhenLocalConfig.debugLogs }}
+            value: "{{ .Values.runwhenLocal.autoRun.uploadMergeMode }}"
+          {{ if .Values.runwhenLocal.runwhenLocalConfig.debugLogs }}
           - name: DEBUG_LOGGING
             value: "true"
           {{ end }}
@@ -65,11 +66,11 @@ spec:
             periodSeconds: 5
             failureThreshold: 5
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+            {{- toYaml .Values.runwhenLocal.resources | nindent 12 }}
           volumeMounts:
           - name: shared-volume
             mountPath: "/shared"
-          {{- if .Values.discoveryKubeconfig.secretProvided.enabled }}
+          {{- if .Values.runwhenLocal.discoveryKubeconfig.secretProvided.enabled }}
           - name: secret-volume
             mountPath: "/shared/kubeconfig"
             subPath: "kubeconfig"
@@ -77,7 +78,7 @@ spec:
           - name: configmap-volume
             mountPath: "/shared/workspaceInfo.yaml"
             subPath: "workspaceInfo.yaml"
-          {{- with .Values.uploadInfo }}
+          {{- with .Values.runwhenLocal.uploadInfo }}
           {{- if . }}
           - name: configmap-volume
             mountPath: "/shared/uploadInfo.yaml"
@@ -87,22 +88,22 @@ spec:
       volumes:
       - name: shared-volume
         emptyDir: {}
-      {{- if .Values.discoveryKubeconfig.secretProvided.enabled }}
+      {{- if .Values.runwhenLocal.discoveryKubeconfig.secretProvided.enabled }}
       - name: secret-volume
         secret:
-          secretName: {{ .Values.discoveryKubeconfig.secretProvided.secretName }}
+          secretName: {{ .Values.runwhenLocal.discoveryKubeconfig.secretProvided.secretName }}
           items:
-            - key: {{ .Values.discoveryKubeconfig.secretProvided.secretKey }}
-              path: {{ .Values.discoveryKubeconfig.secretProvided.secretPath }}
+            - key: {{ .Values.runwhenLocal.discoveryKubeconfig.secretProvided.secretKey }}
+              path: {{ .Values.runwhenLocal.discoveryKubeconfig.secretProvided.secretPath }}
       {{- end }}
       - name: configmap-volume
         configMap:
-          name: {{ if .Values.runwhenLocalConfig.useExistingConfigMap }}{{ .Values.runwhenLocalConfig.existingConfigMapName }}{{ else }}{{ .Values.runwhenLocalConfig.configMap.name }}{{ end }}
+          name: {{ if .Values.runwhenLocal.runwhenLocalConfig.useExistingConfigMap }}{{ .Values.runwhenLocal.runwhenLocalConfig.existingConfigMapName }}{{ else }}{{ .Values.runwhenLocal.runwhenLocalConfig.configMap.name }}{{ end }}
 
           # items:
           #   - key: workspaceInfo.yaml
           #     path: workspaceInfo.yaml
-          #   {{- with .Values.uploadInfo }}
+          #   {{- with .Values.runwhenLocal.uploadInfo }}
           #   {{- if . }}
           #   - key: uploadInfo.yaml
           #     path: uploadInfo.yaml
@@ -120,3 +121,4 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+{{- end }}

@@ -5,7 +5,7 @@ metadata:
   labels:
     {{- include "runwhen-local.labels" . | nindent 4 }}
 spec:
-  type: {{ .Values.service.type }}
+  type: {{ .Values.runwhenLocal.service.type }}
   ports:
     - name: mkdocs
       protocol: TCP

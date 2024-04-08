@@ -1,8 +1,0 @@
-{{ if not .Values.runwhenLocalConfig.useExistingConfigMap }}
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {{ .Values.runwhenLocalConfig.configMap.name }}
-data:
-  {{- toYaml .Values.runwhenLocalConfig.configMap.data | nindent 2 }}
-{{ end }}

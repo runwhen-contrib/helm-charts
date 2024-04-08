@@ -1,9 +1,10 @@
-{{- if .Values.ingress.enabled -}}
+{{- if .Values.runwhenLocal.enabled -}}
+{{- if .Values.runwhenLocal.ingress.enabled -}}
 {{- $fullName := include "runwhen-local.fullname" . -}}
-{{- $svcPort := .Values.service.port -}}
-{{- if and .Values.ingress.className (not (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion)) }}
-  {{- if not (hasKey .Values.ingress.annotations "kubernetes.io/ingress.class") }}
-  {{- $_ := set .Values.ingress.annotations "kubernetes.io/ingress.class" .Values.ingress.className}}
+{{- $svcPort := .Values.runwhenLocal.service.port -}}
+{{- if and .Values.runwhenLocal.ingress.className (not (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion)) }}
+  {{- if not (hasKey .Values.runwhenLocal.ingress.annotations "kubernetes.io/ingress.class") }}
+  {{- $_ := set .Values.runwhenLocal.ingress.annotations "kubernetes.io/ingress.class" .Values.runwhenLocal.ingress.className}}
   {{- end }}
 {{- end }}
 {{- if semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion -}}
@@ -18,17 +19,17 @@ metadata:
   name: {{ $fullName }}
   labels:
     {{- include "runwhen-local.labels" . | nindent 4 }}
-  {{- with .Values.ingress.annotations }}
+  {{- with .Values.runwhenLocal.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  {{- if and .Values.ingress.className (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion) }}
-  ingressClassName: {{ .Values.ingress.className }}
+  {{- if and .Values.runwhenLocal.ingress.className (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion) }}
+  ingressClassName: {{ .Values.runwhenLocal.ingress.className }}
   {{- end }}
-  {{- if .Values.ingress.tls }}
+  {{- if .Values.runwhenLocal.ingress.tls }}
   tls:
-    {{- range .Values.ingress.tls }}
+    {{- range .Values.runwhenLocal.ingress.tls }}
     - hosts:
         {{- range .hosts }}
         - {{ . | quote }}
@@ -37,7 +38,7 @@ spec:
     {{- end }}
   {{- end }}
   rules:
-    {{- range .Values.ingress.hosts }}
+    {{- range .Values.runwhenLocal.ingress.hosts }}
     - host: {{ .host | quote }}
       http:
         paths:
@@ -58,4 +59,5 @@ spec:
               {{- end }}
           {{- end }}
     {{- end }}
+{{- end }}
 {{- end }}

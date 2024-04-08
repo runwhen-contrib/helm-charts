@@ -1,0 +1,10 @@
+{{- if .Values.runwhenLocal.enabled -}}
+{{ if not .Values.runwhenLocal.runwhenLocalConfig.useExistingConfigMap }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.runwhenLocal.runwhenLocalConfig.configMap.name }}
+data:
+  {{- toYaml .Values.runwhenLocal.runwhenLocalConfig.configMap.data | nindent 2 }}
+{{ end }}
+{{ end }}

@@ -11,5 +11,5 @@ spec:
     - name: wget
       image: busybox
       command: ['wget']
-      args: ['{{ include "runwhen-local.fullname" . }}:{{ .Values.service.port }}']
+      args: ['{{ include "runwhen-local.fullname" . }}:{{ .Values.runwhenLocal.service.port }}']
   restartPolicy: Never
