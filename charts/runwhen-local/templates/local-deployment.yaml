@@ -41,7 +41,7 @@ spec:
             value: "{{ .Values.runwhenLocal.autoRun.uploadEnabled }}"
           - name: RW_LOCAL_UPLOAD_MERGE_MODE
             value: "{{ .Values.runwhenLocal.autoRun.uploadMergeMode }}"
-          {{ if .Values.runwhenLocal.runwhenLocalConfig.debugLogs }}
+          {{ if .Values.runwhenLocal.debugLogs }}
           - name: DEBUG_LOGGING
             value: "true"
           {{ end }}
@@ -71,44 +71,40 @@ spec:
           - name: shared-volume
             mountPath: "/shared"
           {{- if .Values.runwhenLocal.discoveryKubeconfig.secretProvided.enabled }}
-          - name: secret-volume
+          - name: kubeconfig-secret-volume
             mountPath: "/shared/kubeconfig"
             subPath: "kubeconfig"
           {{- end }}
           - name: configmap-volume
             mountPath: "/shared/workspaceInfo.yaml"
             subPath: "workspaceInfo.yaml"
-          {{- with .Values.runwhenLocal.uploadInfo }}
-          {{- if . }}
-          - name: configmap-volume
+          {{- if .Values.runwhenLocal.uploadInfo.secretProvided.enabled }}
+          - name: upload-secret-volume
             mountPath: "/shared/uploadInfo.yaml"
             subPath: "uploadInfo.yaml"
-          {{- end }}
           {{- end }}
       volumes:
       - name: shared-volume
         emptyDir: {}
       {{- if .Values.runwhenLocal.discoveryKubeconfig.secretProvided.enabled }}
-      - name: secret-volume
+      - name: kubeconfig-secret-volume
         secret:
           secretName: {{ .Values.runwhenLocal.discoveryKubeconfig.secretProvided.secretName }}
           items:
             - key: {{ .Values.runwhenLocal.discoveryKubeconfig.secretProvided.secretKey }}
               path: {{ .Values.runwhenLocal.discoveryKubeconfig.secretProvided.secretPath }}
       {{- end }}
+      {{- if .Values.runwhenLocal.uploadInfo.secretProvided.enabled }}
+      - name: upload-secret-volume
+        secret:
+          secretName: {{ .Values.runwhenLocal.uploadInfo.secretProvided.secretName }}
+          items:
+            - key: {{ .Values.runwhenLocal.uploadInfo.secretProvided.secretKey }}
+              path: {{ .Values.runwhenLocal.uploadInfo.secretProvided.secretPath }}
+      {{- end }}
       - name: configmap-volume
         configMap:
-          name: {{ if .Values.runwhenLocal.runwhenLocalConfig.useExistingConfigMap }}{{ .Values.runwhenLocal.runwhenLocalConfig.existingConfigMapName }}{{ else }}{{ .Values.runwhenLocal.runwhenLocalConfig.configMap.name }}{{ end }}
-
-          # items:
-          #   - key: workspaceInfo.yaml
-          #     path: workspaceInfo.yaml
-          #   {{- with .Values.runwhenLocal.uploadInfo }}
-          #   {{- if . }}
-          #   - key: uploadInfo.yaml
-          #     path: uploadInfo.yaml
-          #   {{- end }}
-          #   {{- end }}
+          name: {{ if .Values.runwhenLocal.workspaceInfo.useExistingConfigMap }}{{ .Values.runwhenLocal.workspaceInfo.existingConfigMapName }}{{ else }}{{ .Values.runwhenLocal.workspaceInfo.configMap.name }}{{ end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

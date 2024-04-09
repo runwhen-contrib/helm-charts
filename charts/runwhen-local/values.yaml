@@ -129,41 +129,39 @@ runwhenLocal:
     uploadMergeMode: "keep-uploaded"         # 'keep-uploaded' or 'keep-existing'
 
 
-  # terminal: Enable or disable the in-browser terminal (unauthentication connection to container shell)
+  # Terminal: Enable or disable the in-browser terminal
+  # Note: The terminal provides an unauthenticated connection to container shell
   terminal:
     disabled: true
 
-  ###### Upload configuration
+  # Enable debug logging
+  debugLogs: true
+
+  ## uploadInfo
   # The upload configuration applies only to users to leverage RunWhen Local as an
   # onboarding tool into RunWhen Platform (https://www.runwhen.com for more details)
   # When uploading discovered resources and configuration information to RunWhen Platform,
   # workspaceName, token, workspaceOwnerEmail, defaultLocation and papiURL are mandtatory
   # can can be obtained immediately after creating a RunWhen Platform workspace.
+  uploadInfo:
+    secretProvided:
+      enabled: false
+      # secretName: ""
+      # secretKey: uploadInfo.yaml
+      # secretPath: uploadInfo.yaml
 
-  ###### workspaceInfo
+
+  ## workspaceInfo
   # Currently this holds details such as custom variables & upload configuration
-  # Note: This section will soon be split into two separate configuration files
   # See https://docs.runwhen.com/public/v/runwhen-local/user-guide/user_guide-advanced_configuration/workspaceinfo-customization
-  ###### Custom Variables
-  # Custom variables are used to help tailor the generated content when we can't
-  # automatically infer from the discovered resources (such as specifying a prometheus
-  # provider, cloud provider, or kubernetes distribution & binary (mostly for oc vs
-  # kubectl users))
 
-  runwhenLocalConfig:
+  workspaceInfo:
     useExistingConfigMap: false
     existingConfigMapName: ""
-    debugLogs: true
     configMap:
       create: true
       name: runwhen-configmap
       data:
-        uploadInfo.yaml: |
-          # workspaceName: undefined
-          # token: undefined
-          # workspaceOwnerEmail: tester@my-company.com
-          # papiURL: undefined
-          # defaultLocation: undefined
         workspaceInfo.yaml: |
           # Information about the RunWhen workspace
           defaultLocation: undefined
@@ -172,13 +170,13 @@ runwhenLocal:
           # More workspace config
           # Information about cloud platforms to scan to discover resources
           defaultLOD: 2
-          # cloudConfig:
-          #   kubernetes:
-          #     kubeconfigFile: /shared/in_cluster_kubeconfig.yaml
-          #     namespaceLODs:
-          #       kube-system: 0
-          #       kube-public: 0
-          #       kube-node-lease: 0
+          cloudConfig:
+            kubernetes:
+              kubeconfigFile: /shared/kubeconfig
+              namespaceLODs:
+                kube-system: 0
+                kube-public: 0
+                kube-node-lease: 0
           custom:
             kubeconfig_secret_name: kubeconfig
             kubernetes_distribution_binary: kubectl
