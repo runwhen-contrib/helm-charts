@@ -146,7 +146,7 @@ runwhenLocal:
   uploadInfo:
     secretProvided:
       enabled: false
-      # secretName: ""
+      # secretName: "uploadinfo"
       # secretKey: uploadInfo.yaml
       # secretPath: uploadInfo.yaml
 
@@ -197,6 +197,7 @@ runner:
     url: "https://runner-cortex-tenant.test.runwhen.com/push"
 
 # grafana-agent is only deployed if runner.enabled is true
+# https://github.com/grafana/agent/blob/main/operations/helm/charts/grafana-agent/values.yaml
 grafana-agent:
   agent:
     mode: 'flow'
@@ -216,3 +217,8 @@ grafana-agent:
         - name: tls-secret-volume
           secret:
             secretName: runner-metrics-tls
+  rbac:
+    create: false
+  serviceAccount:
+    create: false
+    name: grafana-agent
