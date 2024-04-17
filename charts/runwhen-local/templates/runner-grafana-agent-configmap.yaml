@@ -1,0 +1,38 @@
+{{- if .Values.runner.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata: 
+  name: grafana-agent
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: grafana-agent
+data: 
+  config.river: | 
+    prometheus.receive_http "runner" {
+        http {
+            listen_address = "0.0.0.0"
+            listen_port = 9091
+        }
+        forward_to = [prometheus.remote_write.runwhen.receiver]
+    }
+
+    prometheus.scrape "pushgw" {
+        targets    = [{"__address__" = "pushgateway:9091"}]
+        forward_to = [prometheus.remote_write.runwhen.receiver]
+    }
+
+    prometheus.remote_write "runwhen" {
+        endpoint {
+            url = "{{ .Values.runner.metrics.url }}"
+            tls_config {
+            ca_file = "/tls/ca.crt"
+            cert_file = "/tls/tls.crt"
+            key_file =  "/tls/tls.key"
+            insecure_skip_verify    = true
+            }
+        }
+        external_labels = {
+            workspace = "{{ include "runwhen-local.workspaceName" . }}",
+        }
+    }
+{{- end }}

@@ -50,13 +50,20 @@ app.kubernetes.io/name: {{ include "runwhen-local.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
+# {{/*
+# Create the name of the service account to use
+# */}}
+# {{- define "runwhen-local.serviceAccountName" -}}
+# {{- if .Values.serviceAccount.create }}
+# {{- default (include "runwhen-local.fullname" .) .Values.serviceAccount.name }}
+# {{- else }}
+# {{- default "default" .Values.serviceAccount.name }}
+# {{- end }}
+# {{- end }}
+
 {{/*
-Create the name of the service account to use
+Reuse workspacename.
 */}}
-{{- define "runwhen-local.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create }}
-{{- default (include "runwhen-local.fullname" .) .Values.serviceAccount.name }}
-{{- else }}
-{{- default "default" .Values.serviceAccount.name }}
-{{- end }}
-{{- end }}
+{{- define "runwhen-local.workspaceName" -}}
+{{ .Values.workspaceName }}
+{{- end -}}
