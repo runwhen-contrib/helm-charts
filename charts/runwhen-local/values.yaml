@@ -139,7 +139,7 @@ runwhenLocal:
 
   ## uploadInfo
   # The upload configuration applies only to users to leverage RunWhen Local as an
-  # onboarding tool into RunWhen Platform (https://www.runwhen.com for more details)
+  # onboarding tool into RunWhen Platform (https://docs.runwhen.com/public/v/runwhen-local/user-guide/features/upload-to-runwhen-platform for more details)
   # When uploading discovered resources and configuration information to RunWhen Platform,
   # workspaceName, token, workspaceOwnerEmail, defaultLocation and papiURL are mandtatory
   # can can be obtained immediately after creating a RunWhen Platform workspace.
@@ -160,13 +160,14 @@ runwhenLocal:
     existingConfigMapName: ""
     configMap:
       create: true
-      name: runwhen-configmap
+      name: workspace-builder
       data:
         defaultLocation: none
         workspaceOwnerEmail: tester@my-company.com
         # More workspace config
-        # Information about cloud platforms to scan to discover resources
-        defaultLOD: 0
+        # Default Level of Detail(LOD): none, basic, or detailed
+        # https://docs.runwhen.com/public/v/runwhen-local/user-guide/user_guide-advanced_configuration/workspaceinfo-customization/level-of-detail
+        defaultLOD: detailed
         cloudConfig:
           kubernetes:
             kubeconfigFile: /shared/kubeconfig
@@ -174,7 +175,6 @@ runwhenLocal:
               kube-system: 0
               kube-public: 0
               kube-node-lease: 0
-              online-boutique: 2
         custom:
           kubeconfig_secret_name: kubeconfig
           kubernetes_distribution_binary: kubectl
