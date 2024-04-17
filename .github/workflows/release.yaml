@@ -22,7 +22,7 @@ jobs:
       - name: Install Helm
         uses: azure/setup-helm@v3
 
-     - name: Update Helm dependencies
+      - name: Update Helm dependencies
         run: helm dependency update ./charts/runwhen-local
 
       - name: Run chart-releaser
