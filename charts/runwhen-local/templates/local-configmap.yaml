@@ -5,6 +5,14 @@ kind: ConfigMap
 metadata:
   name: {{ .Values.runwhenLocal.workspaceInfo.configMap.name }}
 data:
-  {{- toYaml .Values.runwhenLocal.workspaceInfo.configMap.data | nindent 2 }}
+  workspaceInfo.yaml: | 
+    workspaceName: {{ .Values.workspaceName }}
+    defaultLocation: {{ .Values.runwhenLocal.workspaceInfo.configMap.data.defaultLocation | default "none" }}
+    workspaceOwnerEmail: {{ .Values.runwhenLocal.workspaceInfo.configMap.data.workspaceOwnerEmail | default "tester@mycompany.com" }}
+    defaultLOD: {{ .Values.runwhenLocal.workspaceInfo.configMap.data.defaultLOD | default "detailed" }}
+    cloudConfig:
+      {{- toYaml .Values.runwhenLocal.workspaceInfo.configMap.data.cloudConfig | nindent 6 }}
+    custom:
+      {{- toYaml .Values.runwhenLocal.workspaceInfo.configMap.data.custom | nindent 6 }}
 {{ end }}
 {{ end }}

@@ -18,7 +18,7 @@
 ###############################################################################
 ######################## Global/Shared Settings ###############################
 ###############################################################################
-workspaceName: t-runwhen-shared
+workspaceName: [workspace-name]
 
 imagePullSecrets: []
 
@@ -106,18 +106,18 @@ runwhenLocal:
   # clusters.
   #
   # Using inClusterAuth works for the local cluster only.
-  # If discoverying multiple clusters, set inClusterAuth.enabled=false
+  # If discovering multiple clusters, set inClusterAuth.enabled=false
   # and mount a secret with a kubeconfig that contains all
   # cluster contexts to be discovered
 
   discoveryKubeconfig:
     inClusterAuth:
-      enabled: false
-    secretProvided:
       enabled: true
-      secretName: kubeconfig
-      secretKey: kubeconfig
-      secretPath: kubeconfig
+    secretProvided:
+      enabled: false
+      # secretName: kubeconfig
+      # secretKey: kubeconfig
+      # secretPath: kubeconfig
 
   ### RunWhen Local Runtime Configuration
   # autoRun: start discovery on deployment, and re-run discovery evey discoveryInterval seconds
@@ -162,27 +162,24 @@ runwhenLocal:
       create: true
       name: runwhen-configmap
       data:
-        workspaceInfo.yaml: |
-          # Information about the RunWhen workspace
-          defaultLocation: undefined
-          workspaceName: t-runwhen-shared
-          workspaceOwnerEmail: tester@my-company.com
-          # More workspace config
-          # Information about cloud platforms to scan to discover resources
-          defaultLOD: 2
-          cloudConfig:
-            kubernetes:
-              kubeconfigFile: /shared/kubeconfig
-              namespaceLODs:
-                kube-system: 0
-                kube-public: 0
-                kube-node-lease: 0
-          custom:
-            kubeconfig_secret_name: kubeconfig
-            kubernetes_distribution_binary: kubectl
-            cloud_provider: none
-            gcp_project_id: none
-            gcp_ops_suite_sa: none
+        defaultLocation: none
+        workspaceOwnerEmail: tester@my-company.com
+        # More workspace config
+        # Information about cloud platforms to scan to discover resources
+        defaultLOD: detailed
+        cloudConfig:
+          kubernetes:
+            kubeconfigFile: /shared/kubeconfig
+            namespaceLODs:
+              kube-system: 0
+              kube-public: 0
+              kube-node-lease: 0
+        custom:
+          kubeconfig_secret_name: kubeconfig
+          kubernetes_distribution_binary: kubectl
+          cloud_provider: none
+          gcp_project_id: none
+          gcp_ops_suite_sa: none
 
 
 ###############################################################################
