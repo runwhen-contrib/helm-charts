@@ -135,7 +135,7 @@ runwhenLocal:
     disabled: true
 
   # Enable debug logging
-  debugLogs: true
+  debugLogs: false
 
   ## uploadInfo
   # The upload configuration applies only to users to leverage RunWhen Local as an
