@@ -197,6 +197,9 @@ runner:
 # grafana-agent is only deployed if runner.enabled is true
 # https://github.com/grafana/agent/blob/main/operations/helm/charts/grafana-agent/values.yaml
 grafana-agent:
+  crds:
+    # -- Whether to install CRDs for monitoring.
+    create: false
   agent:
     mode: 'flow'
     configMap:
