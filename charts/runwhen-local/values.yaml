@@ -192,10 +192,10 @@ runwhenLocal:
           - repoURL: https://github.com/runwhen-contrib/rw-cli-codecollection
             ref: aws-bundles2
         custom:
-          # Note: Most of these are simple keys, such as the name of a secret that 
+          # Note: Most of these are simple keys, such as the name of a secret that
           # should be referenced from the platform. The secret itself (key and value)
-          # must be created in the RunWhen Platform by the user. We do not upload 
-          # or configure secrets automatically. 
+          # must be created in the RunWhen Platform by the user. We do not upload
+          # or configure secrets automatically.
           kubeconfig_secret_name: kubeconfig
           kubernetes_distribution_binary: kubectl
           cloud_provider: none
