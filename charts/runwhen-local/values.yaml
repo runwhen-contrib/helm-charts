@@ -188,13 +188,21 @@ runwhenLocal:
               kube-system: 0
               kube-public: 0
               kube-node-lease: 0
-        codeCollections: []
+        codeCollections:
+          - repoURL: https://github.com/runwhen-contrib/rw-cli-codecollection
+            ref: aws-bundles2
         custom:
+          # Note: Most of these are simple keys, such as the name of a secret that
+          # should be referenced from the platform. The secret itself (key and value)
+          # must be created in the RunWhen Platform by the user. We do not upload
+          # or configure secrets automatically.
           kubeconfig_secret_name: kubeconfig
           kubernetes_distribution_binary: kubectl
           cloud_provider: none
           gcp_project_id: none
           gcp_ops_suite_sa: none
+          aws_access_key_id: AWS_ACCESS_KEY_ID
+          aws_secret_access_key: AWS_SECRET_ACCESS_KEY
 
 
 ###############################################################################
