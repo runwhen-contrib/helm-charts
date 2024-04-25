@@ -33,6 +33,11 @@ tolerations: []
 
 affinity: {}
 
+# Is this a platform the requires special configuration?
+# Currently supports EKS_Fargate, kubernetes
+platformType: "kubernetes" 
+
+
 ###############################################################################
 ######################## RunWhen Local Configuration ##########################
 ###############################################################################
@@ -95,12 +100,21 @@ runwhenLocal:
     #      - chart-example.local
 
   resources:
-    requests:
-      memory: "256Mi"
-      cpu: "250m"
-    limits:
-      memory: "1024Mi"
-      cpu: "1"
+    default:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "1"
+        memory: "1024Mi"
+    EKS_Fargate:
+      requests:
+        cpu: "2"  
+        memory: "1024Mi"
+      limits:
+        cpu: "2"
+        memory: "1024Mi"
+
 
   # RunWhen Local requires a kubeconfig to discover resouces from 1 or more
   # clusters.
@@ -175,6 +189,7 @@ runwhenLocal:
               kube-system: 0
               kube-public: 0
               kube-node-lease: 0
+        codeCollections: []
         custom:
           kubeconfig_secret_name: kubeconfig
           kubernetes_distribution_binary: kubectl
@@ -193,6 +208,21 @@ runner:
   controlAddr: "https://runner.beta.runwhen.com"
   metrics:
     url: "https://runner-cortex-tenant.beta.runwhen.com/push"
+  resources:
+    default:
+      requests:
+        cpu: "50m"
+        memory: "64Mi"
+      limits:
+        cpu: "200m"
+        memory: "256Mi"
+    EKS_Fargate:
+      requests:
+        cpu: "200m"
+        memory: "256Mi"
+      limits:
+        cpu: "200m"
+        memory: "256Mi"
 
 # grafana-agent is only deployed if runner.enabled is true
 # https://github.com/grafana/agent/blob/main/operations/helm/charts/grafana-agent/values.yaml

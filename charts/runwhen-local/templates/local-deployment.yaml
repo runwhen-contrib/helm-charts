@@ -66,7 +66,11 @@ spec:
             periodSeconds: 5
             failureThreshold: 5
           resources:
-            {{- toYaml .Values.runwhenLocal.resources | nindent 12 }}
+            {{- if eq .Values.platformType "EKS_Fargate" }}
+            {{- toYaml .Values.runwhenLocal.resources.EKS_Fargate | nindent 12 }}
+            {{- else }}
+            {{- toYaml .Values.runwhenLocal.resources.default | nindent 12 }}
+            {{- end }}
           volumeMounts:
           - name: shared-volume
             mountPath: "/shared"
