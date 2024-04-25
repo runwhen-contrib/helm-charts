@@ -35,8 +35,7 @@ affinity: {}
 
 # Is this a platform the requires special configuration?
 # Currently supports EKS_Fargate, kubernetes
-platformType: "kubernetes" 
-
+platformType: "kubernetes"
 
 ###############################################################################
 ######################## RunWhen Local Configuration ##########################
@@ -109,7 +108,7 @@ runwhenLocal:
         memory: "1024Mi"
     EKS_Fargate:
       requests:
-        cpu: "2"  
+        cpu: "2"
         memory: "1024Mi"
       limits:
         cpu: "2"
