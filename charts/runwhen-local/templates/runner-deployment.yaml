@@ -33,7 +33,12 @@ spec:
         - containerPort: 9090
           name: metrics
           protocol: TCP
-        resources: {}
+        resources:
+          {{- if eq .Values.platformType "EKS_Fargate" }}
+          {{- toYaml .Values.runner.resources.EKS_Fargate | nindent 12 }}
+          {{- else }}
+          {{- toYaml .Values.runner.resources.default | nindent 12 }}
+          {{- end }}
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         env:
