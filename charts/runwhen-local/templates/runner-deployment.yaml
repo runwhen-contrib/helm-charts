@@ -27,7 +27,7 @@ spec:
     spec:
       containers:
       - image: {{ .Values.runner.image | default "us-docker.pkg.dev/runwhen-nonprod-shared/public-images/runner:stable" }}
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: {{ .Values.runner.imagePullPolicy | default "IfNotPresent" }}
         name: runner
         ports:
         - containerPort: 9090
