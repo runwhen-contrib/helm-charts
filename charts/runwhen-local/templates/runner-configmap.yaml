@@ -1,0 +1,146 @@
+{{- if and .Values.runner.configMap .Values.runner.configMap.create -}}
+{{- $_ := .Values.runner.configMap.apiVersion | required ".Values.runner.configMap.apiVersion must be set !" -}}
+{{- $_ := .Values.runner.configMap.kind | required ".Values.runner.configMap.kind must be set !" -}}
+{{- $_ := .Values.runner.configMap.name | required ".Values.runner.configMap.name must be set !" -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.runner.configMap.name }}
+  labels:
+    app: runner
+data:
+  config.yaml: |
+    apiVersion: {{ .Values.runner.configMap.apiVersion }}
+    kind: {{ .Values.runner.configMap.kind }}
+    {{- if .Values.runner.configMap.raw }}
+    {{- toYaml .Values.runner.configMap.raw | nindent 4 }}
+    {{- else }}
+    global:
+      log:
+        level: INFO
+        format: console
+      controlAddr: {{ .Values.runner.controlAddr }}
+      metricsAddr: {{ .Values.runner.metrics.url }}
+      proxy:
+        enabled: {{ .Values.runner.proxy.enabled }}
+        httpProxy: "{{ .Values.runner.proxy.httpProxy }}"
+        httpsProxy: "{{ .Values.runner.proxy.httpsProxy }}"
+        noProxy:  "{{ .Values.runner.proxy.noProxy }}"
+    environment:
+      {{- with .Values.runner.runEnvironment.blockedSecrets }}
+      blockedSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.runner.runEnvironment.secretsProvided }}
+      secretsProvided:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.runner.runEnvironment.secretProviders }}
+      secretProviders:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      kubernetes:
+        proxy:
+          enabled: {{ or .Values.runner.runEnvironment.proxy.enabled .Values.runner.proxy.enabled }}
+          httpProxy: "{{ or .Values.runner.runEnvironment.proxy.httpProxy .Values.runner.proxy.httpProxy }}"
+          httpsProxy: "{{ or .Values.runner.runEnvironment.proxy.httpsProxy .Values.runner.proxy.httpProxy }}"
+          noProxy: "{{ or .Values.runner.runEnvironment.proxy.httpsProxy .Values.runner.proxy.httpProxy }}"
+          proxyCA: "{{ or .Values.runner.runEnvironment.proxy.proxyCA .Values.runner.proxy.httpProxy }}"
+        deployment:
+          {{- with .Values.runner.runEnvironment.deployment.annotations }}
+          annotations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.deployment.podAnnotations }}
+          podAnnotations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.deployment.affinity }}
+          affinity:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.deployment.nodeName }}
+          nodeName: {{ . }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.deployment.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.extraEnv }}
+          envVars:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+          {{- if eq .Values.platformType "EKS_Fargate" }}
+            {{- toYaml .Values.runner.runEnvironment.deployment.resources.EKS_Fargate | nindent 12 }}
+          {{- else }}
+            {{- toYaml .Values.runner.runEnvironment.deployment.resources.default | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.containerSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.securityContext }}
+          podSecurityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.deployment.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.volumes }}
+          volumes:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+        pod:
+          {{- with .Values.runner.runEnvironment.pod.annotations }}
+          annotations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.pod.affinity }}
+          affinity:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.pod.nodeName }}
+          nodeName: {{ . }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.pod.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.extraEnv }}
+          envVars:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+          {{- if eq .Values.platformType "EKS_Fargate" }}
+            {{- toYaml .Values.runner.runEnvironment.pod.resources.EKS_Fargate | nindent 12 }}
+          {{- else }}
+            {{- toYaml .Values.runner.runEnvironment.pod.resources.default | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.containerSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.securityContext }}
+          podSecurityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.pod.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.volumes }}
+          volumes:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+    {{- end }}
+{{- end -}}
