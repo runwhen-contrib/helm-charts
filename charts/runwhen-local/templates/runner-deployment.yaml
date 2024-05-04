@@ -56,16 +56,16 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        {{- if .Values.runner.proxy.enabled }}
-        {{- with .Values.runner.proxy.httpProxy }}
+        {{- if .Values.proxy.enabled }}
+        {{- with .Values.proxy.httpProxy }}
         - name: HTTP_PROXY
           value: {{ . }}
         {{- end }}
-        {{- with .Values.runner.proxy.httpsProxy }}
+        {{- with .Values.proxy.httpsProxy }}
         - name: HTTPS_PROXY
           value: {{ . }}
         {{- end }}
-        {{- with .Values.runner.proxy.noProxy }}
+        {{- with .Values.proxy.noProxy }}
         - name: NO_PROXY
           value: {{ . }}
         {{- end }}

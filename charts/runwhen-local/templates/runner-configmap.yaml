@@ -23,10 +23,10 @@ data:
       controlAddr: {{ .Values.runner.controlAddr }}
       metricsAddr: {{ .Values.runner.metrics.url }}
       proxy:
-        enabled: {{ .Values.runner.proxy.enabled }}
-        httpProxy: "{{ .Values.runner.proxy.httpProxy }}"
-        httpsProxy: "{{ .Values.runner.proxy.httpsProxy }}"
-        noProxy:  "{{ .Values.runner.proxy.noProxy }}"
+        enabled: {{ .Values.proxy.enabled }}
+        httpProxy: "{{ .Values.proxy.httpProxy }}"
+        httpsProxy: "{{ .Values.proxy.httpsProxy }}"
+        noProxy:  "{{ .Values.proxy.noProxy }}"
     environment:
       {{- with .Values.runner.runEnvironment.blockedSecrets }}
       blockedSecrets:
@@ -42,11 +42,11 @@ data:
       {{- end }}
       kubernetes:
         proxy:
-          enabled: {{ or .Values.runner.runEnvironment.proxy.enabled .Values.runner.proxy.enabled }}
-          httpProxy: "{{ or .Values.runner.runEnvironment.proxy.httpProxy .Values.runner.proxy.httpProxy }}"
-          httpsProxy: "{{ or .Values.runner.runEnvironment.proxy.httpsProxy .Values.runner.proxy.httpProxy }}"
-          noProxy: "{{ or .Values.runner.runEnvironment.proxy.httpsProxy .Values.runner.proxy.httpProxy }}"
-          proxyCA: "{{ or .Values.runner.runEnvironment.proxy.proxyCA .Values.runner.proxy.httpProxy }}"
+          enabled: {{ or .Values.runner.runEnvironment.proxy.enabled .Values.proxy.enabled }}
+          httpProxy: "{{ or .Values.runner.runEnvironment.proxy.httpProxy .Values.proxy.httpProxy }}"
+          httpsProxy: "{{ or .Values.runner.runEnvironment.proxy.httpsProxy .Values.proxy.httpProxy }}"
+          noProxy: "{{ or .Values.runner.runEnvironment.proxy.httpsProxy .Values.proxy.httpProxy }}"
+          proxyCA: "{{ or .Values.runner.runEnvironment.proxy.proxyCA .Values.proxy.httpProxy }}"
         deployment:
           {{- with .Values.runner.runEnvironment.deployment.annotations }}
           annotations:

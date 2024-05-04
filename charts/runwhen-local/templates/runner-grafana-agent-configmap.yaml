@@ -24,6 +24,14 @@ data:
     prometheus.remote_write "runwhen" {
         endpoint {
             url = "{{ .Values.runner.metrics.url }}"
+            {{- if .Values.proxy.enabled }}
+            {{- with .Values.proxy.httpsProxy }}
+            proxy_url =  "{{ . }}"
+            {{- end }}
+            {{- with .Values.proxy.noProxy }}
+            no_proxy = "{{ . }}"
+            {{- end }}
+            {{- end }}
             tls_config {
             ca_file = "/tls/ca.crt"
             cert_file = "/tls/tls.crt"
