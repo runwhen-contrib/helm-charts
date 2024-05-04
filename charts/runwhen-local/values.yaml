@@ -279,7 +279,7 @@ runner:
       #           key: secret-id
 
     # secretsProvided is used to mount the secrets to the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods
-    # The secrets are mounted as files or environment variables and much come from either a built in provider or a custom provider
+    # The secrets are mounted as files or environment variables and must come from either a built in provider or a custom provider
     #
     # The built in providers and the format of their secrets provided entries are as follows:
     # Built In Providers Supported:
@@ -310,7 +310,7 @@ runner:
     # Block the use of a specific secret being mounted to the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods
     # - "myvault@/dev/data/simple-test-secret"
 
-    # The configurations exposed the SLI (CronCodeRun) Deployments
+    # The configurations applied to the SLI (CronCodeRun) Deployments
     deployment:
       annotations: {}
       podAnnotations: {}
@@ -333,7 +333,7 @@ runner:
           limits:
             cpu: "300m"
             memory: "196Mi"
-    # The configurations exposed the TaskSet (CodeRun) Pods
+    # The configurations applired to the TaskSet (CodeRun) Pods
     pod:
       annotations: {}
       affinity: {}
@@ -363,7 +363,7 @@ runner:
       proxyCA: ""
 
   # proxy configuration for the runner container, set runEnvironment.proxy.enabled to true to use this configuration
-  # fo the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods as well, or configure custom proxy settings in the runEnvironment
+  # for the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods as well, or configure custom proxy settings in the runEnvironment.proxy fields
   proxy:
     enabled: false
     httpProxy: ""
