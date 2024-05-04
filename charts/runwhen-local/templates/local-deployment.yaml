@@ -45,6 +45,20 @@ spec:
           - name: DEBUG_LOGGING
             value: "true"
           {{ end }}
+          {{- if .Values.proxy.enabled }}
+          {{- with .Values.proxy.httpProxy }}
+          - name: HTTP_PROXY
+            value: {{ . }}
+          {{- end }}
+          {{- with .Values.proxy.httpsProxy }}
+          - name: HTTPS_PROXY
+            value: {{ . }}
+          {{- end }}
+          {{- with .Values.proxy.noProxy }}
+          - name: NO_PROXY
+            value: {{ . }}
+          {{- end }}
+          {{- end }}
           ports:
             - name: mkdocs
               containerPort: 8081
