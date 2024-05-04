@@ -16,9 +16,10 @@ data:
     {{- toYaml .Values.runner.configMap.raw | nindent 4 }}
     {{- else }}
     global:
+      {{- with .Values.runner.log }}
       log:
-        level: INFO
-        format: console
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       controlAddr: {{ .Values.runner.controlAddr }}
       metricsAddr: {{ .Values.runner.metrics.url }}
       proxy:
