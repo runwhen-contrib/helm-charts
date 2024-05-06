@@ -196,9 +196,7 @@ runwhenLocal:
               kube-system: 0
               kube-public: 0
               kube-node-lease: 0
-        codeCollections:
-          - repoURL: https://github.com/runwhen-contrib/rw-cli-codecollection
-            ref: aws-bundles2
+        codeCollections: []
         custom:
           # Note: Most of these are simple keys, such as the name of a secret that
           # should be referenced from the platform. The secret itself (key and value)
