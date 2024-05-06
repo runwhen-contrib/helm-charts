@@ -36,10 +36,19 @@ affinity: {}
 # Set proxy details for the runner & runwhenLocal deployments
 proxy:
   enabled: false
+  # HTTP_PROXY environment variable
   httpProxy: ""
+  # HTTPS_PROXY environment variable
   httpsProxy: ""
-  noProxy: ""
+  # NO_PROXY environment variable -- defaults to include localhost and the Kubernetes service host which should be in every k8s pod
+  noProxy: "127.0.0.1,$($KUBERNETES_SERVICE_HOST)"
+  # Path to a CA PEM certificate file to use for the proxy -- Only set this if you mount a secret with the CA certificate to a custom path
   proxyCA: ""
+
+proxyCA: {}
+  # secretNname: ""
+  # configMapName: ""
+  # key: ""
 
 # Is this a platform the requires special configuration?
 # Currently supports EKS_Fargate, kubernetes
@@ -371,12 +380,16 @@ runner:
           limits:
             cpu: "300m"
             memory: "256Mi"
-    proxy:
-      enabled: false
-      httpProxy: ""
-      httpsProxy: ""
-      noProxy: ""
-      proxyCA: ""
+    proxy: {}
+      # enabled: false
+      # httpProxy: ""
+      # httpsProxy: ""
+      # noProxy: "127.0.0.1,$($KUBERNETES_SERVICE_HOST)"
+      # proxyCA: ""
+    proxyCA: {}
+      # secretNname: ""
+      # configMapName: ""
+      # key: ""
 
   # proxy configuration for the runner container, set runEnvironment.proxy.enabled to true to use this configuration
   # for the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods as well, or configure custom proxy settings in the runEnvironment.proxy fields
