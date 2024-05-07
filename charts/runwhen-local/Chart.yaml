@@ -3,7 +3,7 @@ name: runwhen-local
 description: A Helm chart RunWhen Local - A community powered troubleshooting cheat sheet
 type: application
 version: 0.1.9
-appVersion: "0.5.10"
+appVersion: "0.5.12"
 icon: https://storage.googleapis.com/runwhen-nonprod-shared-images/icons/runwhen_icon.png
 dependencies:
   - name: grafana-agent
