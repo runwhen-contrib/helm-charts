@@ -134,6 +134,7 @@ runwhenLocal:
   discoveryKubeconfig:
     inClusterAuth:
       enabled: true
+      createKubeconfigSecret: true
     secretProvided:
       enabled: false
       # secretName: kubeconfig

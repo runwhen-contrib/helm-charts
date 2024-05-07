@@ -45,6 +45,10 @@ spec:
           - name: DEBUG_LOGGING
             value: "true"
           {{ end }}
+          {{ if .Values.runwhenLocal.discoveryKubeconfig.inClusterAuth.createKubeconfigSecret }}
+          - name: RW_CREATE_KUBECONFIG_SECRET
+            value: "true"
+          {{ end }}
           - name: KUBERNETES_CLUSTER_NAME
             value: {{ .Values.runwhenLocal.clusterName }}
           {{- if .Values.proxy.enabled }}
