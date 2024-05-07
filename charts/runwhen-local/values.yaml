@@ -130,10 +130,11 @@ runwhenLocal:
   # If discovering multiple clusters, set inClusterAuth.enabled=false
   # and mount a secret with a kubeconfig that contains all
   # cluster contexts to be discovered
-
+  clusterName: "default"
   discoveryKubeconfig:
     inClusterAuth:
       enabled: true
+      createKubeconfigSecret: true
     secretProvided:
       enabled: false
       # secretName: kubeconfig
@@ -202,7 +203,10 @@ runwhenLocal:
           # should be referenced from the platform. The secret itself (key and value)
           # must be created in the RunWhen Platform by the user. We do not upload
           # or configure secrets automatically.
-          kubeconfig_secret_name: kubeconfig
+          # The default for kubeconfig_secret_name is set to a secret that runwhenLocal
+          # creates for the use of the runner. This can be simply swapped out with the
+          # name of a secret that is stored in the RunWhen Platform.
+          kubeconfig_secret_name: "k8s:file@secret/kubeconfig:kubeconfig"
           kubernetes_distribution_binary: kubectl
           cloud_provider: none
           gcp_project_id: none

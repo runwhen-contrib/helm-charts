@@ -24,6 +24,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ .Values.runwhenLocal.serviceAccount.name }}
+      automountServiceAccountToken: true
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
@@ -45,6 +46,12 @@ spec:
           - name: DEBUG_LOGGING
             value: "true"
           {{ end }}
+          {{ if .Values.runwhenLocal.discoveryKubeconfig.inClusterAuth.createKubeconfigSecret }}
+          - name: RW_CREATE_KUBECONFIG_SECRET
+            value: "true"
+          {{ end }}
+          - name: KUBERNETES_CLUSTER_NAME
+            value: {{ .Values.runwhenLocal.clusterName }}
           {{- if .Values.proxy.enabled }}
           {{- with .Values.proxy.httpProxy }}
           - name: HTTP_PROXY
