@@ -45,6 +45,8 @@ spec:
           - name: DEBUG_LOGGING
             value: "true"
           {{ end }}
+          - name: KUBERNETES_CLUSTER_NAME
+            value: {{ .Values.runwhenLocal.clusterName }}
           {{- if .Values.proxy.enabled }}
           {{- with .Values.proxy.httpProxy }}
           - name: HTTP_PROXY
