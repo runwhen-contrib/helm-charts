@@ -104,6 +104,6 @@ spec:
         configMap:
           name: {{ .Values.runner.configMap.name }}
       {{ with .Values.runner.volumes }}
-        {{- toYaml . | nindent 8 }}
+        {{- toYaml . | nindent 6 }}
       {{- end }}
 {{- end }}
