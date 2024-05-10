@@ -93,6 +93,9 @@ spec:
             {{- toYaml .Values.runwhenLocal.resources.default | nindent 12 }}
             {{- end }}
           volumeMounts:
+          {{- with .Values.runwhenLocal.volumeMounts }}
+            {{- toYaml . | nindent 10 }}
+          {{- end }}
           - name: shared-volume
             mountPath: "/shared"
           {{- if .Values.runwhenLocal.discoveryKubeconfig.secretProvided.enabled }}
@@ -108,10 +111,10 @@ spec:
             mountPath: "/shared/uploadInfo.yaml"
             subPath: "uploadInfo.yaml"
           {{- end }}
-          {{- with .Values.runwhenLocal.volumeMounts }}
-          {{- toYaml . | nindent 10 }}
-          {{- end }}
       volumes:
+      {{ with .Values.runwhenLocal.volumes }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
       - name: shared-volume
         emptyDir: {}
       {{- if .Values.runwhenLocal.discoveryKubeconfig.secretProvided.enabled }}
@@ -133,9 +136,6 @@ spec:
       - name: configmap-volume
         configMap:
           name: {{ if .Values.runwhenLocal.workspaceInfo.useExistingConfigMap }}{{ .Values.runwhenLocal.workspaceInfo.existingConfigMapName }}{{ else }}{{ .Values.runwhenLocal.workspaceInfo.configMap.name }}{{ end }}
-      {{ with .Values.runwhenLocal.volumes }}
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
