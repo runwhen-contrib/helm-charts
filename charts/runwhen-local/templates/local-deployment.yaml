@@ -133,10 +133,10 @@ spec:
       - name: configmap-volume
         configMap:
           name: {{ if .Values.runwhenLocal.workspaceInfo.useExistingConfigMap }}{{ .Values.runwhenLocal.workspaceInfo.existingConfigMapName }}{{ else }}{{ .Values.runwhenLocal.workspaceInfo.configMap.name }}{{ end }}
-      {{- with .Values.nodeSelector }}
       {{ with .Values.runwhenLocal.volumes }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
