@@ -57,6 +57,12 @@ runwhenLocal:
     # Overrides the image tag whose default is the chart appVersion.
     tag: "latest"
 
+  # Extra volumes for the runwhen-local container
+  volumes: {}
+
+  # Extra volume mounts for the  runwhen-local container
+  volumeMounts: {}
+
   serviceAccount:
     # Specifies whether a service account should be created
     create: true
