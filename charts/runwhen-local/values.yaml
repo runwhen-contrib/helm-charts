@@ -41,13 +41,11 @@ proxy:
   # HTTPS_PROXY environment variable
   httpsProxy: ""
   # NO_PROXY environment variable -- defaults to include localhost and the Kubernetes service host which should be in every k8s pod
-  noProxy: "127.0.0.1,$($KUBERNETES_SERVICE_HOST)"
-  # Path to a CA PEM certificate file to use for the proxy -- Only set this if you mount a secret with the CA certificate to a custom path
-  proxyCA: ""
+  noProxy: "127.0.0.1,$($KUBERNETES_SERVICE_HOST),pushgateway"
 
 proxyCA: {}
   # secretNname: ""
-  # configMapName: ""
+  # configMapName: "" # not fully templated yet
   # key: ""
 
 # Is this a platform the requires special configuration?
@@ -349,7 +347,7 @@ runner:
             cpu: "50m"
             memory: "64Mi"
           limits:
-            cpu: "300m"
+            cpu: "500m"
             memory: "196Mi"
         EKS_Fargate:
           requests:
@@ -371,7 +369,7 @@ runner:
             cpu: "50m"
             memory: "128Mi"
           limits:
-            cpu: "300m"
+            cpu: "500m"
             memory: "256Mi"
         EKS_Fargate:
           requests:
@@ -384,8 +382,7 @@ runner:
       # enabled: false
       # httpProxy: ""
       # httpsProxy: ""
-      # noProxy: "127.0.0.1,$($KUBERNETES_SERVICE_HOST)"
-      # proxyCA: ""
+      # noProxy: "127.0.0.1,$($KUBERNETES_SERVICE_HOST),pushgateway"
     proxyCA: {}
       # secretNname: ""
       # configMapName: ""
@@ -416,6 +413,7 @@ grafana-agent:
     # -- Whether to install CRDs for monitoring.
     create: false
   agent:
+    enableReporting: false
     mode: 'flow'
     configMap:
       create: false
@@ -426,6 +424,11 @@ grafana-agent:
         - name: tls-secret-volume
           mountPath: /tls
           readOnly: true
+        # Note: must be used when using .Values.ProxyCA
+        # - name: proxy-ca-volume
+        #   mountPath: /etc/ssl/certs/proxy-ca.crt
+        #   readOnly: true
+        #   subPath: proxy-ca.crt
   controller:
     type: deployment
     volumes:
@@ -433,6 +436,13 @@ grafana-agent:
         - name: tls-secret-volume
           secret:
             secretName: runner-metrics-tls
+        # Note: must be configured when using .Values.ProxyCA
+        # - name: proxy-ca-volume
+        #   secret:
+        #     secretName: # Value from .Values.proxyCA.secretName
+        #     items:
+        #       - key: ca.crt # Value from .Values.proxyCA.key
+        #         path: proxy-ca.crt
   rbac:
     create: false
   serviceAccount:
