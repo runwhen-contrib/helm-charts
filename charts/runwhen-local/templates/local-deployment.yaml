@@ -42,14 +42,14 @@ spec:
             value: "{{ .Values.runwhenLocal.autoRun.uploadEnabled }}"
           - name: RW_LOCAL_UPLOAD_MERGE_MODE
             value: "{{ .Values.runwhenLocal.autoRun.uploadMergeMode }}"
-          {{ if .Values.runwhenLocal.debugLogs }}
+          {{- if .Values.runwhenLocal.debugLogs }}
           - name: DEBUG_LOGGING
             value: "true"
-          {{ end }}
-          {{ if .Values.runwhenLocal.discoveryKubeconfig.inClusterAuth.createKubeconfigSecret }}
+          {{- end }}
+          {{- if .Values.runwhenLocal.discoveryKubeconfig.inClusterAuth.createKubeconfigSecret }}
           - name: RW_CREATE_KUBECONFIG_SECRET
             value: "true"
-          {{ end }}
+          {{- end }}
           - name: KUBERNETES_CLUSTER_NAME
             value: {{ .Values.runwhenLocal.clusterName }}
           {{- if .Values.proxy.enabled }}
@@ -65,6 +65,17 @@ spec:
           - name: NO_PROXY
             value: {{ . }}
           {{- end }}
+          {{- if or .Values.proxyCA .Values.runwhenLocal.proxyCA }}
+          - name: SLI_CERT_FILE
+            value: "/etc/ssl/certs/ca-certificates.crt"
+          - name: REQUESTS_CA_BUNDLE
+            value: "/etc/ssl/certs/ca-certificates.crt"
+          - name: NODE_EXTRA_CA_CERTS
+            value: "/etc/ssl/certs/ca-certificates.crt"
+          {{- end }}
+          {{- end }}
+          {{- with .Values.runwhenLocal.extraEnv }}
+          {{- toYaml . | nindent 8 }}
           {{- end }}
           ports:
             - name: mkdocs
@@ -96,6 +107,13 @@ spec:
           {{- with .Values.runwhenLocal.volumeMounts }}
             {{- toYaml . | nindent 10 }}
           {{- end }}
+          {{- if or .Values.proxy.enabled .Values.runwhenLocal.proxy }}
+          {{- if or .Values.proxyCA .Values.runwhenLocal.proxyCA }}
+          - name: proxy-ca
+            mountPath: /etc/ssl/certs/ca-certificates.crt
+            subPath: ca-certificates.crt
+          {{- end }}
+          {{- end }}
           - name: shared-volume
             mountPath: "/shared"
           {{- if .Values.runwhenLocal.discoveryKubeconfig.secretProvided.enabled }}
@@ -112,8 +130,24 @@ spec:
             subPath: "uploadInfo.yaml"
           {{- end }}
       volumes:
-      {{ with .Values.runwhenLocal.volumes }}
+      {{- with .Values.runwhenLocal.volumes }}
       {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- if or .Values.proxy.enabled .Values.runwhenLocal.proxy }}
+      {{- with or .Values.proxyCA .Values.runwhenLocal.proxyCA }}
+      - name: proxy-ca
+        {{- if .secretName }}
+        secret:
+          secretName: {{ .secretName }}
+        {{- else if .configMapName }}
+        configMap:
+          name: {{.configMapName }}
+        {{- end }}
+          items:
+          - key: {{ .key | default "ca.crt" }}
+            path: ca-certificates.crt
+          defaultMode: 420
+      {{- end }}
       {{- end }}
       - name: shared-volume
         emptyDir: {}

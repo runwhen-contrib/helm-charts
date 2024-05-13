@@ -33,16 +33,20 @@ tolerations: []
 
 affinity: {}
 
-# Set proxy details for the runner & runwhenLocal deployments
+# Set proxy env for RunWhen Local and Runner Deployments and any supporting infrastructure such as the grafana-agent
 proxy:
   enabled: false
   # HTTP_PROXY environment variable
   httpProxy: ""
   # HTTPS_PROXY environment variable
   httpsProxy: ""
-  # NO_PROXY environment variable -- defaults to include localhost and the Kubernetes service host which should be in every k8s pod
-  noProxy: "127.0.0.1,$($KUBERNETES_SERVICE_HOST),pushgateway"
+  # NO_PROXY environment variable
+  noProxy: "127.0.0.1,localhost,$($KUBERNETES_SERVICE_HOST),pushgateway"
 
+# Set the proxy CA details, if the runner is being deployed be sure to set
+# the grafana-agent mounts and volumes to match the proxyCA configuration
+# -- Those are not set by default as the secretName or ConfigMapName and Key
+#    are not directly templatable from this chart.
 proxyCA: {}
   # secretNname: ""
   # configMapName: "" # not fully templated yet
@@ -333,7 +337,7 @@ runner:
     # Block the use of a specific secret being mounted to the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods
     # - "myvault@/dev/data/simple-test-secret"
 
-    # The configurations applied to the SLI (CronCodeRun) Deployments
+    #### The configurations applied to the SLI (CronCodeRun) Deployments ####
     deployment:
       annotations: {}
       podAnnotations: {}
@@ -356,7 +360,7 @@ runner:
           limits:
             cpu: "300m"
             memory: "196Mi"
-    # The configurations applired to the TaskSet (CodeRun) Pods
+    #### The configurations applied to the TaskSet (CodeRun) Pods ####
     pod:
       annotations: {}
       affinity: {}
@@ -367,22 +371,26 @@ runner:
         default:
           requests:
             cpu: "50m"
-            memory: "128Mi"
+            memory: "96Mi"
           limits:
             cpu: "500m"
             memory: "256Mi"
         EKS_Fargate:
           requests:
             cpu: "300m"
-            memory: "64Mi"
+            memory: "256Mi"
           limits:
             cpu: "300m"
             memory: "256Mi"
+    # The proxy configurations applied to the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods
+    # By default the global values for .Values.proxy and .Values.proxyCA are used.
     proxy: {}
       # enabled: false
       # httpProxy: ""
       # httpsProxy: ""
       # noProxy: "127.0.0.1,$($KUBERNETES_SERVICE_HOST),pushgateway"
+    # The proxy CA details, if the runner is being deployed be sure to set
+    # the grafana-agent mounts and volumes to match the proxyCA configuration
     proxyCA: {}
       # secretNname: ""
       # configMapName: ""
@@ -436,13 +444,14 @@ grafana-agent:
         - name: tls-secret-volume
           secret:
             secretName: runner-metrics-tls
-        # Note: must be configured when using .Values.ProxyCA
-        # - name: proxy-ca-volume
+        # Note: must be configured when using .Values.ProxyCA -- can also be transitioned to
+        # a configMap if needed -- just match the values from .Values.ProxyCA.ConfigMapName and .Values.ProxyCA.Key
+        # - name: proxy-ca-volume # DO NOT CHANGE
         #   secret:
         #     secretName: # Value from .Values.proxyCA.secretName
         #     items:
         #       - key: ca.crt # Value from .Values.proxyCA.key
-        #         path: proxy-ca.crt
+        #         path: proxy-ca.crt # DO NOT CHANGE
   rbac:
     create: false
   serviceAccount:
