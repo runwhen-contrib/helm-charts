@@ -45,8 +45,21 @@ data:
           enabled: {{ or .Values.runner.runEnvironment.proxy.enabled .Values.proxy.enabled }}
           httpProxy: "{{ or .Values.runner.runEnvironment.proxy.httpProxy .Values.proxy.httpProxy }}"
           httpsProxy: "{{ or .Values.runner.runEnvironment.proxy.httpsProxy .Values.proxy.httpProxy }}"
-          noProxy: "{{ or .Values.runner.runEnvironment.proxy.httpsProxy .Values.proxy.httpProxy }}"
-          proxyCA: "{{ or .Values.runner.runEnvironment.proxy.proxyCA .Values.proxy.httpProxy }}"
+          noProxy: "{{ or .Values.runner.runEnvironment.proxy.noProxy .Values.proxy.noProxy }}"
+          proxyCA: "{{ or .Values.runner.runEnvironment.proxy.proxyCA .Values.proxy.proxyCA }}"
+        {{- if or .Values.proxy.enabled .Values.runner.proxy }}
+        {{- with or .Values.proxyCA .Values.runner.proxyCA }}
+        proxyCA:
+          {{- if .secretName }}
+          secret:
+            name: {{ .secretName }}
+          {{- else if .configMapName }}
+          configMap:
+            name: {{.configMapName }}
+          {{- end }}
+            key: {{ .key }}
+        {{- end }}
+        {{- end }}
         deployment:
           {{- with .Values.runner.runEnvironment.deployment.annotations }}
           annotations:

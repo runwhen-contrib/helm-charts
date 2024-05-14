@@ -33,10 +33,14 @@ data:
             {{- end }}
             {{- end }}
             tls_config {
-            ca_file = "/tls/ca.crt"
-            cert_file = "/tls/tls.crt"
-            key_file =  "/tls/tls.key"
-            insecure_skip_verify    = true
+                {{- if .Values.proxyCA }}
+                ca_file = "/etc/ssl/certs/proxy-ca.crt"
+                {{- else }}
+                ca_file = "/tls/ca.crt"
+                {{- end }}
+                cert_file = "/tls/tls.crt"
+                key_file =  "/tls/tls.key"
+                insecure_skip_verify    = true
             }
         }
         external_labels = {
