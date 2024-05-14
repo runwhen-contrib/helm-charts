@@ -48,7 +48,7 @@ proxy:
 # -- Those are not set by default as the secretName or ConfigMapName and Key
 #    are not directly templatable from this chart.
 proxyCA: {}
-  # secretNname: ""
+  # secretName: ""
   # configMapName: "" # not fully templated yet
   # key: ""
 
@@ -392,7 +392,7 @@ runner:
     # The proxy CA details, if the runner is being deployed be sure to set
     # the grafana-agent mounts and volumes to match the proxyCA configuration
     proxyCA: {}
-      # secretNname: ""
+      # secretName: ""
       # configMapName: ""
       # key: ""
 

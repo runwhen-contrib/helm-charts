@@ -10,6 +10,8 @@ data:
     defaultLocation: {{ .Values.runwhenLocal.workspaceInfo.configMap.data.defaultLocation | default "none" }}
     workspaceOwnerEmail: {{ .Values.runwhenLocal.workspaceInfo.configMap.data.workspaceOwnerEmail | default "tester@mycompany.com" }}
     defaultLOD: {{ .Values.runwhenLocal.workspaceInfo.configMap.data.defaultLOD | default "detailed" }}
+    namespaces: 
+      {{- toYaml .Values.runwhenLocal.workspaceInfo.configMap.data.namespaces | nindent 6 }}
     codeCollections:
       {{- toYaml .Values.runwhenLocal.workspaceInfo.configMap.data.codeCollections | nindent 6 }}
     cloudConfig:
