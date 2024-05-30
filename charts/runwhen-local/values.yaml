@@ -437,6 +437,13 @@ grafana-agent:
         #   mountPath: /etc/ssl/certs/proxy-ca.crt
         #   readOnly: true
         #   subPath: proxy-ca.crt
+    resources:
+      requests:
+        cpu: "10m"
+        memory: "32Mi"
+      limits:
+        cpu: "50m"
+        memory: "64Mi"
   controller:
     type: deployment
     volumes:
