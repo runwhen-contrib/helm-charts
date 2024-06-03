@@ -33,6 +33,10 @@ tolerations: []
 
 affinity: {}
 
+# Override the container image registry used for all images
+# Note: grafana-agent is a subchart and must still be explicitly updated.
+registryOverride: ""
+
 # Set proxy env for RunWhen Local and Runner Deployments and any supporting infrastructure such as the grafana-agent
 proxy:
   enabled: false
@@ -63,7 +67,8 @@ platformType: "kubernetes"
 runwhenLocal:
   enabled: true
   image:
-    repository: ghcr.io/runwhen-contrib/runwhen-local
+    registry: ""
+    repository: ""
     pullPolicy: Always
     # Overrides the image tag whose default is the chart appVersion.
     tag: "latest"
@@ -250,7 +255,10 @@ runner:
     kind: RunnerConfig
     raw: {}
 
-  image: "us-docker.pkg.dev/runwhen-nonprod-shared/public-images/runner:latest"
+  image:
+    registry: ""
+    repository: ""
+    tag: "latest"
   controlAddr: "https://runner.beta.runwhen.com"
   metrics:
     url: "https://runner-cortex-tenant.beta.runwhen.com/push"
@@ -414,12 +422,23 @@ runner:
         cpu: "200m"
         memory: "256Mi"
 
+  ## Override the Prometheus Pushgateway settings
+  pushgateway:
+    image:
+      registry: ""
+      repository: ""
+      tag: ""
+
 # grafana-agent is only deployed if runner.enabled is true
 # https://github.com/grafana/agent/blob/main/operations/helm/charts/grafana-agent/values.yaml
 grafana-agent:
   crds:
     # -- Whether to install CRDs for monitoring.
     create: false
+  image:
+    registry: "docker.io"
+    repository: "grafana/agent"
+    tag: ""
   agent:
     enableReporting: false
     mode: 'flow'

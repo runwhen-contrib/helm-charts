@@ -31,7 +31,7 @@ spec:
         - name: {{ .Chart.Name }}
           securityContext:
             {{- toYaml .Values.runwhenLocal.securityContext | nindent 12 }}
-          image: "{{ .Values.runwhenLocal.image.repository }}:{{ .Values.runwhenLocal.image.tag | default .Chart.AppVersion }}"
+          image: "{{ (.Values.runwhenLocal.image.registry | default .Values.registryOverride)| default "ghcr.io" }}/{{ .Values.runwhenLocal.image.repository | default "runwhen-contrib/runwhen-local" }}:{{ .Values.runwhenLocal.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.runwhenLocal.image.pullPolicy }}
           env: 
           - name: AUTORUN_WORKSPACE_BUILDER_INTERVAL

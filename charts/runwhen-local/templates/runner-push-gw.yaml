@@ -26,7 +26,7 @@ spec:
     spec:
       containers:
       - name: pushgateway
-        image: prom/pushgateway
+        image: "{{ (.Values.runner.pushgateway.image.registry | default .Values.registryOverride)| default "docker.io" }}/{{ .Values.runner.pushgateway.image.repository | default "prom/pushgateway" }}:{{ .Values.runner.pushgateway.image.tag | default "latest"}}"
         command: ["/bin/pushgateway"]
         args: ["--log.level=debug"]
         ports:
