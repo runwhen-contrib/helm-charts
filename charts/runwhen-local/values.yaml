@@ -280,9 +280,9 @@ runner:
 
   ## The target environments configuration for deploying the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods
   runEnvironment:
-    image: 
+    image:
       pullSecret: ""
-      pullPolicy: "" 
+      pullPolicy: ""
       registry: ""
       repository: ""
     # volumes common for all the pods created by the runner
