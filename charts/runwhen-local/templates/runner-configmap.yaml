@@ -40,6 +40,10 @@ data:
       secretProviders:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      imagePullSecret: "{{ .Values.runner.runEnvironment.image.pullSecret }}"
+      imagePullPolicy: "{{ .Values.runner.runEnvironment.image.pullPolicy }}"
+      imageRegistry: "{{ (.Values.runner.runEnvironment.image.registry | default .Values.registryOverride) }}"
+      imageRepository: "{{ .Values.runner.runEnvironment.image.repository }}"
       kubernetes:
         proxy:
           enabled: {{ or .Values.runner.runEnvironment.proxy.enabled .Values.proxy.enabled }}
