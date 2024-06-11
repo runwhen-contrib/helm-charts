@@ -60,6 +60,10 @@ proxyCA: {}
 # Currently supports EKS_Fargate, kubernetes
 platformType: "kubernetes"
 
+# Platform Architecture can be: amd64 or arm64
+# when changing platforms, consider toleration updates to the Grafana-Agent subchart
+platformArch: "arm64"
+
 ###############################################################################
 ######################## RunWhen Local Configuration ##########################
 ###############################################################################
@@ -78,6 +82,9 @@ runwhenLocal:
 
   # Extra volume mounts for the  runwhen-local container
   volumeMounts: {}
+
+  # Additional tolerations for runwhen-local container
+  tolerations: []
 
   serviceAccount:
     # Specifies whether a service account should be created
@@ -219,7 +226,11 @@ runwhenLocal:
               kube-system: 0
               kube-public: 0
               kube-node-lease: 0
-        codeCollections: []
+        codeCollections:
+        - repoURL: https://github.com/stewartshea/rw-cli-codecollection.git
+          ref: main
+        - repoURL: https://github.com/stewartshea/rw-public-codecollection.git
+          ref: main
         custom:
           # Note: Most of these are simple keys, such as the name of a secret that
           # should be referenced from the platform. The secret itself (key and value)
@@ -277,6 +288,9 @@ runner:
 
   # Extra volume mounts for the runner container
   volumeMounts: {}
+
+  # Additional tolerations for the runner container
+  tolerations: []
 
   ## The target environments configuration for deploying the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods
   runEnvironment:
@@ -433,6 +447,7 @@ runner:
       registry: ""
       repository: ""
       tag: ""
+    tolerations: []
 
 # grafana-agent is only deployed if runner.enabled is true
 # https://github.com/grafana/agent/blob/main/operations/helm/charts/grafana-agent/values.yaml
@@ -470,6 +485,12 @@ grafana-agent:
         memory: "64Mi"
   controller:
     type: deployment
+    tolerations:
+    # Uncomment the following for arm64 nodes
+    - key: "kubernetes.io/arch"
+      operator: "Equal"
+      value: "arm64"
+      effect: "NoSchedule"
     volumes:
       extra:
         - name: tls-secret-volume

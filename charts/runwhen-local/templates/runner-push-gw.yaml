@@ -47,9 +47,20 @@ spec:
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.tolerations }}
+      {{- if or (eq .Values.platformArch "arm64") (not (empty .Values.tolerations)) (not (empty .Values.runner.pushgateway.tolerations)) }}
       tolerations:
+        {{- if eq .Values.platformArch "arm64" }}
+        - key: "kubernetes.io/arch"
+          operator: "Equal"
+          value: "arm64"
+          effect: "NoSchedule"
+        {{- end }}
+        {{- with .Values.tolerations }}
         {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.runner.pushgateway.tolerations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
       {{- end }}
 ---
 apiVersion: v1
