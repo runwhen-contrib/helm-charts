@@ -226,11 +226,7 @@ runwhenLocal:
               kube-system: 0
               kube-public: 0
               kube-node-lease: 0
-        codeCollections:
-        - repoURL: https://github.com/stewartshea/rw-cli-codecollection.git
-          ref: main
-        - repoURL: https://github.com/stewartshea/rw-public-codecollection.git
-          ref: main
+        codeCollections: []
         custom:
           # Note: Most of these are simple keys, such as the name of a secret that
           # should be referenced from the platform. The secret itself (key and value)
