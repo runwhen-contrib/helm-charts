@@ -479,6 +479,8 @@ grafana-agent:
       limits:
         cpu: "50m"
         memory: "64Mi"
+  configReloader:
+    enabled: false
   controller:
     type: deployment
     tolerations:

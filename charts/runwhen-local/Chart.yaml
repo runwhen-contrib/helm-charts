@@ -2,7 +2,7 @@ apiVersion: v2
 name: runwhen-local
 description: A Helm chart RunWhen Local - A community powered troubleshooting cheat sheet
 type: application
-version: 0.1.19
+version: 0.1.20
 appVersion: "0.5.19"
 icon: https://storage.googleapis.com/runwhen-nonprod-shared-images/icons/runwhen_icon.png
 dependencies:
