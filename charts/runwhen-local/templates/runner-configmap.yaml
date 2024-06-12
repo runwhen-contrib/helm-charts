@@ -1,3 +1,4 @@
+{{- if .Values.runner.enabled -}}
 {{- if and .Values.runner.configMap .Values.runner.configMap.create -}}
 {{- $_ := .Values.runner.configMap.apiVersion | required ".Values.runner.configMap.apiVersion must be set !" -}}
 {{- $_ := .Values.runner.configMap.kind | required ".Values.runner.configMap.kind must be set !" -}}
@@ -40,6 +41,10 @@ data:
       secretProviders:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      imagePullSecret: "{{ .Values.runner.runEnvironment.image.pullSecret }}"
+      imagePullPolicy: "{{ .Values.runner.runEnvironment.image.pullPolicy }}"
+      imageRegistry: "{{ (.Values.runner.runEnvironment.image.registry | default .Values.registryOverride) }}"
+      imageRepository: "{{ .Values.runner.runEnvironment.image.repository }}"
       kubernetes:
         proxy:
           enabled: {{ or .Values.runner.runEnvironment.proxy.enabled .Values.proxy.enabled }}
@@ -98,9 +103,20 @@ data:
           podSecurityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with .Values.runner.runEnvironment.deployment.tolerations }}
+          {{- if or (eq .Values.platformArch "arm64") (not (empty .Values.tolerations)) (not (empty .Values.runner.runEnvironment.deployment.tolerations)) }}
           tolerations:
-            {{- toYaml . | nindent 12 }}
+          {{- if eq .Values.platformArch "arm64" }}
+          - key: "kubernetes.io/arch"
+            operator: "Equal"
+            value: "arm64"
+            effect: "NoSchedule"
+          {{- end }}
+          {{- with .Values.tolerations }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.deployment.tolerations }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
           {{- end }}
           {{- with .Values.runner.runEnvironment.volumes }}
           volumes:
@@ -144,9 +160,20 @@ data:
           podSecurityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with .Values.runner.runEnvironment.pod.tolerations }}
+          {{- if or (eq .Values.platformArch "arm64") (not (empty .Values.tolerations)) (not (empty .Values.runner.runEnvironment.pod.tolerations)) }}
           tolerations:
-            {{- toYaml . | nindent 12 }}
+          {{- if eq .Values.platformArch "arm64" }}
+          - key: "kubernetes.io/arch"
+            operator: "Equal"
+            value: "arm64"
+            effect: "NoSchedule"
+          {{- end }}
+          {{- with .Values.tolerations }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.pod.tolerations }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
           {{- end }}
           {{- with .Values.runner.runEnvironment.volumes }}
           volumes:
@@ -157,4 +184,5 @@ data:
             {{- toYaml . | nindent 12 }}
           {{- end }}
     {{- end }}
+{{- end -}}
 {{- end -}}
