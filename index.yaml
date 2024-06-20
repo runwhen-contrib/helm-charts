@@ -3,6 +3,27 @@ entries:
   runwhen-local:
   - apiVersion: v2
     appVersion: 0.5.19
+    created: "2024-06-20T13:17:04.02417808Z"
+    dependencies:
+    - condition: runner.enabled
+      name: grafana-agent
+      repository: https://grafana.github.io/helm-charts
+      version: 0.36.0
+    description: A Helm chart RunWhen Local - A community powered troubleshooting
+      cheat sheet
+    digest: beaa3515afc1555eeb4bc5d343df119d87b48d931473496880e2bbf453fa6b21
+    icon: https://storage.googleapis.com/runwhen-nonprod-shared-images/icons/runwhen_icon.png
+    maintainers:
+    - email: shea.stewart@runwhen.com
+      name: stewartshea
+      url: www.runwhen.com
+    name: runwhen-local
+    type: application
+    urls:
+    - https://github.com/runwhen-contrib/helm-charts/releases/download/runwhen-local-0.1.21/runwhen-local-0.1.21.tgz
+    version: 0.1.21
+  - apiVersion: v2
+    appVersion: 0.5.19
     created: "2024-06-12T19:14:14.025230195Z"
     dependencies:
     - condition: runner.enabled
@@ -608,4 +629,4 @@ entries:
     urls:
     - https://github.com/runwhen-contrib/helm-charts/releases/download/runwhen-local-0.0.12/runwhen-local-0.0.12.tgz
     version: 0.0.12
-generated: "2024-06-12T19:14:14.025559802Z"
+generated: "2024-06-20T13:17:04.024414814Z"
