@@ -62,7 +62,7 @@ platformType: "kubernetes"
 
 # Platform Architecture can be: amd64 or arm64
 # when changing platforms, consider toleration updates to the Grafana-Agent subchart
-platformArch: "arm64"
+platformArch: "amd64"
 
 ###############################################################################
 ######################## RunWhen Local Configuration ##########################
@@ -483,12 +483,12 @@ grafana-agent:
     enabled: false
   controller:
     type: deployment
-    tolerations:
+    tolerations: []
     # Uncomment the following for arm64 nodes
-    - key: "kubernetes.io/arch"
-      operator: "Equal"
-      value: "arm64"
-      effect: "NoSchedule"
+    # - key: "kubernetes.io/arch"
+    #   operator: "Equal"
+    #   value: "arm64"
+    #   effect: "NoSchedule"
     volumes:
       extra:
         - name: tls-secret-volume
