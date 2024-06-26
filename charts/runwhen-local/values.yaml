@@ -385,6 +385,7 @@ runner:
             memory: "196Mi"
     #### The configurations applied to the TaskSet (CodeRun) Pods ####
     pod:
+      runAsJob: false
       annotations: {}
       affinity: {}
       nodeName: ""
@@ -454,7 +455,7 @@ grafana-agent:
   image:
     registry: "docker.io"
     repository: "grafana/agent"
-    tag: ""
+    tag: "v0.41.1"
   agent:
     enableReporting: false
     mode: 'flow'
