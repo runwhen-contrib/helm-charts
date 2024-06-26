@@ -454,7 +454,7 @@ grafana-agent:
   image:
     registry: "docker.io"
     repository: "grafana/agent"
-    tag: ""
+    tag: "v0.41.1"
   agent:
     enableReporting: false
     mode: 'flow'

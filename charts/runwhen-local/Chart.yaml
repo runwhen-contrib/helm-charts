@@ -7,7 +7,7 @@ appVersion: "0.5.19"
 icon: https://storage.googleapis.com/runwhen-nonprod-shared-images/icons/runwhen_icon.png
 dependencies:
   - name: grafana-agent
-    version: "0.36.0"
+    version: "0.41.0"
     repository: "https://grafana.github.io/helm-charts"
     condition: runner.enabled
 maintainers:
