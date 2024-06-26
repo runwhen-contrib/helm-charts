@@ -127,6 +127,7 @@ data:
             {{- toYaml . | nindent 12 }}
           {{- end }}
         pod:
+          runAsJob: {{ .Values.runner.runEnvironment.pod.runAsJob  }}
           {{- with .Values.runner.runEnvironment.pod.annotations }}
           annotations:
             {{- toYaml . | nindent 12 }}

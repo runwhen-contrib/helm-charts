@@ -385,6 +385,7 @@ runner:
             memory: "196Mi"
     #### The configurations applied to the TaskSet (CodeRun) Pods ####
     pod:
+      runAsJob: false
       annotations: {}
       affinity: {}
       nodeName: ""
