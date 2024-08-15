@@ -15,7 +15,22 @@ data:
     codeCollections:
       {{- toYaml .Values.runwhenLocal.workspaceInfo.configMap.data.codeCollections | nindent 6 }}
     cloudConfig:
-      {{- toYaml .Values.runwhenLocal.workspaceInfo.configMap.data.cloudConfig | nindent 6 }}
+      {{- if .Values.runwhenLocal.workspaceInfo.configMap.data.cloudConfig.kubernetes }}
+      kubernetes:
+        {{- toYaml .Values.runwhenLocal.workspaceInfo.configMap.data.cloudConfig.kubernetes | nindent 8 }}
+      {{- end }}
+      {{- if .Values.runwhenLocal.workspaceInfo.configMap.data.cloudConfig.azure }}
+      azure:
+        {{- toYaml .Values.runwhenLocal.workspaceInfo.configMap.data.cloudConfig.azure | nindent 8 }}
+      {{- end }}
+      {{- if .Values.runwhenLocal.workspaceInfo.configMap.data.cloudConfig.gcp }}
+      gcp:
+        {{- toYaml .Values.runwhenLocal.workspaceInfo.configMap.data.cloudConfig.gcp | nindent 8 }}
+      {{- end }}
+      {{- if .Values.runwhenLocal.workspaceInfo.configMap.data.cloudConfig.aws }}
+      aws:
+        {{- toYaml .Values.runwhenLocal.workspaceInfo.configMap.data.cloudConfig.aws | nindent 8 }}
+      {{- end }}
     custom:
       {{- toYaml .Values.runwhenLocal.workspaceInfo.configMap.data.custom | nindent 6 }}
 {{ end }}
