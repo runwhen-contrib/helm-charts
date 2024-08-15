@@ -7,31 +7,6 @@ metadata:
 data:
   workspaceInfo.yaml: | 
     workspaceName: {{ .Values.workspaceName }}
-    defaultLocation: {{ .Values.runwhenLocal.workspaceInfo.configMap.data.defaultLocation | default "none" }}
-    workspaceOwnerEmail: {{ .Values.runwhenLocal.workspaceInfo.configMap.data.workspaceOwnerEmail | default "tester@mycompany.com" }}
-    defaultLOD: {{ .Values.runwhenLocal.workspaceInfo.configMap.data.defaultLOD | default "detailed" }}
-    namespaces: 
-      {{- toYaml .Values.runwhenLocal.workspaceInfo.configMap.data.namespaces | nindent 6 }}
-    codeCollections:
-      {{- toYaml .Values.runwhenLocal.workspaceInfo.configMap.data.codeCollections | nindent 6 }}
-    cloudConfig:
-      {{- if .Values.runwhenLocal.workspaceInfo.configMap.data.cloudConfig.kubernetes }}
-      kubernetes:
-        {{- toYaml .Values.runwhenLocal.workspaceInfo.configMap.data.cloudConfig.kubernetes | nindent 8 }}
-      {{- end }}
-      {{- if .Values.runwhenLocal.workspaceInfo.configMap.data.cloudConfig.azure }}
-      azure:
-        {{- toYaml .Values.runwhenLocal.workspaceInfo.configMap.data.cloudConfig.azure | nindent 8 }}
-      {{- end }}
-      {{- if .Values.runwhenLocal.workspaceInfo.configMap.data.cloudConfig.gcp }}
-      gcp:
-        {{- toYaml .Values.runwhenLocal.workspaceInfo.configMap.data.cloudConfig.gcp | nindent 8 }}
-      {{- end }}
-      {{- if .Values.runwhenLocal.workspaceInfo.configMap.data.cloudConfig.aws }}
-      aws:
-        {{- toYaml .Values.runwhenLocal.workspaceInfo.configMap.data.cloudConfig.aws | nindent 8 }}
-      {{- end }}
-    custom:
-      {{- toYaml .Values.runwhenLocal.workspaceInfo.configMap.data.custom | nindent 6 }}
+    {{- .Values.runwhenLocal.workspaceInfo.configMap.data | toYaml | nindent 4 }}
 {{ end }}
 {{ end }}
