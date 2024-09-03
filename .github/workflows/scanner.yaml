@@ -37,6 +37,7 @@ jobs:
           # Build dependencies and render the Helm chart to YAML
           helm dependency build
           helm template . > ../../rendered_chart.yaml
+          cat ../../rendered_chart.yaml
           echo "Rendered Helm chart to YAML in ../../rendered_chart.yaml."
 
 
