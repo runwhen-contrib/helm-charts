@@ -8,6 +8,7 @@ on:
         required: true
         default: |
           - us-docker.pkg.dev/runwhen-nonprod-shared/public-images/robot-runtime-base-image:latest
+          - ghcr.io/runwhen-contrib/runwhen-local:latest
 
 jobs:
   trivy-scan:
