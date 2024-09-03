@@ -76,14 +76,6 @@ jobs:
           wget https://github.com/aquasecurity/trivy/releases/download/${TRIVY_VERSION}/trivy_${STRIPPED_VERSION}_Linux-64bit.deb
           sudo dpkg -i trivy_${STRIPPED_VERSION}_Linux-64bit.deb
 
-      # - name: Parse registry list
-      #   id: parse-registries
-      #   run: |
-      #     echo "${{ github.event.inputs.registries }}" | sed 's/- /\n/g' | sed 's/^ *//;s/ *$//' > registries.txt
-      #     echo "Parsed registries:"
-      #     cat registries.txt
-      #     echo "Total registries found: $(wc -l < registries.txt)"
-
       - name: Verify registry entries and file reading
         run: |
           echo "Reading registries from registries.txt:"
@@ -107,7 +99,6 @@ jobs:
             # Run Trivy scan and log output
             trivy image --severity CRITICAL --ignore-unfixed --scanners vuln --format json "$registry" > trivy_result.json
             echo "Trivy scan result for '$registry':"
-            cat trivy_result.json
 
             # Check if Trivy output was generated and contains vulnerabilities
             if [[ ! -s trivy_result.json ]]; then
@@ -126,12 +117,7 @@ jobs:
 
             # Log the aggregated results so far
             echo "Aggregated results after processing '$registry':"
-            cat aggregated_results.json
           done < registries.txt
-      - name: Inspect aggregated results
-        run: |
-          echo "Inspecting aggregated results for debugging:"
-          jq . aggregated_results.json
 
       - name: Calculate aggregated metric
         id: calculate-metrics
