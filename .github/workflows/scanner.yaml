@@ -46,7 +46,7 @@ jobs:
             fi
 
             # Run Trivy scan and log output
-            trivy image --severity CRITICAL --ignore-unfixed --format json "$registry" > trivy_result.json
+            trivy image --severity CRITICAL --ignore-unfixed --scanners vuln --format json "$registry" > trivy_result.json
             echo "Trivy scan result for '$registry':"
             cat trivy_result.json
 
@@ -70,6 +70,11 @@ jobs:
             echo "Aggregated results after processing '$registry':"
             cat aggregated_results.json
           done < registries.txt
+
+      - name: Inspect aggregated results
+        run: |
+          echo "Inspecting aggregated results for debugging:"
+          jq . aggregated_results.json
 
       - name: Calculate aggregated metric
         id: calculate-metrics
