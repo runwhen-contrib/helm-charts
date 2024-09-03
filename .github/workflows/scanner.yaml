@@ -105,7 +105,9 @@ jobs:
         id: generate-summary
         run: |
           # Create a summary report
-          jq 'reduce .Vulnerabilities[] as $v ({}; .[$v.Registry] += [{"ID": $v.VulnerabilityID, "InstalledVersion": $v.InstalledVersion, "FixedVersion": $v.FixedVersion, "Severity": $v.Severity}] | .) as $byRegistry | { "total_critical": (.Vulnerabilities | map(select(.Severity == "CRITICAL")) | length), "breakdown": $byRegistry }' aggregated_results.json > summary_report.json
+          jq 'def add_by_registry: reduce .[] as $v ({}; .[$v.Registry] += [{"ID": $v.VulnerabilityID, "InstalledVersion": $v.InstalledVersion, "FixedVersion": $v.FixedVersion, "Severity": $v.Severity}]); 
+              { "total_critical": (.Vulnerabilities | map(select(.Severity == "CRITICAL")) | length), 
+                "breakdown": (.Vulnerabilities | add_by_registry) }' aggregated_results.json > summary_report.json
           
           echo "Summary report generated."
           cat summary_report.json
