@@ -34,9 +34,11 @@ jobs:
           # Update the Helm repo index
           helm repo update
           
+          # Build dependencies and render the Helm chart to YAML
           helm dependency build
-          helm template . > rendered_chart.yaml
-          echo "Rendered Helm chart to YAML."
+          helm template . > ../../rendered_chart.yaml
+          echo "Rendered Helm chart to YAML in ../../rendered_chart.yaml."
+
 
       - name: Verify Rendered YAML File
         run: |
