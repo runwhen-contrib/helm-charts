@@ -24,8 +24,9 @@ jobs:
       - name: Render Helm Chart to YAML
         id: render-helm
         run: |
+          cd charts
           helm dependency build
-          helm template ./charts/runwhen-local > rendered_chart.yaml
+          helm template ./runwhen-local > rendered_chart.yaml
           echo "Rendered Helm chart to YAML."
 
       - name: Extract Images from Rendered YAML
