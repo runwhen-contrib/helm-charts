@@ -25,6 +25,15 @@ jobs:
         id: render-helm
         run: |
           cd charts/runwhen-local
+          # Parse the Chart.yaml file to extract repositories
+          yq eval '.dependencies[] | .repository' Chart.yaml | while read -r repo; do
+            name=$(echo $repo | sed 's|https://||' | sed 's|http://||' | awk -F'/' '{print $1}')
+            echo "Adding Helm repository $name with URL $repo"
+            helm repo add $name $repo || true
+          done
+          # Update the Helm repo index
+          helm repo update
+          
           helm dependency build
           helm template . > rendered_chart.yaml
           echo "Rendered Helm chart to YAML."
