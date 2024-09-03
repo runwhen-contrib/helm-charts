@@ -122,9 +122,3 @@ jobs:
                   (["Registry", "Vulnerability ID", "Installed Version", "Fixed Version", "Severity"] | (., map(length*"-"))),
                   (.[] | [.Registry, .VulnerabilityID, .InstalledVersion, .FixedVersion, .Severity]) |
                   @tsv' aggregated_results.json | column -t -s $'\t'
-
-      - name: Upload summary report
-        uses: actions/upload-artifact@v3
-        with:
-          name: trivy_summary_report
-          path: summary_report.json
