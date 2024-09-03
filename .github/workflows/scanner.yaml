@@ -22,7 +22,7 @@ jobs:
           STRIPPED_VERSION=${TRIVY_VERSION#v}
           wget https://github.com/aquasecurity/trivy/releases/download/${TRIVY_VERSION}/trivy_${STRIPPED_VERSION}_Linux-64bit.deb
           sudo dpkg -i trivy_${STRIPPED_VERSION}_Linux-64bit.deb
-          
+
       - name: Parse registry list
         id: parse-registries
         run: |
@@ -39,14 +39,15 @@ jobs:
         run: |
           while IFS= read -r registry || [[ -n "$registry" ]]; do
             echo "Scanning $registry..."
-            trivy image --severity CRITICAL --ignore-unfixed --scanners vuln --format json "$registry" > trivy_result.json
-            cat trivy_result.json
-            jq '.Results[].Vulnerabilities' trivy_result.json | jq -c '.[]' | \
+            trivy image --severity CRITICAL --ignore-unfixed --format json "$registry" > trivy_result.json
+
+            # Add registry details to each vulnerability
+            jq --arg registry "$registry" '.Results[].Vulnerabilities[] |= . + {"Registry": $registry}' trivy_result.json | \
             jq -s '{"Vulnerabilities": .}' > vulnerabilities.json
+
+            # Merge the current results with the aggregated results
             jq -s '.[0].Vulnerabilities + .[1].Vulnerabilities | {Vulnerabilities: .}' aggregated_results.json vulnerabilities.json > temp.json && mv temp.json aggregated_results.json
           done < registries.txt
-          ls 
-          cat trivy_result.json
 
       - name: Calculate aggregated metric
         id: calculate-metrics
