@@ -31,7 +31,8 @@ jobs:
           cat registries.txt
       
       - name: Initialize aggregated results
-        run: echo '{"Vulnerabilities": []}' > aggregated_results.json
+        run: |
+          echo '{"Vulnerabilities": []}' > aggregated_results.json
 
       - name: Scan each registry and aggregate results
         id: trivy-scan
