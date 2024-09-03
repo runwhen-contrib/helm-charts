@@ -27,7 +27,7 @@ jobs:
       - name: Parse registry list
         id: parse-registries
         run: |
-          echo "${{ github.event.inputs.registries }}" | sed 's/- //g' > registries.txt
+          echo "${{ github.event.inputs.registries }}" | tr -d '\r' | sed -e 's/^- //' -e 's/^ *//' -e 's/ *$//' -e '/^$/d' > registries.txt
           echo "Parsed registries:"
           cat registries.txt
       
