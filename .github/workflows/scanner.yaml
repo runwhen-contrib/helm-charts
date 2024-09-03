@@ -101,23 +101,26 @@ jobs:
         run: |
           echo "Total Critical vulnerabilities: ${{ env.critical_count }}"
 
-      - name: Generate summary report
+      - name: Generate summary report in table format
         id: generate-summary
         run: |
-          # Create a summary report
-          jq 'def add_by_registry: reduce .[] as $v ({}; .[$v.Registry] += [{"ID": $v.VulnerabilityID, "InstalledVersion": $v.InstalledVersion, "FixedVersion": $v.FixedVersion, "Severity": $v.Severity}]); 
-              { "total_critical": (.Vulnerabilities | map(select(.Severity == "CRITICAL")) | length), 
-                "breakdown": (.Vulnerabilities | add_by_registry) }' aggregated_results.json > summary_report.json
-          
-          echo "Summary report generated."
-          cat summary_report.json
+          # Generate a summary report in table format
+          jq -r 'def group_vulns:
+                    reduce .[] as $v ({}; .[$v.VulnerabilityID + "@" + $v.InstalledVersion + "@" + $v.FixedVersion] = {
+                        "Registry": $v.Registry, 
+                        "VulnerabilityID": $v.VulnerabilityID, 
+                        "InstalledVersion": $v.InstalledVersion, 
+                        "FixedVersion": $v.FixedVersion, 
+                        "Severity": $v.Severity
+                    });
+                  group_vulns | 
+                  to_entries | map(.value) |
+                  unique_by(.VulnerabilityID, .InstalledVersion, .FixedVersion) |
+                  sort_by(.Registry) |
+                  (["Registry", "Vulnerability ID", "Installed Version", "Fixed Version", "Severity"] | (., map(length*"-"))),
+                  (.[] | [.Registry, .VulnerabilityID, .InstalledVersion, .FixedVersion, .Severity]) |
+                  @tsv' aggregated_results.json | column -t -s $'\t'
 
-      - name: Print summary in table format
-        run: |
-          echo "Generating table format for summary report..."
-          echo -e "Registry\tVulnerability ID\tInstalled Version\tFixed Version\tSeverity"
-          echo "---------------------------------------------------------------------------------"
-          jq -r '.breakdown | to_entries[] | "\(.key)\t\(.value[] | .ID)\t\(.value[] | .InstalledVersion)\t\(.value[] | .FixedVersion)\t\(.value[] | .Severity)"' summary_report.json | column -t -s $'\t'
 
       - name: Upload summary report
         uses: actions/upload-artifact@v3
