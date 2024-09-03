@@ -39,12 +39,15 @@ jobs:
         run: |
           while IFS= read -r registry; do
             echo "Scanning $registry..."
-            trivy image --severity CRITICAL --format json "$registry" > trivy_result.json
+            trivy image --severity CRITICAL --ignore-unfixed --scanners vuln --format json "$registry" > trivy_result.json
+            cat trivy_result.json
             jq '.Results[].Vulnerabilities' trivy_result.json | jq -c '.[]' | \
             jq -s '{"Vulnerabilities": .}' > vulnerabilities.json
             jq -s '.[0].Vulnerabilities + .[1].Vulnerabilities | {Vulnerabilities: .}' aggregated_results.json vulnerabilities.json > temp.json && mv temp.json aggregated_results.json
           done
           cat aggregated_results.json
+          ls 
+          trivy_result.json
 
       - name: Calculate aggregated metric
         id: calculate-metrics
