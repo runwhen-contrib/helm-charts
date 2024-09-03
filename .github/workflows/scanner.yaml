@@ -106,21 +106,22 @@ jobs:
         run: |
           # Generate a summary report in table format
           jq -r 'def group_vulns:
-                    reduce .[] as $v ({}; .[$v.VulnerabilityID + "@" + $v.InstalledVersion + "@" + $v.FixedVersion] = {
-                        "Registry": $v.Registry, 
-                        "VulnerabilityID": $v.VulnerabilityID, 
-                        "InstalledVersion": $v.InstalledVersion, 
-                        "FixedVersion": $v.FixedVersion, 
-                        "Severity": $v.Severity
-                    });
+                    reduce .Vulnerabilities[] as $v ({}; 
+                      .[$v.VulnerabilityID + "@" + $v.InstalledVersion + "@" + $v.FixedVersion] += [{
+                          "Registry": $v.Registry, 
+                          "VulnerabilityID": $v.VulnerabilityID, 
+                          "InstalledVersion": $v.InstalledVersion, 
+                          "FixedVersion": $v.FixedVersion, 
+                          "Severity": $v.Severity
+                      }]
+                    );
                   group_vulns | 
-                  to_entries | map(.value) |
+                  to_entries | map(.value) | flatten |
                   unique_by(.VulnerabilityID, .InstalledVersion, .FixedVersion) |
                   sort_by(.Registry) |
                   (["Registry", "Vulnerability ID", "Installed Version", "Fixed Version", "Severity"] | (., map(length*"-"))),
                   (.[] | [.Registry, .VulnerabilityID, .InstalledVersion, .FixedVersion, .Severity]) |
                   @tsv' aggregated_results.json | column -t -s $'\t'
-
 
       - name: Upload summary report
         uses: actions/upload-artifact@v3
