@@ -5,10 +5,9 @@ on:
     inputs:
       registries:
         description: "List of image registries to scan"
-        required: true
+        required: false
         default: |
           - us-docker.pkg.dev/runwhen-nonprod-shared/public-images/robot-runtime-base-image:latest
-          - ghcr.io/runwhen-contrib/runwhen-local:latest
 
 jobs:
   trivy-scan:
@@ -37,7 +36,6 @@ jobs:
           # Build dependencies and render the Helm chart to YAML
           helm dependency build
           helm template . --set runner.enabled=true > ../../rendered_chart.yaml
-          cat ../../rendered_chart.yaml
           echo "Rendered Helm chart to YAML in ../../rendered_chart.yaml."
 
 
@@ -59,6 +57,17 @@ jobs:
           echo "Images extracted from Helm chart:"
           cat registries.txt
           echo "Total images found: $(wc -l < registries.txt)"
+
+      - name: Add Workflow Input Registries
+        id: add-input-registries
+        run: |
+          # Add additional registries specified in workflow inputs
+          echo "${{ github.event.inputs.registries }}" | sed 's/- /\n/g' | sed 's/^ *//;s/ *$//' >> registries.txt
+          sort -u registries.txt -o registries.txt
+          echo "Combined list of registries:"
+          cat registries.txt
+          echo "Total registries found: $(wc -l < registries.txt)"
+
 
       - name: Install latest Trivy
         run: |
