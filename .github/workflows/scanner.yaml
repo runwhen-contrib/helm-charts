@@ -100,12 +100,11 @@ jobs:
       - name: Display total critical vulnerabilities
         run: |
           echo "Total Critical vulnerabilities: ${{ env.critical_count }}"
-
       - name: Generate summary report
         id: generate-summary
         run: |
           # Create a summary report
-          jq 'reduce .Vulnerabilities[] as $v ({}; .[$v.Registry] += [{"ID": $v.VulnerabilityID, "InstalledVersion": $v.InstalledVersion, "FixedVersion": $v.FixedVersion, "Severity": $v.Severity}] | .[$v.Registry] | map(select(.Severity == "CRITICAL"))) as $tmp | { "total_critical": (reduce ($tmp | flatten)[] as $v (0; . + 1)), "breakdown": $tmp }' aggregated_results.json > summary_report.json
+          jq 'reduce .Vulnerabilities[] as $v ({}; .[$v.Registry] += [{"ID": $v.VulnerabilityID, "InstalledVersion": $v.InstalledVersion, "FixedVersion": $v.FixedVersion, "Severity": $v.Severity}]) | { "total_critical": (map(select(.Severity == "CRITICAL")) | length), "breakdown": . }' aggregated_results.json > summary_report.json
           
           echo "Summary report generated."
           cat summary_report.json
