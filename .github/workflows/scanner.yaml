@@ -36,7 +36,7 @@ jobs:
           
           # Build dependencies and render the Helm chart to YAML
           helm dependency build
-          helm template . --set runner-enabled=true > ../../rendered_chart.yaml
+          helm template . --set runner.enabled=true > ../../rendered_chart.yaml
           cat ../../rendered_chart.yaml
           echo "Rendered Helm chart to YAML in ../../rendered_chart.yaml."
 
@@ -80,14 +80,13 @@ jobs:
           while IFS= read -r registry || [[ -n "$registry" ]]; do
             echo "Registry: '$registry'"
           done < registries.txt
-      
-      - name: Initialize aggregated results
-        run: |
-          echo '{"Vulnerabilities": []}' > aggregated_results.json
-
+    
       - name: Scan each registry and aggregate results
         id: trivy-scan
         run: |
+          # Initialize an empty JSON array for aggregated results
+          echo '{"Vulnerabilities": []}' > aggregated_results.json
+
           while IFS= read -r registry || [[ -n "$registry" ]]; do
             echo "Scanning registry: '$registry'..."
             if [[ -z "$registry" ]]; then
@@ -107,7 +106,7 @@ jobs:
             fi
 
             # Safely handle null values in the Trivy output and log intermediate JSON
-            jq --arg registry "$registry" '.Results[].Vulnerabilities? // [] | .[] |= . + {"Registry": $registry}' trivy_result.json > vulnerabilities.json
+            jq --arg registry "$registry" '.Results[]?.Vulnerabilities? // [] | .[] |= . + {"Registry": $registry}' trivy_result.json > vulnerabilities.json
             echo "Processed vulnerabilities for '$registry':"
             cat vulnerabilities.json
 
@@ -119,7 +118,6 @@ jobs:
             echo "Aggregated results after processing '$registry':"
             cat aggregated_results.json
           done < registries.txt
-
       - name: Inspect aggregated results
         run: |
           echo "Inspecting aggregated results for debugging:"
