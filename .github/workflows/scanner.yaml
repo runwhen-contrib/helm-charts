@@ -30,10 +30,17 @@ jobs:
           echo "${{ github.event.inputs.registries }}" | sed 's/- /\n/g' | sed 's/^ *//;s/ *$//' > registries.txt
           echo "Parsed registries:"
           cat registries.txt
+          echo "Total registries found: $(wc -l < registries.txt)"
+
+      - name: Debug: Verify registry entries and file reading
+        run: |
+          echo "Reading registries from registries.txt:"
+          while IFS= read -r registry || [[ -n "$registry" ]]; do
+            echo "Registry: '$registry'"
+          done < registries.txt
       
       - name: Initialize aggregated results
-        run: |
-          echo '{"Vulnerabilities": []}' > aggregated_results.json
+        run: echo '{"Vulnerabilities": []}' > aggregated_results.json
 
       - name: Scan each registry and aggregate results
         id: trivy-scan
@@ -46,7 +53,7 @@ jobs:
             fi
 
             # Run Trivy scan and log output
-            trivy image --severity CRITICAL --ignore-unfixed --format json "$registry" > trivy_result.json
+            trivy image --severity CRITICAL --ignore-unfixed --scanners vuln --format json "$registry" > trivy_result.json
             echo "Trivy scan result for '$registry':"
             cat trivy_result.json
 
@@ -57,13 +64,12 @@ jobs:
             fi
 
             # Safely handle null values in the Trivy output and log intermediate JSON
-            jq --arg registry "$registry" '.Results[].Vulnerabilities? // [] | .[] |= . + {"Registry": $registry}' trivy_result.json | \
-            jq -s '.[]' > vulnerabilities.json
+            jq --arg registry "$registry" '.Results[].Vulnerabilities? // [] | .[] |= . + {"Registry": $registry}' trivy_result.json > vulnerabilities.json
             echo "Processed vulnerabilities for '$registry':"
             cat vulnerabilities.json
 
             # Merge the current results with the aggregated results, ensuring a flat array
-            jq '.Vulnerabilities += input.Vulnerabilities' aggregated_results.json vulnerabilities.json > temp.json
+            jq '.Vulnerabilities += input' aggregated_results.json vulnerabilities.json > temp.json
             mv temp.json aggregated_results.json
 
             # Log the aggregated results so far
@@ -83,7 +89,6 @@ jobs:
           critical_count=$(jq '.Vulnerabilities | map(select(.Severity == "CRITICAL")) | length' aggregated_results.json)
           echo "Total Critical vulnerabilities: $critical_count"
           echo "critical_count=$critical_count" >> $GITHUB_ENV
-
 
       - name: Upload aggregated results
         uses: actions/upload-artifact@v3
