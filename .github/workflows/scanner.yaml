@@ -18,8 +18,11 @@ jobs:
 
       - name: Install latest Trivy
         run: |
-          brew install trivy
-
+          TRIVY_VERSION=$(curl -s https://api.github.com/repos/aquasecurity/trivy/releases/latest | jq -r .tag_name)
+          STRIPPED_VERSION=${TRIVY_VERSION#v}
+          wget https://github.com/aquasecurity/trivy/releases/download/${TRIVY_VERSION}/trivy_${STRIPPED_VERSION}_Linux-64bit.deb
+          sudo dpkg -i trivy_${STRIPPED_VERSION}_Linux-64bit.deb
+          
       - name: Parse registry list
         id: parse-registries
         run: |
