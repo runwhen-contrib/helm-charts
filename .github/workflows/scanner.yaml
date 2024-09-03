@@ -17,6 +17,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Install Helm
+        run: |
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+      - name: Render Helm Chart to YAML
+        id: render-helm
+        run: |
+          helm template ./charts/runwhen-local > rendered_chart.yaml
+          echo "Rendered Helm chart to YAML."
+
+      - name: Extract Images from Rendered YAML
+        id: extract-images
+        run: |
+          grep "image:" rendered_chart.yaml | awk '{print $2}' > registries.txt
+          sort -u registries.txt -o registries.txt
+          echo "Images extracted from Helm chart:"
+          cat registries.txt
+          echo "Total images found: $(wc -l < registries.txt)"
+
       - name: Install latest Trivy
         run: |
           TRIVY_VERSION=$(curl -s https://api.github.com/repos/aquasecurity/trivy/releases/latest | jq -r .tag_name)
@@ -24,13 +43,13 @@ jobs:
           wget https://github.com/aquasecurity/trivy/releases/download/${TRIVY_VERSION}/trivy_${STRIPPED_VERSION}_Linux-64bit.deb
           sudo dpkg -i trivy_${STRIPPED_VERSION}_Linux-64bit.deb
 
-      - name: Parse registry list
-        id: parse-registries
-        run: |
-          echo "${{ github.event.inputs.registries }}" | sed 's/- /\n/g' | sed 's/^ *//;s/ *$//' > registries.txt
-          echo "Parsed registries:"
-          cat registries.txt
-          echo "Total registries found: $(wc -l < registries.txt)"
+      # - name: Parse registry list
+      #   id: parse-registries
+      #   run: |
+      #     echo "${{ github.event.inputs.registries }}" | sed 's/- /\n/g' | sed 's/^ *//;s/ *$//' > registries.txt
+      #     echo "Parsed registries:"
+      #     cat registries.txt
+      #     echo "Total registries found: $(wc -l < registries.txt)"
 
       - name: Verify registry entries and file reading
         run: |
