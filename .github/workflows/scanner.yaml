@@ -5,9 +5,11 @@ on:
     inputs:
       registries:
         description: "List of image registries to scan"
-        required: true
+        required: false
         default: |
           - us-docker.pkg.dev/runwhen-nonprod-shared/public-images/robot-runtime-base-image:latest
+  schedule:
+    - cron: "0 19 * * *"  # Runs every day at 2 PM EST (7 PM UTC)
 
 jobs:
   trivy-scan:
@@ -16,34 +18,145 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Trivy
-        uses: aquasecurity/trivy-action@master
-        with:
-          version: '0.33.0' # Specify the Trivy version here
-
-      - name: Parse registry list
-        id: parse-registries
+      - name: Install Helm
         run: |
-          echo "${{ github.event.inputs.registries }}" | sed 's/- //g' > registries.txt
-          echo "Parsed registries:"
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+      - name: Render Helm Chart to YAML
+        id: render-helm
+        run: |
+          cd charts/runwhen-local
+          # Parse the Chart.yaml file to extract repositories
+          yq eval '.dependencies[] | .repository' Chart.yaml | while read -r repo; do
+            name=$(echo $repo | sed 's|https://||' | sed 's|http://||' | awk -F'/' '{print $1}')
+            echo "Adding Helm repository $name with URL $repo"
+            helm repo add $name $repo || true
+          done
+          # Update the Helm repo index
+          helm repo update
+          
+          # Build dependencies and render the Helm chart to YAML
+          helm dependency build
+          helm template . --set runner.enabled=true > ../../rendered_chart.yaml
+          echo "Rendered Helm chart to YAML in ../../rendered_chart.yaml."
+
+
+      - name: Verify Rendered YAML File
+        run: |
+          if [ -f "rendered_chart.yaml" ]; then
+            echo "Rendered YAML file exists."
+          else
+            echo "Rendered YAML file does not exist!"
+            exit 1
+          fi
+
+      - name: Extract Images from Rendered YAML
+        id: extract-images
+        run: |
+          # Extract image lines and remove leading/trailing quotes or unnecessary text
+          grep -E "image:|\"image:" rendered_chart.yaml | sed -e 's/.*image: *//' -e 's/^"//' -e 's/"$//' > registries.txt
+          sort -u registries.txt -o registries.txt
+          echo "Images extracted from Helm chart:"
           cat registries.txt
-      
-      - name: Scan each registry
+          echo "Total images found: $(wc -l < registries.txt)"
+
+      - name: Add Workflow Input Registries
+        id: add-input-registries
+        run: |
+          # Add additional registries specified in workflow inputs
+          echo "${{ github.event.inputs.registries }}" | sed 's/- /\n/g' | sed 's/^ *//;s/ *$//' >> registries.txt
+          sort -u registries.txt -o registries.txt
+          echo "Combined list of registries:"
+          cat registries.txt
+          echo "Total registries found: $(wc -l < registries.txt)"
+
+
+      - name: Install latest Trivy
+        run: |
+          TRIVY_VERSION=$(curl -s https://api.github.com/repos/aquasecurity/trivy/releases/latest | jq -r .tag_name)
+          STRIPPED_VERSION=${TRIVY_VERSION#v}
+          wget https://github.com/aquasecurity/trivy/releases/download/${TRIVY_VERSION}/trivy_${STRIPPED_VERSION}_Linux-64bit.deb
+          sudo dpkg -i trivy_${STRIPPED_VERSION}_Linux-64bit.deb
+
+      - name: Verify registry entries and file reading
+        run: |
+          echo "Reading registries from registries.txt:"
+          while IFS= read -r registry || [[ -n "$registry" ]]; do
+            echo "Registry: '$registry'"
+          done < registries.txt
+    
+      - name: Scan each registry and aggregate results
         id: trivy-scan
         run: |
-          while IFS= read -r registry; do
-            echo "Scanning $registry..."
-            critical_count=$(trivy image --severity CRITICAL --ignore-unfixed --format json "$registry" | jq '.Results[].Vulnerabilities | map(select(.Severity == "CRITICAL")) | length')
-            echo "$registry: $critical_count Critical vulnerabilities" >> trivy_critical_metrics.txt
+          # Initialize an empty JSON array for aggregated results
+          echo '{"Vulnerabilities": []}' > aggregated_results.json
+
+          while IFS= read -r registry || [[ -n "$registry" ]]; do
+            echo "Scanning registry: '$registry'..."
+            if [[ -z "$registry" ]]; then
+              echo "Error: Empty registry value detected. Skipping..."
+              continue
+            fi
+
+            # Run Trivy scan and log output
+            trivy image --severity CRITICAL --ignore-unfixed --scanners vuln --format json "$registry" > trivy_result.json
+            echo "Trivy scan result for '$registry':"
+
+            # Check if Trivy output was generated and contains vulnerabilities
+            if [[ ! -s trivy_result.json ]]; then
+              echo "Error: Trivy scan failed for '$registry'. Skipping..."
+              continue
+            fi
+
+            # Safely handle null values in the Trivy output and log intermediate JSON
+            jq --arg registry "$registry" '.Results[]?.Vulnerabilities? // [] | .[] |= . + {"Registry": $registry}' trivy_result.json > vulnerabilities.json
+            echo "Processed vulnerabilities for '$registry':"
+            cat vulnerabilities.json
+
+            # Merge the current results with the aggregated results, ensuring a flat array
+            jq '.Vulnerabilities += input' aggregated_results.json vulnerabilities.json > temp.json
+            mv temp.json aggregated_results.json
+
+            # Log the aggregated results so far
+            echo "Aggregated results after processing '$registry':"
           done < registries.txt
 
-      - name: Upload results
+      - name: Calculate aggregated metric
+        id: calculate-metrics
+        run: |
+          echo "Calculating total Critical vulnerabilities..."
+          critical_count=$(jq '.Vulnerabilities | map(select(.Severity == "CRITICAL")) | length' aggregated_results.json)
+          echo "Total Critical vulnerabilities: $critical_count"
+          echo "critical_count=$critical_count" >> $GITHUB_ENV
+
+      - name: Upload aggregated results
         uses: actions/upload-artifact@v3
         with:
-          name: trivy_critical_metrics
-          path: trivy_critical_metrics.txt
+          name: trivy_aggregated_results
+          path: aggregated_results.json
 
-      - name: Display metrics
+      - name: Display total critical vulnerabilities
         run: |
-          echo "Critical vulnerabilities count:"
-          cat trivy_critical_metrics.txt
+          echo "Total Critical vulnerabilities: ${{ env.critical_count }}"
+
+      - name: Generate summary report in table format
+        id: generate-summary
+        run: |
+          # Generate a summary report in table format
+          jq -r 'def group_vulns:
+                    reduce .Vulnerabilities[] as $v ({}; 
+                      .[$v.VulnerabilityID + "@" + $v.InstalledVersion + "@" + $v.FixedVersion] += [{
+                          "Registry": $v.Registry, 
+                          "VulnerabilityID": $v.VulnerabilityID, 
+                          "InstalledVersion": $v.InstalledVersion, 
+                          "FixedVersion": $v.FixedVersion, 
+                          "Severity": $v.Severity
+                      }]
+                    );
+                  group_vulns | 
+                  to_entries | map(.value) | flatten |
+                  unique_by(.VulnerabilityID, .InstalledVersion, .FixedVersion) |
+                  sort_by(.Registry) |
+                  (["Registry", "Vulnerability ID", "Installed Version", "Fixed Version", "Severity"] | (., map(length*"-"))),
+                  (.[] | [.Registry, .VulnerabilityID, .InstalledVersion, .FixedVersion, .Severity]) |
+                  @tsv' aggregated_results.json | column -t -s $'\t'
