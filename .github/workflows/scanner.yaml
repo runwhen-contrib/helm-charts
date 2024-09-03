@@ -39,8 +39,19 @@ jobs:
         id: trivy-scan
         run: |
           while IFS= read -r registry || [[ -n "$registry" ]]; do
-            echo "Scanning $registry..."
+            echo "Scanning registry: '$registry'..."
+            if [[ -z "$registry" ]]; then
+              echo "Error: Empty registry value detected. Skipping..."
+              continue
+            fi
+
             trivy image --severity CRITICAL --ignore-unfixed --format json "$registry" > trivy_result.json
+
+            # Check if Trivy output was generated
+            if [[ ! -s trivy_result.json ]]; then
+              echo "Error: Trivy scan failed for '$registry'. Skipping..."
+              continue
+            fi
 
             # Add registry details to each vulnerability
             jq --arg registry "$registry" '.Results[].Vulnerabilities[] |= . + {"Registry": $registry}' trivy_result.json | \
@@ -49,6 +60,7 @@ jobs:
             # Merge the current results with the aggregated results
             jq -s '.[0].Vulnerabilities + .[1].Vulnerabilities | {Vulnerabilities: .}' aggregated_results.json vulnerabilities.json > temp.json && mv temp.json aggregated_results.json
           done < registries.txt
+
 
       - name: Calculate aggregated metric
         id: calculate-metrics
