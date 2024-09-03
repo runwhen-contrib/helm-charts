@@ -47,7 +47,7 @@ jobs:
           done
           cat aggregated_results.json
           ls 
-          trivy_result.json
+          cat trivy_result.json
 
       - name: Calculate aggregated metric
         id: calculate-metrics
