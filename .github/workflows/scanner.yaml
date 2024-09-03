@@ -30,22 +30,30 @@ jobs:
           echo "Parsed registries:"
           cat registries.txt
       
-      - name: Scan each registry
+      - name: Scan each registry and aggregate results
         id: trivy-scan
         run: |
+          echo "[]" > aggregated_results.json
           while IFS= read -r registry; do
             echo "Scanning $registry..."
-            critical_count=$(trivy image --severity CRITICAL --ignore-unfixed --format json "$registry" | jq '.Results[].Vulnerabilities | map(select(.Severity == "CRITICAL")) | length')
-            echo "$registry: $critical_count Critical vulnerabilities" >> trivy_critical_metrics.txt
+            trivy image --severity CRITICAL --format json "$registry" > trivy_result.json
+            jq -s '.[0] + .[1]' aggregated_results.json trivy_result.json > temp.json && mv temp.json aggregated_results.json
           done < registries.txt
+          cat aggregated_results.json
 
-      - name: Upload results
+      - name: Calculate aggregated metric
+        id: calculate-metrics
+        run: |
+          critical_count=$(jq '[.[] | .Vulnerabilities[] | select(.Severity == "CRITICAL")] | length' aggregated_results.json)
+          echo "Total Critical vulnerabilities: $critical_count"
+          echo "critical_count=$critical_count" >> $GITHUB_ENV
+
+      - name: Upload aggregated results
         uses: actions/upload-artifact@v3
         with:
-          name: trivy_critical_metrics
-          path: trivy_critical_metrics.txt
+          name: trivy_aggregated_results
+          path: aggregated_results.json
 
-      - name: Display metrics
+      - name: Display total critical vulnerabilities
         run: |
-          echo "Critical vulnerabilities count:"
-          cat trivy_critical_metrics.txt
+          echo "Total Critical vulnerabilities: ${{ env.critical_count }}"
