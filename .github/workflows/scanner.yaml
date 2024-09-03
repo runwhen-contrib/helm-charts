@@ -45,22 +45,31 @@ jobs:
               continue
             fi
 
+            # Run Trivy scan and log output
             trivy image --severity CRITICAL --ignore-unfixed --format json "$registry" > trivy_result.json
+            echo "Trivy scan result for '$registry':"
+            cat trivy_result.json
 
-            # Check if Trivy output was generated
+            # Check if Trivy output was generated and contains vulnerabilities
             if [[ ! -s trivy_result.json ]]; then
               echo "Error: Trivy scan failed for '$registry'. Skipping..."
               continue
             fi
 
-            # Add registry details to each vulnerability
-            jq --arg registry "$registry" '.Results[].Vulnerabilities[] |= . + {"Registry": $registry}' trivy_result.json | \
+            # Safely handle null values in the Trivy output and log intermediate JSON
+            jq --arg registry "$registry" '.Results[].Vulnerabilities? // [] | .[] |= . + {"Registry": $registry}' trivy_result.json | \
             jq -s '{"Vulnerabilities": .}' > vulnerabilities.json
+            echo "Processed vulnerabilities for '$registry':"
+            cat vulnerabilities.json
 
             # Merge the current results with the aggregated results
-            jq -s '.[0].Vulnerabilities + .[1].Vulnerabilities | {Vulnerabilities: .}' aggregated_results.json vulnerabilities.json > temp.json && mv temp.json aggregated_results.json
-          done < registries.txt
+            jq -s '.[0].Vulnerabilities + .[1].Vulnerabilities | {Vulnerabilities: .}' aggregated_results.json vulnerabilities.json > temp.json
+            mv temp.json aggregated_results.json
 
+            # Log the aggregated results so far
+            echo "Aggregated results after processing '$registry':"
+            cat aggregated_results.json
+          done < registries.txt
 
       - name: Calculate aggregated metric
         id: calculate-metrics
