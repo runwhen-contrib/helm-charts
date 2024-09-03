@@ -53,7 +53,8 @@ jobs:
       - name: Extract Images from Rendered YAML
         id: extract-images
         run: |
-          grep "image:" rendered_chart.yaml | awk '{print $2}' | sed 's/^"\(.*\)"$/\1/' | grep -v "^image:" > registries.txt
+          # Extract image lines and remove leading/trailing quotes or unnecessary text
+          grep -E "image:|\"image:" rendered_chart.yaml | sed -e 's/.*image: *//' -e 's/^"//' -e 's/"$//' > registries.txt
           sort -u registries.txt -o registries.txt
           echo "Images extracted from Helm chart:"
           cat registries.txt
