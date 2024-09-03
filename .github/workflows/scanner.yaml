@@ -30,21 +30,25 @@ jobs:
           echo "Parsed registries:"
           cat registries.txt
       
+      - name: Initialize aggregated results
+        run: echo '{"Vulnerabilities": []}' > aggregated_results.json
+
       - name: Scan each registry and aggregate results
         id: trivy-scan
         run: |
-          echo "[]" > aggregated_results.json
           while IFS= read -r registry; do
             echo "Scanning $registry..."
             trivy image --severity CRITICAL --format json "$registry" > trivy_result.json
-            jq -s '.[0] + .[1]' aggregated_results.json trivy_result.json > temp.json && mv temp.json aggregated_results.json
-          done < registries.txt
+            jq '.Results[].Vulnerabilities' trivy_result.json | jq -c '.[]' | \
+            jq -s '{"Vulnerabilities": .}' > vulnerabilities.json
+            jq -s '.[0].Vulnerabilities + .[1].Vulnerabilities | {Vulnerabilities: .}' aggregated_results.json vulnerabilities.json > temp.json && mv temp.json aggregated_results.json
+          done
           cat aggregated_results.json
 
       - name: Calculate aggregated metric
         id: calculate-metrics
         run: |
-          critical_count=$(jq '[.[] | .Vulnerabilities[] | select(.Severity == "CRITICAL")] | length' aggregated_results.json)
+          critical_count=$(jq '.Vulnerabilities | map(select(.Severity == "CRITICAL")) | length' aggregated_results.json)
           echo "Total Critical vulnerabilities: $critical_count"
           echo "critical_count=$critical_count" >> $GITHUB_ENV
 
