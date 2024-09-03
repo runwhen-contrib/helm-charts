@@ -38,10 +38,19 @@ jobs:
           helm template . > rendered_chart.yaml
           echo "Rendered Helm chart to YAML."
 
+      - name: Verify Rendered YAML File
+        run: |
+          if [ -f "../../rendered_chart.yaml" ]; then
+            echo "Rendered YAML file exists."
+          else
+            echo "Rendered YAML file does not exist!"
+            exit 1
+          fi
+
       - name: Extract Images from Rendered YAML
         id: extract-images
         run: |
-          grep "image:" rendered_chart.yaml | awk '{print $2}' > registries.txt
+          grep "image:" ../../rendered_chart.yaml | awk '{print $2}' > registries.txt
           sort -u registries.txt -o registries.txt
           echo "Images extracted from Helm chart:"
           cat registries.txt
