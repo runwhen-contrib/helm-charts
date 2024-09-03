@@ -36,7 +36,7 @@ jobs:
           
           # Build dependencies and render the Helm chart to YAML
           helm dependency build
-          helm template . > ../../rendered_chart.yaml
+          helm template . --set runner-enabled=true > ../../rendered_chart.yaml
           cat ../../rendered_chart.yaml
           echo "Rendered Helm chart to YAML in ../../rendered_chart.yaml."
 
@@ -53,7 +53,7 @@ jobs:
       - name: Extract Images from Rendered YAML
         id: extract-images
         run: |
-          grep "image:" rendered_chart.yaml | awk '{print $2}' > registries.txt
+          grep "image:" rendered_chart.yaml | awk '{gsub(/"/, "", $2); print $2}' > registries.txt
           sort -u registries.txt -o registries.txt
           echo "Images extracted from Helm chart:"
           cat registries.txt
