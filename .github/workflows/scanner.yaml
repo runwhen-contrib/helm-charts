@@ -10,6 +10,9 @@ on:
           - us-docker.pkg.dev/runwhen-nonprod-shared/public-images/robot-runtime-base-image:latest
   schedule:
     - cron: "0 19 * * *"  # Runs every day at 2 PM EST (7 PM UTC)
+    
+  pull_request:
+    types: [opened, synchronize]  # Triggers on PR open and when commits are pushed to the PR
 
 jobs:
   trivy-scan:
