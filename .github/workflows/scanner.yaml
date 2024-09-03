@@ -100,3 +100,25 @@ jobs:
       - name: Display total critical vulnerabilities
         run: |
           echo "Total Critical vulnerabilities: ${{ env.critical_count }}"
+
+      - name: Generate summary report
+        id: generate-summary
+        run: |
+          # Create a summary report
+          jq 'reduce .Vulnerabilities[] as $v ({}; .[$v.Registry] += [{"ID": $v.VulnerabilityID, "InstalledVersion": $v.InstalledVersion, "FixedVersion": $v.FixedVersion, "Severity": $v.Severity}] | .[$v.Registry] | map(select(.Severity == "CRITICAL"))) as $tmp | { "total_critical": (reduce ($tmp | flatten)[] as $v (0; . + 1)), "breakdown": $tmp }' aggregated_results.json > summary_report.json
+          
+          echo "Summary report generated."
+          cat summary_report.json
+
+      - name: Print summary in table format
+        run: |
+          echo "Generating table format for summary report..."
+          echo -e "Registry\tVulnerability ID\tInstalled Version\tFixed Version\tSeverity"
+          echo "---------------------------------------------------------------------------------"
+          jq -r '.breakdown | to_entries[] | "\(.key)\t\(.value[] | .ID)\t\(.value[] | .InstalledVersion)\t\(.value[] | .FixedVersion)\t\(.value[] | .Severity)"' summary_report.json | column -t -s $'\t'
+
+      - name: Upload summary report
+        uses: actions/upload-artifact@v3
+        with:
+          name: trivy_summary_report
+          path: summary_report.json
