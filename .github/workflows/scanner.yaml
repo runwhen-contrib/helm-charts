@@ -46,7 +46,7 @@ jobs:
             fi
 
             # Run Trivy scan and log output
-            trivy image --severity CRITICAL --ignore-unfixed --scanners vuln --format json "$registry" > trivy_result.json
+            trivy image --severity CRITICAL --ignore-unfixed --format json "$registry" > trivy_result.json
             echo "Trivy scan result for '$registry':"
             cat trivy_result.json
 
@@ -58,12 +58,12 @@ jobs:
 
             # Safely handle null values in the Trivy output and log intermediate JSON
             jq --arg registry "$registry" '.Results[].Vulnerabilities? // [] | .[] |= . + {"Registry": $registry}' trivy_result.json | \
-            jq -s '{"Vulnerabilities": .}' > vulnerabilities.json
+            jq -s '.[]' > vulnerabilities.json
             echo "Processed vulnerabilities for '$registry':"
             cat vulnerabilities.json
 
-            # Merge the current results with the aggregated results
-            jq -s '.[0].Vulnerabilities + .[1].Vulnerabilities | {Vulnerabilities: .}' aggregated_results.json vulnerabilities.json > temp.json
+            # Merge the current results with the aggregated results, ensuring a flat array
+            jq '.Vulnerabilities += input.Vulnerabilities' aggregated_results.json vulnerabilities.json > temp.json
             mv temp.json aggregated_results.json
 
             # Log the aggregated results so far
@@ -79,9 +79,11 @@ jobs:
       - name: Calculate aggregated metric
         id: calculate-metrics
         run: |
+          echo "Calculating total Critical vulnerabilities..."
           critical_count=$(jq '.Vulnerabilities | map(select(.Severity == "CRITICAL")) | length' aggregated_results.json)
           echo "Total Critical vulnerabilities: $critical_count"
           echo "critical_count=$critical_count" >> $GITHUB_ENV
+
 
       - name: Upload aggregated results
         uses: actions/upload-artifact@v3
