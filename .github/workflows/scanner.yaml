@@ -24,6 +24,7 @@ jobs:
       - name: Render Helm Chart to YAML
         id: render-helm
         run: |
+          helm dependency build
           helm template ./charts/runwhen-local > rendered_chart.yaml
           echo "Rendered Helm chart to YAML."
 
