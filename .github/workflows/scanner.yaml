@@ -32,7 +32,7 @@ jobs:
           cat registries.txt
           echo "Total registries found: $(wc -l < registries.txt)"
 
-      - name: Debug: Verify registry entries and file reading
+      - name: Verify registry entries and file reading
         run: |
           echo "Reading registries from registries.txt:"
           while IFS= read -r registry || [[ -n "$registry" ]]; do
