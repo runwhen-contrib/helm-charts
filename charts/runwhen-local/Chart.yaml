@@ -2,12 +2,12 @@ apiVersion: v2
 name: runwhen-local
 description: A Helm chart RunWhen Local - A community powered troubleshooting cheat sheet
 type: application
-version: 0.1.25
-appVersion: "0.6.1"
+version: 0.1.26
+appVersion: "0.6.3"
 icon: https://storage.googleapis.com/runwhen-nonprod-shared-images/icons/runwhen_icon.png
 dependencies:
   - name: grafana-agent
-    version: "0.41.0"
+    version: "0.42.0"
     repository: "https://grafana.github.io/helm-charts"
     condition: runner.enabled
 maintainers:
