@@ -12,12 +12,6 @@ data:
       health_check:
         endpoint: ${env:MY_POD_IP}:13133
     receivers:
-      # otlp:
-      #   protocols:
-      #     grpc:
-      #       endpoint: ${env:MY_POD_IP}:4317
-      #     http:
-      #       endpoint: ${env:MY_POD_IP}:4318
       prometheus:
         config:
           global:
@@ -27,22 +21,11 @@ data:
               static_configs:
                 - targets: 
                   - pushgateway:9091
-              metric_relabel_configs:
-                - source_labels: [__name__]
-                  regex: ".*__.*"  # Only allow metrics with double underscores
-                  action: keep     # Keep metrics with double underscores
-                - source_labels: [__name__]
-                  regex: ".*_.*"
-                  action: keep     
-            # - job_name: opentelemetry-collector
-            #   static_configs:
-            #     - targets:
-            #         - ${env:MY_POD_IP}:8888
     exporters:
-      debug:
-        verbosity: detailed
-      logging:
-        verbosity: detailed
+    #   debug:
+    #     verbosity: detailed
+    #   logging:
+    #     verbosity: detailed
       prometheusremotewrite:
         endpoint: {{ .Values.runner.metrics.url }}
         {{- if .Values.proxy.enabled }}
@@ -65,7 +48,6 @@ data:
           insecure_skip_verify: true
         external_labels:
             workspace: {{ include "runwhen-local.workspaceName" . }}
-
     processors:
       batch:
     service:
@@ -73,13 +55,11 @@ data:
         metrics:
           receivers: [prometheus]
           processors: [batch]
-          exporters: [prometheusremotewrite, debug]
+          exporters: [prometheusremotewrite]
       extensions:
         - health_check
       telemetry:
         logs:
           level: debug
-        # metrics:
-        #   address: ${env:MY_POD_IP}:8888
 
 {{- end }}
