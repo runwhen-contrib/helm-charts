@@ -28,7 +28,7 @@ jobs:
           if [[ -n "$changed" ]]; then
             echo "::set-output name=changed::true"
           fi
-          helm repo add grafana https://grafana.github.io/helm-charts
+          helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts 
 
       - name: Run chart-testing (lint)
         run: ct lint --debug --target-branch main
