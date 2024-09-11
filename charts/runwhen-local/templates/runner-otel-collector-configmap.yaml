@@ -1,0 +1,65 @@
+{{- if .Values.runner.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata: 
+  name: otel-collector
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: otel-collector
+data: 
+  relay: |
+    extensions:
+      health_check:
+        endpoint: ${env:MY_POD_IP}:13133
+    receivers:
+      prometheus:
+        config:
+          global:
+            scrape_interval: 15s 
+          scrape_configs:
+            - job_name: prometheus.scrape.pushgw
+              static_configs:
+                - targets: 
+                  - pushgateway:9091
+    exporters:
+    #   debug:
+    #     verbosity: detailed
+    #   logging:
+    #     verbosity: detailed
+      prometheusremotewrite:
+        endpoint: {{ .Values.runner.metrics.url }}
+        {{- if .Values.proxy.enabled }}
+        http_client_settings:
+          {{- with .Values.proxy.httpsProxy }}
+          proxy_url: "{{ . }}"
+          {{- end }}
+          {{- with .Values.proxy.noProxy }}
+          no_proxy: "{{ . }}"
+          {{- end }}
+        {{- end }}
+        tls:
+          {{- if .Values.proxyCA }}
+          ca_file: "/etc/ssl/certs/proxy-ca.crt"
+          {{- else }}
+          ca_file: "/tls/ca.crt"
+          {{- end }}
+          cert_file: "/tls/tls.crt"
+          key_file: "/tls/tls.key"
+          insecure_skip_verify: true
+        external_labels:
+            workspace: {{ include "runwhen-local.workspaceName" . }}
+    processors:
+      batch:
+    service:
+      pipelines:
+        metrics:
+          receivers: [prometheus]
+          processors: [batch]
+          exporters: [prometheusremotewrite]
+      extensions:
+        - health_check
+      telemetry:
+        logs:
+          level: debug
+
+{{- end }}
