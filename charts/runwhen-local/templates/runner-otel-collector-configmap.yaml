@@ -10,29 +10,39 @@ data:
   relay: |
     extensions:
       health_check:
-        endpoint: ${MY_POD_IP}:13133
+        endpoint: ${env:MY_POD_IP}:13133
     receivers:
-      otlp:
-        protocols:
-          grpc:
-            endpoint: 0.0.0.0:4317
-          http:
-            endpoint: 0.0.0.0:4318
+      # otlp:
+      #   protocols:
+      #     grpc:
+      #       endpoint: ${env:MY_POD_IP}:4317
+      #     http:
+      #       endpoint: ${env:MY_POD_IP}:4318
       prometheus:
         config:
           global:
             scrape_interval: 15s 
           scrape_configs:
-            - job_name: pushgw
+            - job_name: prometheus.scrape.pushgw
               static_configs:
                 - targets: 
                   - pushgateway:9091
-            - job_name: opentelemetry-collector
-              static_configs:
-                - targets:
-                    - 0.0.0.0:8888
-
+              metric_relabel_configs:
+                - source_labels: [__name__]
+                  regex: ".*__.*"  # Only allow metrics with double underscores
+                  action: keep     # Keep metrics with double underscores
+                - source_labels: [__name__]
+                  regex: ".*_.*"
+                  action: keep     
+            # - job_name: opentelemetry-collector
+            #   static_configs:
+            #     - targets:
+            #         - ${env:MY_POD_IP}:8888
     exporters:
+      debug:
+        verbosity: detailed
+      logging:
+        verbosity: detailed
       prometheusremotewrite:
         endpoint: {{ .Values.runner.metrics.url }}
         {{- if .Values.proxy.enabled }}
@@ -58,21 +68,18 @@ data:
 
     processors:
       batch:
-        timeout: 5s
-        send_batch_max_size: 10000
-
     service:
       pipelines:
         metrics:
-          receivers: [otlp, prometheus]
+          receivers: [prometheus]
           processors: [batch]
-          exporters: [prometheusremotewrite]
+          exporters: [prometheusremotewrite, debug]
       extensions:
         - health_check
       telemetry:
         logs:
           level: debug
-        metrics:
-          address: 0.0.0.0:8888
+        # metrics:
+        #   address: ${env:MY_POD_IP}:8888
 
 {{- end }}
