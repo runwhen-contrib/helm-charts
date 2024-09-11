@@ -23,7 +23,7 @@ jobs:
         uses: azure/setup-helm@v3
       
       - name: Add Grafana Helm repository
-        run: helm repo add grafana https://grafana.github.io/helm-charts
+        run: helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
 
       - name: Update Helm dependencies
         run: helm dependency update ./charts/runwhen-local
