@@ -30,6 +30,7 @@ jobs:
           fi
           helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts 
           # Build dependencies and render the Helm chart to YAML
+          cd charts/runwhen-local 
           helm dependency build
 
       - name: Run chart-testing (lint)
