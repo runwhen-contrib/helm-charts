@@ -29,6 +29,8 @@ jobs:
             echo "::set-output name=changed::true"
           fi
           helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts 
+          # Build dependencies and render the Helm chart to YAML
+          helm dependency build
 
       - name: Run chart-testing (lint)
         run: ct lint --debug --target-branch main
