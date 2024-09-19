@@ -2,8 +2,8 @@ apiVersion: v2
 name: runwhen-local
 description: A Helm chart RunWhen Local - A community powered troubleshooting cheat sheet
 type: application
-version: 0.2.1
-appVersion: "0.6.3"
+version: 0.2.2
+appVersion: "0.7.0"
 icon: https://storage.googleapis.com/runwhen-nonprod-shared-images/icons/runwhen_icon.png
 dependencies:
   # - name: grafana-agent
@@ -11,7 +11,7 @@ dependencies:
   #   repository: "https://grafana.github.io/helm-charts"
   #   condition: runner.enabled
   - name: opentelemetry-collector
-    version: "0.104.0"
+    version: "0.109.0"
     repository: "https://open-telemetry.github.io/opentelemetry-helm-charts"
     condition: runner.enabled
 maintainers:
