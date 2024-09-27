@@ -375,7 +375,7 @@ runner:
             memory: "64Mi"
           limits:
             cpu: "500m"
-            memory: "196Mi"
+            memory: "512Mi"
         EKS_Fargate:
           requests:
             cpu: "300m"
