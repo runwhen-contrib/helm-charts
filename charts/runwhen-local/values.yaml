@@ -221,7 +221,7 @@ runwhenLocal:
         defaultLOD: detailed
         cloudConfig:
           kubernetes:
-            kubeconfigFile: /shared/kubeconfig
+            inClusterAuth: true
             namespaceLODs:
               kube-system: 0
               kube-public: 0
