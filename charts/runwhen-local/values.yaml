@@ -222,10 +222,6 @@ runwhenLocal:
         cloudConfig:
           kubernetes:
             inClusterAuth: true
-            namespaceLODs:
-              kube-system: 0
-              kube-public: 0
-              kube-node-lease: 0
         codeCollections: []
         custom:
           # Note: Most of these are simple keys, such as the name of a secret that
