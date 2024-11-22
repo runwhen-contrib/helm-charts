@@ -439,7 +439,7 @@ runner:
     image:
       registry: ""
       repository: ""
-      tag: ""
+      tag: "v1.10.0"
     tolerations: []
 
 ## opentelemetry-collector is only deployed if runner.enabled is true
@@ -452,7 +452,7 @@ opentelemetry-collector:
   image:
     repository: "otel/opentelemetry-collector"
     pullPolicy: IfNotPresent
-    tag: "latest"
+    tag: "0.104.0"
   imagePullSecrets: []
   command:
     name: "otelcol"
