@@ -22,11 +22,20 @@ jobs:
       - name: Install Helm
         uses: azure/setup-helm@v3
       
-      - name: Add Grafana Helm repository
+      - name: Add opentelemetry helm chart
         run: helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
 
       - name: Update Helm dependencies
-        run: helm dependency update ./charts/runwhen-local
+        run: |
+          helm dependency update ./charts/runwhen-local
+          if [[ `git status --porcelain` ]]; then
+            echo "Dependencies updated, committing changes."
+            git add ./charts/runwhen-local/Chart.lock
+            git commit -m "Update Chart.lock to match Chart.yaml [skip actions]"
+            git push
+          else
+            echo "No changes to Chart.lock."
+          fi
 
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.5.0
