@@ -367,7 +367,7 @@ runner:
       resources:
         default:
           requests:
-            cpu: "10m"
+            cpu: "15m"
             memory: "64Mi"
           limits:
             cpu: "300m"
