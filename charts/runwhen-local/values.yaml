@@ -370,8 +370,8 @@ runner:
             cpu: "50m"
             memory: "64Mi"
           limits:
-            cpu: "500m"
-            memory: "512Mi"
+            cpu: "300m"
+            memory: "1Gi"
         EKS_Fargate:
           requests:
             cpu: "300m"
@@ -390,17 +390,17 @@ runner:
       resources:
         default:
           requests:
-            cpu: "300m"
+            cpu: "50m"
             memory: "128Mi"
           limits:
             cpu: "1"
-            memory: "512Mi"
+            memory: "1Gi"
         EKS_Fargate:
           requests:
-            cpu: "300m"
+            cpu: "100m"
             memory: "256Mi"
           limits:
-            cpu: "300m"
+            cpu: "100m"
             memory: "256Mi"
     # The proxy configurations applied to the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods
     # By default the global values for .Values.proxy and .Values.proxyCA are used.
