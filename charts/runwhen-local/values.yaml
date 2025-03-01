@@ -445,7 +445,7 @@ runner:
 ## opentelemetry-collector is only deployed if runner.enabled is true
 ## https://github.com/open-telemetry/opentelemetry-helm-charts/blob/main/charts/opentelemetry-collector/values.yaml
 opentelemetry-collector:
-  nameOverride: otel-collector
+  fullnameOverride: otel-collector
   mode: deployment
   configMap:
     create: false
