@@ -1,31 +1,35 @@
 {{- if .Values.runner.enabled -}}
 apiVersion: v1
 kind: ConfigMap
-metadata: 
+metadata:
   name: otel-collector
   namespace: {{ .Release.Namespace }}
   labels:
     app: otel-collector
-data: 
+data:
   relay: |
     extensions:
       health_check:
         endpoint: ${env:MY_POD_IP}:13133
+
     receivers:
+      # Keep this for previous pushgw implementations
       prometheus:
         config:
           global:
-            scrape_interval: 15s 
+            scrape_interval: 15s
           scrape_configs:
             - job_name: prometheus.scrape.pushgw
               static_configs:
-                - targets: 
+                - targets:
                   - pushgateway:9091
+      # Add this to support RW.Core.Push Metric switching to otlp
+      otlp:
+        protocols:
+          http:
+          grpc:
+
     exporters:
-    #   debug:
-    #     verbosity: detailed
-    #   logging:
-    #     verbosity: detailed
       prometheusremotewrite:
         endpoint: {{ .Values.runner.metrics.url }}
         {{- if .Values.proxy.enabled }}
@@ -47,17 +51,26 @@ data:
           key_file: "/tls/tls.key"
           insecure_skip_verify: true
         external_labels:
-            workspace: {{ include "runwhen-local.workspaceName" . }}
+          workspace: {{ include "runwhen-local.workspaceName" . }}
+
     processors:
       batch:
+
     service:
       pipelines:
-        metrics:
+        metrics/prom:
           receivers: [prometheus]
           processors: [batch]
           exporters: [prometheusremotewrite]
+
+        metrics/otlp:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [prometheusremotewrite]
+
       extensions:
         - health_check
+
       telemetry:
         logs:
           level: debug
