@@ -434,14 +434,6 @@ runner:
         cpu: "200m"
         memory: "256Mi"
 
-  ## Override the Prometheus Pushgateway settings
-  pushgateway:
-    image:
-      registry: ""
-      repository: ""
-      tag: "v1.10.0"
-    tolerations: []
-
 
 ## opentelemetry-collector is only deployed if runner.enabled is true
 ## https://github.com/open-telemetry/opentelemetry-helm-charts/blob/main/charts/opentelemetry-collector/values.yaml
