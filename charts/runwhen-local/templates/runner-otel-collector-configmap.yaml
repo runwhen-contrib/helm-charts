@@ -26,8 +26,10 @@ data:
       # Add this to support RW.Core.Push Metric switching to otlp
       otlp:
         protocols:
-          http:
+          http: 
+            endpoint: ${env:MY_POD_IP}:4318
           grpc:
+            endpoint: ${env:MY_POD_IP}:4317
 
     exporters:
       prometheusremotewrite:
