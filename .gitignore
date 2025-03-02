@@ -1,3 +1,4 @@
 .vscode/settings.json
 *.tgz
 test-values.yaml
+**.secret

@@ -80,9 +80,18 @@ spec:
         {{- with .Values.runner.extraEnv }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-        {{- with .Values.runner.securityContext }}
+        {{- if .Values.runner.securityContext }}
         securityContext:
-          {{- toYaml . | nindent 8 }}
+          {{- toYaml .Values.runner.securityContext | nindent 12 }}
+        {{- else }}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - all
+          readOnlyRootFilesystem: true
+          seccompProfile:
+            type: "RuntimeDefault"
         {{- end }}
       dnsPolicy: ClusterFirst
       restartPolicy: Always
@@ -113,9 +122,9 @@ spec:
       {{- toYaml . | nindent 6 }}
       {{- end }}
       {{- end }}
-      {{- with .Values.runner.podSecurityContext }}
+      {{- if .Values.runner.podSecurityContext }}
       securityContext:
-        {{- toYaml . | nindent 8 }}
+        {{- toYaml .Values.runner.podSecurityContext | nindent 8 }}
       {{- end }}
       volumes:
       - name: runner-config-volume

@@ -29,11 +29,24 @@ spec:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
         - name: {{ .Chart.Name }}
+          {{- if .Values.runwhenLocal.securityContext }}
           securityContext:
             {{- toYaml .Values.runwhenLocal.securityContext | nindent 12 }}
+          {{- else }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - all
+            readOnlyRootFilesystem: true
+            seccompProfile:
+              type: "RuntimeDefault"
+          {{- end }}
           image: "{{ (.Values.runwhenLocal.image.registry | default .Values.registryOverride)| default "ghcr.io" }}/{{ .Values.runwhenLocal.image.repository | default "runwhen-contrib/runwhen-local" }}:{{ .Values.runwhenLocal.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.runwhenLocal.image.pullPolicy }}
           env: 
+          - name: TMPDIR
+            value: /tmp   
           - name: AUTORUN_WORKSPACE_BUILDER_INTERVAL
             value: "{{ .Values.runwhenLocal.autoRun.discoveryInterval }}"
           - name: RW_LOCAL_TERMINAL_DISABLED
@@ -116,6 +129,8 @@ spec:
           {{- end }}
           - name: shared-volume
             mountPath: "/shared"
+          - name: tmpdir
+            mountPath: "/tmp"
           {{- if .Values.runwhenLocal.discoveryKubeconfig.secretProvided.enabled }}
           - name: kubeconfig-secret-volume
             mountPath: "/shared/kubeconfig"
@@ -150,6 +165,8 @@ spec:
       {{- end }}
       {{- end }}
       - name: shared-volume
+        emptyDir: {}
+      - name: tmpdir
         emptyDir: {}
       {{- if .Values.runwhenLocal.discoveryKubeconfig.secretProvided.enabled }}
       - name: kubeconfig-secret-volume
