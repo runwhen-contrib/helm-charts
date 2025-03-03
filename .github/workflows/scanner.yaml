@@ -102,7 +102,7 @@ jobs:
             fi
 
             # Run Trivy scan and log output
-            trivy image --severity CRITICAL --ignore-unfixed --scanners vuln --format json "$registry" > trivy_result.json
+            trivy image --severity CRITICAL,HIGH --ignore-unfixed --scanners vuln --format json "$registry" > trivy_result.json
             echo "Trivy scan result for '$registry':"
 
             # Check if Trivy output was generated and contains vulnerabilities
@@ -132,6 +132,11 @@ jobs:
           echo "Total Critical vulnerabilities: $critical_count"
           echo "critical_count=$critical_count" >> $GITHUB_ENV
 
+          echo "Calculating total High vulnerabilities..."
+          high_count=$(jq '.Vulnerabilities | map(select(.Severity == "HIGH")) | length' aggregated_results.json)
+          echo "Total High vulnerabilities: $high_count"
+          echo "high_count=$high_count" >> $GITHUB_ENV
+
       - name: Upload aggregated results
         uses: actions/upload-artifact@v4
         with:
@@ -141,6 +146,10 @@ jobs:
       - name: Display total critical vulnerabilities
         run: |
           echo "Total Critical vulnerabilities: ${{ env.critical_count }}"
+
+      - name: Display total high vulnerabilities
+        run: |
+          echo "Total High vulnerabilities: ${{ env.high_count }}"
 
       - name: Generate summary report in table format
         id: generate-summary
