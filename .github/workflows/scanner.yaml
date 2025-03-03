@@ -9,10 +9,9 @@ on:
         default: |
           - us-docker.pkg.dev/runwhen-nonprod-shared/public-images/robot-runtime-base-image:latest
   schedule:
-    - cron: "0 19 * * *"  # Runs every day at 2 PM EST (7 PM UTC)
-    
+    - cron: "0 19 * * *"  # Runs daily at 2 PM EST (7 PM UTC)
   pull_request:
-    types: [opened, synchronize]  # Triggers on PR open and when commits are pushed to the PR
+    types: [opened, synchronize]
 
 jobs:
   trivy-scan:
@@ -43,7 +42,6 @@ jobs:
           helm template . --set runner.enabled=true > ../../rendered_chart.yaml
           echo "Rendered Helm chart to YAML in ../../rendered_chart.yaml."
 
-
       - name: Verify Rendered YAML File
         run: |
           if [ -f "rendered_chart.yaml" ]; then
@@ -56,8 +54,8 @@ jobs:
       - name: Extract Images from Rendered YAML
         id: extract-images
         run: |
-          # Extract image lines and remove leading/trailing quotes or unnecessary text
-          grep -E "image:|\"image:" rendered_chart.yaml | sed -e 's/.*image: *//' -e 's/^"//' -e 's/"$//' > registries.txt
+          grep -E "image:|\"image:" rendered_chart.yaml \
+            | sed -e 's/.*image: *//' -e 's/^"//' -e 's/"$//' > registries.txt
           sort -u registries.txt -o registries.txt
           echo "Images extracted from Helm chart:"
           cat registries.txt
@@ -67,12 +65,14 @@ jobs:
         id: add-input-registries
         run: |
           # Add additional registries specified in workflow inputs
-          echo "${{ github.event.inputs.registries }}" | sed 's/- /\n/g' | sed 's/^ *//;s/ *$//' >> registries.txt
+          echo "${{ github.event.inputs.registries }}" \
+            | sed 's/- /\n/g' \
+            | sed 's/^ *//;s/ *$//' \
+            >> registries.txt
           sort -u registries.txt -o registries.txt
           echo "Combined list of registries:"
           cat registries.txt
           echo "Total registries found: $(wc -l < registries.txt)"
-
 
       - name: Install latest Trivy
         run: |
@@ -91,8 +91,8 @@ jobs:
       - name: Scan each registry and aggregate results
         id: trivy-scan
         run: |
-          # Initialize an empty JSON array for aggregated results
-          echo '{"Vulnerabilities": []}' > aggregated_results.json
+          # 1) Initialize an empty JSON array to store *all* vulnerabilities
+          echo "[]" > aggregated_results.json
 
           while IFS= read -r registry || [[ -n "$registry" ]]; do
             echo "Scanning registry: '$registry'..."
@@ -101,39 +101,47 @@ jobs:
               continue
             fi
 
-            # Run Trivy scan and log output
+            # 2) Run Trivy scan and capture output
             trivy image --severity CRITICAL,HIGH --ignore-unfixed --scanners vuln --format json "$registry" > trivy_result.json
             echo "Trivy scan result for '$registry':"
 
-            # Check if Trivy output was generated and contains vulnerabilities
+            # 3) Check for scan failures or empty output
             if [[ ! -s trivy_result.json ]]; then
               echo "Error: Trivy scan failed for '$registry'. Skipping..."
               continue
             fi
 
-            # Safely handle null values in the Trivy output and log intermediate JSON
-            jq --arg registry "$registry" '.Results[]?.Vulnerabilities? // [] | .[] |= . + {"Registry": $registry}' trivy_result.json > vulnerabilities.json
+            # 4) Extract vulnerabilities into an array, add "Registry" to each
+            jq --arg registry "$registry" '
+              [ .Results[]?
+                | (.Vulnerabilities? // [])
+                | .[] 
+                | . + { "Registry": $registry }
+              ]
+            ' trivy_result.json > vulnerabilities.json
             echo "Processed vulnerabilities for '$registry':"
             cat vulnerabilities.json
 
-            # Merge the current results with the aggregated results, ensuring a flat array
-            jq '.Vulnerabilities += input' aggregated_results.json vulnerabilities.json > temp.json
+            # 5) Concatenate new vulnerabilities onto the aggregator array
+            #    -s (slurp) => read both files into an array of two arrays
+            #    .[0] + .[1] => array concat
+            jq -s '.[0] + .[1]' aggregated_results.json vulnerabilities.json > temp.json
             mv temp.json aggregated_results.json
 
-            # Log the aggregated results so far
             echo "Aggregated results after processing '$registry':"
+            # If desired, you can `cat aggregated_results.json` here for debugging
           done < registries.txt
 
-      - name: Calculate aggregated metric
+      - name: Calculate aggregated metrics
         id: calculate-metrics
         run: |
           echo "Calculating total Critical vulnerabilities..."
-          critical_count=$(jq '.Vulnerabilities | map(select(.Severity == "CRITICAL")) | length' aggregated_results.json)
+          critical_count=$(jq '[ .[] | select(.Severity == "CRITICAL") ] | length' aggregated_results.json)
           echo "Total Critical vulnerabilities: $critical_count"
           echo "critical_count=$critical_count" >> $GITHUB_ENV
 
           echo "Calculating total High vulnerabilities..."
-          high_count=$(jq '.Vulnerabilities | map(select(.Severity == "HIGH")) | length' aggregated_results.json)
+          high_count=$(jq '[ .[] | select(.Severity == "HIGH") ] | length' aggregated_results.json)
           echo "Total High vulnerabilities: $high_count"
           echo "high_count=$high_count" >> $GITHUB_ENV
 
@@ -154,21 +162,22 @@ jobs:
       - name: Generate summary report in table format
         id: generate-summary
         run: |
-          # Generate a summary report in table format
-          jq -r 'def group_vulns:
-                    reduce .Vulnerabilities[] as $v ({}; 
-                      .[$v.VulnerabilityID + "@" + $v.InstalledVersion + "@" + $v.FixedVersion] += [{
-                          "Registry": $v.Registry, 
-                          "VulnerabilityID": $v.VulnerabilityID, 
-                          "InstalledVersion": $v.InstalledVersion, 
-                          "FixedVersion": $v.FixedVersion, 
-                          "Severity": $v.Severity
-                      }]
-                    );
-                  group_vulns | 
-                  to_entries | map(.value) | flatten |
-                  unique_by(.VulnerabilityID, .InstalledVersion, .FixedVersion) |
-                  sort_by(.Registry) |
-                  (["Registry", "Vulnerability ID", "Installed Version", "Fixed Version", "Severity"] | (., map(length*"-"))),
-                  (.[] | [.Registry, .VulnerabilityID, .InstalledVersion, .FixedVersion, .Severity]) |
-                  @tsv' aggregated_results.json | column -t -s $'\t'
+          # Now aggregated_results.json is a top-level array, so we reduce .[] instead of .Vulnerabilities[]
+          jq -r '
+            def group_vulns:
+              reduce .[] as $v ({}; 
+                .[$v.VulnerabilityID + "@" + $v.InstalledVersion + "@" + $v.FixedVersion]
+                  += [ $v ]
+              );
+            group_vulns
+            | to_entries
+            | map(.value)
+            | flatten
+            | unique_by(.VulnerabilityID, .InstalledVersion, .FixedVersion)
+            | sort_by(.Registry)
+            | (["Registry", "Vulnerability ID", "Installed Version", "Fixed Version", "Severity"] 
+               | (., map(length * "-"))),
+              (.[] 
+                | [.Registry, .VulnerabilityID, .InstalledVersion, .FixedVersion, .Severity])
+            | @tsv
+          ' aggregated_results.json | column -t -s $'\t'
