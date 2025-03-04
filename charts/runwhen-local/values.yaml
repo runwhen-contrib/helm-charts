@@ -439,7 +439,7 @@ runner:
     image:
       registry: ""
       repository: ""
-      tag: "v1.10.0"
+      tag: "v1.11.0"
     tolerations: []
 
 ## opentelemetry-collector is only deployed if runner.enabled is true
