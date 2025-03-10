@@ -13,17 +13,6 @@ data:
         endpoint: ${env:MY_POD_IP}:13133
 
     receivers:
-      # Keep this for previous pushgw implementations
-      prometheus:
-        config:
-          global:
-            scrape_interval: 15s
-          scrape_configs:
-            - job_name: prometheus.scrape.pushgw
-              static_configs:
-                - targets:
-                  - pushgateway:9091
-      # Add this to support RW.Core.Push Metric switching to otlp
       otlp:
         protocols:
           http: 
@@ -60,11 +49,6 @@ data:
 
     service:
       pipelines:
-        metrics/prom:
-          receivers: [prometheus]
-          processors: [batch]
-          exporters: [prometheusremotewrite]
-
         metrics/otlp:
           receivers: [otlp]
           processors: [batch]
