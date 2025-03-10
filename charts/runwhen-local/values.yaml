@@ -261,7 +261,7 @@ runner:
   image:
     registry: ""
     repository: ""
-    tag: "latest"
+    tag: "main-7d8b8691"
   controlAddr: "https://runner.beta.runwhen.com"
   metrics:
     url: "https://runner-cortex-tenant.beta.runwhen.com/push"
