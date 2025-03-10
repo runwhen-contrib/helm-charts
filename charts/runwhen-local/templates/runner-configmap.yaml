@@ -95,9 +95,18 @@ data:
           {{- else }}
             {{- toYaml .Values.runner.runEnvironment.deployment.resources.default | nindent 12 }}
           {{- end }}
-          {{- with .Values.runner.runEnvironment.containerSecurityContext }}
+          {{- if .Values.runner.runEnvironment.containerSecurityContext }}
           securityContext:
             {{- toYaml . | nindent 12 }}
+          {{- else }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - all
+            readOnlyRootFilesystem: true
+            seccompProfile:
+              type: "RuntimeDefault"
           {{- end }}
           {{- with .Values.runner.runEnvironment.securityContext }}
           podSecurityContext:
