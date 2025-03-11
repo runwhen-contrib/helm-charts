@@ -168,12 +168,14 @@ jobs:
             | @tsv
           ' aggregated_results.json | column -t -s $'\t')
 
+          # Wrap the summary in triple backticks for Markdown code fencing
+          summary="\`\`\`\n${summary}\n\`\`\`"
 
-          # Write the summary as an output so we can access it in subsequent steps
+          # Output the summary so subsequent steps can access it
           echo "summary<<EOF" >> $GITHUB_OUTPUT
           echo "$summary" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-
+          
       # -------------------------------------------
       # Step to insert/overwrite summary in README
       # -------------------------------------------
