@@ -3,6 +3,14 @@
 # helm-charts
 All Public RunWhen Helm Charts - Managed by terraform
 
+
+# Latest Security Scan Results
+Security scans regularly run against all images used by this helm chart using [trivy](https://trivy.dev/latest/), scanning for CRITICAL and HIGH vulnerabilities that are fixable. 
+
+```
+trivy image --severity CRITICAL,HIGH --ignore-unfixed --scanners vuln --format json "$registry" > trivy_result.json
+```
+
 <!-- START_TRIVY_SUMMARY -->
 Registry                                                              Vulnerability ID  Installed Version  Fixed Version   Severity
 --------                                                              ----------------  -----------------  -------------   --------
