@@ -17,9 +17,11 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "runwhen-local.selectorLabels" . | nindent 8 }}
+          app: runwhen-local
+          {{- include "runwhen-local.selectorLabels" . | nindent 10 }}
     spec:
-      {{- with .Values.runwhenLocal.imagePullSecrets }}
+      {{- include "runwhen-local.podSecurityContext" . | nindent 6 }}
+      {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
@@ -29,19 +31,7 @@ spec:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
         - name: {{ .Chart.Name }}
-          {{- if .Values.runwhenLocal.securityContext }}
-          securityContext:
-            {{- toYaml .Values.runwhenLocal.securityContext | nindent 12 }}
-          {{- else }}
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - all
-            readOnlyRootFilesystem: true
-            seccompProfile:
-              type: "RuntimeDefault"
-          {{- end }}
+          {{- include "runwhen-local.containerSecurityContext" . | nindent 10 }}
           image: "{{ (.Values.runwhenLocal.image.registry | default .Values.registryOverride)| default "ghcr.io" }}/{{ .Values.runwhenLocal.image.repository | default "runwhen-contrib/runwhen-local" }}:{{ .Values.runwhenLocal.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.runwhenLocal.image.pullPolicy }}
           env: 

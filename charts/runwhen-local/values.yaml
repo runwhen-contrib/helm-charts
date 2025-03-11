@@ -33,6 +33,17 @@ tolerations: []
 
 affinity: {}
 
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - all
+  readOnlyRootFilesystem: true
+  seccompProfile:
+    type: "RuntimeDefault"
+
+podSecurityContext: {}
+
 # Override the container image registry used for all images
 # Note: grafana-agent is a subchart and must still be explicitly updated.
 registryOverride: ""
@@ -301,17 +312,10 @@ runner:
     extraEnv: {}
 
     # containerSecurityContext is used to set the security context for both the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods
-    securityContext:
-      allowPrivilegeEscalation: false
-      capabilities:
-        drop:
-          - all
-      readOnlyRootFilesystem: true
-      seccompProfile:
-        type: "RuntimeDefault"
+    # securityContext: {}
 
     # securityContext is used to set the security context for both the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods
-    podSecurityContext: {}
+    # podSecurityContext: {}
 
     secretProviders: {}
       # mycustomprovider:

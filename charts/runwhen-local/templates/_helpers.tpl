@@ -67,3 +67,20 @@ Reuse workspacename.
 {{- define "runwhen-local.workspaceName" -}}
 {{ .Values.workspaceName }}
 {{- end -}}
+
+{{/*
+Set Global Security Context
+*/}}
+{{- define "runwhen-local.containerSecurityContext" -}}
+{{- if .Values.containerSecurityContext }}
+securityContext:
+{{ toYaml .Values.containerSecurityContext | indent 2 }}
+{{- end }}
+{{- end }}
+
+{{- define "runwhen-local.podSecurityContext" -}}
+{{- if .Values.podSecurityContext }}
+securityContext:
+{{ toYaml .Values.podSecurityContext | indent 2 }}
+{{- end }}
+{{- end }}

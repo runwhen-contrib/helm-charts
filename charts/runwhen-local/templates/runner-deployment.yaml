@@ -2,151 +2,161 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  labels:
-    app: runner
   name: runner
-  namespace: {{ .Release.Namespace }}
+  labels:
+    {{ include "runwhen-local.labels" . | nindent 4 }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: runner
+      {{ include "runwhen-local.selectorLabels" . | nindent 6 }}
   strategy:
+    type: RollingUpdate
     rollingUpdate:
       maxSurge: 25%
       maxUnavailable: 25%
-    type: RollingUpdate
   template:
     metadata:
       labels:
+        {{ include "runwhen-local.selectorLabels" . | nindent 8 }}
         app: runner
-      {{- with .Values.podAnnotations }}
+      {{- with .Values.runner.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
     spec:
-      containers:
-      - image: "{{ (.Values.runner.image.registry |  default .Values.registryOverride) | default "us-docker.pkg.dev" }}/{{ .Values.runner.image.repository | default "runwhen-nonprod-shared/public-images/runner" }}:{{ .Values.runner.image.tag | default "latest" }}"
-        imagePullPolicy: {{ .Values.runner.imagePullPolicy | default "Always" }}
-        name: runner
-        ports:
-        - containerPort: 9090
-          name: metrics
-          protocol: TCP
-        resources:
-          {{- if eq .Values.platformType "EKS_Fargate" }}
-          {{- toYaml .Values.runner.resources.EKS_Fargate | nindent 12 }}
-          {{- else }}
-          {{- toYaml .Values.runner.resources.default | nindent 12 }}
-          {{- end }}
-        terminationMessagePath: /dev/termination-log
-        terminationMessagePolicy: File
-        volumeMounts:
-        - name: runner-config-volume
-          mountPath: "/etc/runwhen/runner/config.yaml"
-          subPath: "config.yaml"
-        {{- if or .Values.proxy.enabled .Values.runner.proxy }}
-        {{- if or .Values.proxyCA .Values.runner.proxyCA }}
-        - name: proxy-ca
-          mountPath: /etc/ssl/certs/proxy-ca.pem
-          subPath: proxy-ca.pem
-        {{- end }}
-        {{- end }}
-        {{- with .Values.runner.volumeMounts }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
-        env:
-        - name: RUNNER_CONTROL_ADDR
-          value: "{{ .Values.runner.controlAddr | default "https://runner.beta.runwhen.com" }}"
-        - name: RUNNER_NAMESPACE
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: metadata.namespace
-        {{- if .Values.proxy.enabled }}
-        {{- with .Values.proxy.httpProxy }}
-        - name: HTTP_PROXY
-          value: {{ . }}
-        {{- end }}
-        {{- with .Values.proxy.httpsProxy }}
-        - name: HTTPS_PROXY
-          value: {{ . }}
-        {{- end }}
-        {{- with .Values.proxy.noProxy }}
-        - name: NO_PROXY
-          value: {{ . }}
-        {{- end }}
-        {{- end }}
-        {{- with .Values.runner.extraEnv }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
-        {{- if .Values.runner.securityContext }}
-        securityContext:
-          {{- toYaml .Values.runner.securityContext | nindent 12 }}
-        {{- else }}
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-              - all
-          readOnlyRootFilesystem: true
-          seccompProfile:
-            type: "RuntimeDefault"
-        {{- end }}
-      dnsPolicy: ClusterFirst
-      restartPolicy: Always
-      schedulerName: default-scheduler
+      # Pod-level securityContext (if any)
+      {{- include "runwhen-local.podSecurityContext" . | nindent 6 }}
+
       serviceAccount: runner
       serviceAccountName: runner
-      terminationGracePeriodSeconds: 50
+      automountServiceAccountToken: true
+
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      containers:
+        - name: runner
+          image: "{{ (.Values.runner.image.registry | default .Values.registryOverride ) | default "us-docker.pkg.dev" }}/{{ .Values.runner.image.repository | default "runwhen-nonprod-shared/public-images/runner" }}:{{ .Values.runner.image.tag | default "latest" }}"
+          imagePullPolicy: {{ .Values.runner.imagePullPolicy | default "Always" }}
+          # Container-level securityContext (if you want to share the same helper as local):
+          {{- include "runwhen-local.containerSecurityContext" . | nindent 10 }}
+
+          ports:
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+
+          resources:
+            {{- if eq .Values.platformType "EKS_Fargate" }}
+            {{- toYaml .Values.runner.resources.EKS_Fargate | nindent 12 }}
+            {{- else }}
+            {{- toYaml .Values.runner.resources.default | nindent 12 }}
+            {{- end }}
+
+          env:
+            - name: RUNNER_CONTROL_ADDR
+              value: "{{ .Values.runner.controlAddr | default "https://runner.beta.runwhen.com" }}"
+            - name: RUNNER_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+
+            {{- /* If global proxy is enabled, set the usual variables. */}}
+            {{- if .Values.proxy.enabled }}
+            {{- with .Values.proxy.httpProxy }}
+            - name: HTTP_PROXY
+              value: {{ . }}
+            {{- end }}
+            {{- with .Values.proxy.httpsProxy }}
+            - name: HTTPS_PROXY
+              value: {{ . }}
+            {{- end }}
+            {{- with .Values.proxy.noProxy }}
+            - name: NO_PROXY
+              value: {{ . }}
+            {{- end }}
+            {{- end }}
+
+            {{- /* Additional environment variables for runner */}}
+            {{- with .Values.runner.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+
+          volumeMounts:
+            - name: runner-config-volume
+              mountPath: "/etc/runwhen/runner/config.yaml"
+              subPath: "config.yaml"
+
+            {{- if .Values.proxy.enabled }}
+            {{- with .Values.proxyCA }}
+            - name: proxy-ca
+              mountPath: /etc/ssl/certs/proxy-ca.pem
+              subPath: proxy-ca.pem
+            {{- end }}
+            {{- end }}
+
+            {{- with .Values.runner.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+
+      volumes:
+        - name: runner-config-volume
+          configMap:
+            name: {{ .Values.runner.configMap.name }}
+
+        {{- if .Values.proxy.enabled }}
+        {{- with .Values.proxyCA }}
+        - name: proxy-ca
+          {{- if .secretName }}
+          secret:
+            secretName: {{ .secretName }}
+          {{- else if .configMapName }}
+          configMap:
+            name: {{.configMapName }}
+          {{- end }}
+            items:
+              - key: {{ .key | default "ca.crt" }}
+                path: proxy-ca.pem
+            defaultMode: 420
+        {{- end }}
+        {{- end }}
+
+        {{- with .Values.volumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+
       {{- with .Values.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+
       {{- if or (eq .Values.platformArch "arm64") (not (empty .Values.tolerations)) (not (empty .Values.runner.tolerations)) }}
       tolerations:
-      {{- if eq .Values.platformArch "arm64" }}
-      - key: "kubernetes.io/arch"
-        operator: "Equal"
-        value: "arm64"
-        effect: "NoSchedule"
+        {{- if eq .Values.platformArch "arm64" }}
+        - key: "kubernetes.io/arch"
+          operator: "Equal"
+          value: "arm64"
+          effect: "NoSchedule"
+        {{- end }}
+        {{- with .Values.tolerations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.runner.tolerations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
       {{- end }}
-      {{- with .Values.tolerations }}
-      {{- toYaml . | nindent 6 }}
-      {{- end }}
-      {{- with .Values.runner.tolerations }}
-      {{- toYaml . | nindent 6 }}
-      {{- end }}
-      {{- end }}
+
+      {{- /* If using a runner-level .Values.runner.podSecurityContext: */}}
       {{- if .Values.runner.podSecurityContext }}
       securityContext:
         {{- toYaml .Values.runner.podSecurityContext | nindent 8 }}
-      {{- end }}
-      volumes:
-      - name: runner-config-volume
-        configMap:
-          name: {{ .Values.runner.configMap.name }}
-      {{- if or .Values.proxy.enabled .Values.runner.proxy }}
-      {{- with or .Values.proxyCA .Values.runner.proxyCA }}
-      - name: proxy-ca
-        {{- if .secretName }}
-        secret:
-          secretName: {{ .secretName }}
-        {{- else if .configMapName }}
-        configMap:
-          name: {{.configMapName }}
-        {{- end }}
-          items:
-          - key: {{ .key }}
-            path: proxy-ca.pem
-          defaultMode: 420
-      {{- end }}
-      {{- end }}
-      {{ with .Values.volumes }}
-        {{- toYaml . | nindent 8 }}
       {{- end }}
 {{- end }}
