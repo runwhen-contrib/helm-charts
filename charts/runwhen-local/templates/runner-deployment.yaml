@@ -9,7 +9,7 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      {{ include "runwhen-local.selectorLabels" . | nindent 6 }}
+      app: runner
   strategy:
     type: RollingUpdate
     rollingUpdate:
