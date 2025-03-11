@@ -146,41 +146,38 @@ jobs:
       - name: Generate summary output
         id: generate-summary
         run: |
-          # Save the summary to a variable
+          # 1) Build the table and column-align it
           summary=$(jq -r '
             def group_vulns:
               reduce .[] as $v ({}; 
-                # Include PkgName in the key to group on (optional, but recommended)
                 .[$v.VulnerabilityID + "@" + $v.PkgName + "@" + $v.InstalledVersion + "@" + $v.FixedVersion]
-                  += [ $v ]
+                  += [$v]
               );
             group_vulns
             | to_entries
             | map(.value)
             | flatten
-            # Use unique_by all four fields if you want them de-duplicated strictly
             | unique_by(.VulnerabilityID, .PkgName, .InstalledVersion, .FixedVersion)
             | sort_by(.Registry)
             | (["Registry","Package","Vulnerability ID","Installed Version","Fixed Version","Severity"]
-              | (., map(length * "-"))),
+               | (., map(length * "-"))),
               (.[]
-                | [.Registry, .PkgName, .VulnerabilityID, .InstalledVersion, .FixedVersion, .Severity])
+               | [ .Registry, .PkgName, .VulnerabilityID, .InstalledVersion, .FixedVersion, .Severity ])
             | @tsv
           ' aggregated_results.json | column -t -s $'\t')
 
-          # Wrap the summary in triple backticks for Markdown code fencing
+          # 2) Wrap the summary in triple backticks for Markdown code fencing
           summary="\`\`\`\n${summary}\n\`\`\`"
 
-          # Output the summary so subsequent steps can access it
+          # 3) Set the output so future steps can read it
           echo "summary<<EOF" >> $GITHUB_OUTPUT
           echo "$summary" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-          
+
       # -------------------------------------------
       # Step to insert/overwrite summary in README
       # -------------------------------------------
       - name: Update README with Trivy Summary
-        # This step depends on the summary from 'generate-summary'
         run: |
           # 1) Grab the summary string from the previous step
           summary="${{ steps.generate-summary.outputs.summary }}"
@@ -189,7 +186,7 @@ jobs:
           start_marker="<!-- START_TRIVY_SUMMARY -->"
           end_marker="<!-- END_TRIVY_SUMMARY -->"
 
-          # If the markers do NOT exist, append them to the end of README
+          # If markers do NOT exist, append them
           if ! grep -q "$start_marker" README.md; then
             echo "" >> README.md
             echo "$start_marker" >> README.md
@@ -199,19 +196,18 @@ jobs:
             sed -i "/$start_marker/,/$end_marker/{/$start_marker/!{/$end_marker/!d}}" README.md
           fi
 
-          # 3) Now insert the new summary between the markers
-          #    Use `sed` to read from stdin (the '<<< "$summary"' part)
-          sed -i "/$start_marker/ r /dev/stdin" README.md <<< "$summary"
+          # 3) Safely insert the multiline summary by writing it to a temporary file
+          echo "$summary" > summary_block.txt
+
+          # 4) Use sed to read the file contents into the README at the marker
+          sed -i "/$start_marker/ r summary_block.txt" README.md
 
       - name: Commit changes (README only)
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Stage the README if it changed:
           git add README.md
-
-          # Check if there is something to commit
           if git diff --cached --exit-code; then
             echo "No changes detected in README.md. Skipping commit."
             exit 0
