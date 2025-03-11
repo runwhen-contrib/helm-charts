@@ -1,8 +1,7 @@
 [![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/runwhen-contrib)](https://artifacthub.io/packages/search?repo=runwhen-contrib)
 
 # helm-charts
-All Public RunWhen Helm Charts - Managed by terraform
-
+All Public RunWhen Helm Charts
 
 # Latest Security Scan Results
 Security scans regularly run against all images used by this helm chart using [trivy](https://trivy.dev/latest/), scanning for CRITICAL and HIGH vulnerabilities that are fixable. 
