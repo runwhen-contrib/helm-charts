@@ -150,21 +150,24 @@ jobs:
           summary=$(jq -r '
             def group_vulns:
               reduce .[] as $v ({}; 
-                .[$v.VulnerabilityID + "@" + $v.InstalledVersion + "@" + $v.FixedVersion]
+                # Include PkgName in the key to group on (optional, but recommended)
+                .[$v.VulnerabilityID + "@" + $v.PkgName + "@" + $v.InstalledVersion + "@" + $v.FixedVersion]
                   += [ $v ]
               );
             group_vulns
             | to_entries
             | map(.value)
             | flatten
-            | unique_by(.VulnerabilityID, .InstalledVersion, .FixedVersion)
+            # Use unique_by all four fields if you want them de-duplicated strictly
+            | unique_by(.VulnerabilityID, .PkgName, .InstalledVersion, .FixedVersion)
             | sort_by(.Registry)
-            | (["Registry","Vulnerability ID","Installed Version","Fixed Version","Severity"] 
+            | (["Registry","Package","Vulnerability ID","Installed Version","Fixed Version","Severity"]
               | (., map(length * "-"))),
-              (.[] 
-                | [.Registry, .VulnerabilityID, .InstalledVersion, .FixedVersion, .Severity])
+              (.[]
+                | [.Registry, .PkgName, .VulnerabilityID, .InstalledVersion, .FixedVersion, .Severity])
             | @tsv
           ' aggregated_results.json | column -t -s $'\t')
+
 
           # Write the summary as an output so we can access it in subsequent steps
           echo "summary<<EOF" >> $GITHUB_OUTPUT
