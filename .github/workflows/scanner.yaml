@@ -1,6 +1,7 @@
 name: Trivy Scan for Critical Vulnerabilities
 
-permissions: write
+permissions: 
+  contents: write
 
 on:
   workflow_dispatch:
