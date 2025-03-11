@@ -17,9 +17,11 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "runwhen-local.selectorLabels" . | nindent 8 }}
+          app: runwhen-local
+          {{- include "runwhen-local.selectorLabels" . | nindent 10 }}
     spec:
-      {{- with .Values.runwhenLocal.imagePullSecrets }}
+      {{- include "runwhen-local.podSecurityContext" . | nindent 6 }}
+      {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
@@ -29,11 +31,12 @@ spec:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
         - name: {{ .Chart.Name }}
-          securityContext:
-            {{- toYaml .Values.runwhenLocal.securityContext | nindent 12 }}
+          {{- include "runwhen-local.containerSecurityContext" . | nindent 10 }}
           image: "{{ (.Values.runwhenLocal.image.registry | default .Values.registryOverride)| default "ghcr.io" }}/{{ .Values.runwhenLocal.image.repository | default "runwhen-contrib/runwhen-local" }}:{{ .Values.runwhenLocal.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.runwhenLocal.image.pullPolicy }}
           env: 
+          - name: TMPDIR
+            value: /tmp   
           - name: AUTORUN_WORKSPACE_BUILDER_INTERVAL
             value: "{{ .Values.runwhenLocal.autoRun.discoveryInterval }}"
           - name: RW_LOCAL_TERMINAL_DISABLED
@@ -116,6 +119,8 @@ spec:
           {{- end }}
           - name: shared-volume
             mountPath: "/shared"
+          - name: tmpdir
+            mountPath: "/tmp"
           {{- if .Values.runwhenLocal.discoveryKubeconfig.secretProvided.enabled }}
           - name: kubeconfig-secret-volume
             mountPath: "/shared/kubeconfig"
@@ -150,6 +155,8 @@ spec:
       {{- end }}
       {{- end }}
       - name: shared-volume
+        emptyDir: {}
+      - name: tmpdir
         emptyDir: {}
       {{- if .Values.runwhenLocal.discoveryKubeconfig.secretProvided.enabled }}
       - name: kubeconfig-secret-volume

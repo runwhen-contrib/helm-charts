@@ -49,11 +49,11 @@ data:
         proxy:
           enabled: {{ or .Values.runner.runEnvironment.proxy.enabled .Values.proxy.enabled }}
           httpProxy: "{{ or .Values.runner.runEnvironment.proxy.httpProxy .Values.proxy.httpProxy }}"
-          httpsProxy: "{{ or .Values.runner.runEnvironment.proxy.httpsProxy .Values.proxy.httpProxy }}"
+          httpsProxy: "{{ or .Values.runner.runEnvironment.proxy.httpsProxy .Values.proxy.httpsProxy }}"
           noProxy: "{{ or .Values.runner.runEnvironment.proxy.noProxy .Values.proxy.noProxy }}"
           proxyCA: "{{ or .Values.runner.runEnvironment.proxy.proxyCA .Values.proxy.proxyCA }}"
-        {{- if or .Values.proxy.enabled .Values.runner.proxy }}
-        {{- with or .Values.proxyCA .Values.runner.proxyCA }}
+        {{- if or .Values.proxy.enabled .Values.runner.runEnvironment.proxy.enabled }}
+        {{- with or .Values.proxyCA .Values.runner.runEnvironment.proxy.proxyCA }}
         proxyCA:
           {{- if .secretName }}
           secret:
@@ -62,7 +62,7 @@ data:
           configMap:
             name: {{.configMapName }}
           {{- end }}
-            key: {{ .key }}
+            key: {{ .key | default "ca.crt" }}
         {{- end }}
         {{- end }}
         deployment:
@@ -85,6 +85,11 @@ data:
           nodeSelector:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          {{- with .Values.runner.runEnvironment.deployment.tolerations }}
+          # Additional tolerations for this deployment
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           {{- with .Values.runner.runEnvironment.extraEnv }}
           envVars:
             {{- toYaml . | nindent 12 }}
@@ -95,14 +100,43 @@ data:
           {{- else }}
             {{- toYaml .Values.runner.runEnvironment.deployment.resources.default | nindent 12 }}
           {{- end }}
-          {{- with .Values.runner.runEnvironment.containerSecurityContext }}
+
+          # ------------------------
+          # Container-level securityContext (Deployment)
+          # If runEnvironment.containerSecurityContext is set, use it;
+          # else if global .Values.containerSecurityContext is set, use that;
+          # else fall back to your default snippet.
+          # ------------------------
+          {{- if .Values.runner.runEnvironment.containerSecurityContext }}
           securityContext:
-            {{- toYaml . | nindent 12 }}
+            {{- toYaml .Values.runner.runEnvironment.containerSecurityContext | nindent 12 }}
+          {{- else if .Values.containerSecurityContext }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          {{- else }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - all
+            readOnlyRootFilesystem: true
+            seccompProfile:
+              type: "RuntimeDefault"
           {{- end }}
-          {{- with .Values.runner.runEnvironment.securityContext }}
+
+          # ------------------------
+          # Pod-level securityContext (Deployment)
+          # If runEnvironment.securityContext is set, use it;
+          # else if global .Values.podSecurityContext is set, use that.
+          # ------------------------
+          {{- if .Values.runner.runEnvironment.securityContext }}
           podSecurityContext:
-            {{- toYaml . | nindent 12 }}
+            {{- toYaml .Values.runner.runEnvironment.securityContext | nindent 12 }}
+          {{- else if .Values.podSecurityContext }}
+          podSecurityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
           {{- end }}
+
           {{- if or (eq .Values.platformArch "arm64") (not (empty .Values.tolerations)) (not (empty .Values.runner.runEnvironment.deployment.tolerations)) }}
           tolerations:
           {{- if eq .Values.platformArch "arm64" }}
@@ -118,6 +152,7 @@ data:
           {{- toYaml . | nindent 10 }}
           {{- end }}
           {{- end }}
+
           {{- with .Values.runner.runEnvironment.volumes }}
           volumes:
             {{- toYaml . | nindent 12 }}
@@ -126,8 +161,9 @@ data:
           volumeMounts:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+
         pod:
-          runAsJob: {{ .Values.runner.runEnvironment.pod.runAsJob  }}
+          runAsJob: {{ .Values.runner.runEnvironment.pod.runAsJob }}
           {{- with .Values.runner.runEnvironment.pod.annotations }}
           annotations:
             {{- toYaml . | nindent 12 }}
@@ -143,6 +179,11 @@ data:
           nodeSelector:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          {{- with .Values.runner.runEnvironment.pod.tolerations }}
+          # Additional tolerations for the pod
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           {{- with .Values.runner.runEnvironment.extraEnv }}
           envVars:
             {{- toYaml . | nindent 12 }}
@@ -153,14 +194,43 @@ data:
           {{- else }}
             {{- toYaml .Values.runner.runEnvironment.pod.resources.default | nindent 12 }}
           {{- end }}
-          {{- with .Values.runner.runEnvironment.containerSecurityContext }}
+
+          # ------------------------
+          # Container-level securityContext (Pod)
+          # If runEnvironment.containerSecurityContext is set, use it;
+          # else if global .Values.containerSecurityContext is set, use that;
+          # else fall back to your default snippet.
+          # ------------------------
+          {{- if .Values.runner.runEnvironment.containerSecurityContext }}
           securityContext:
-            {{- toYaml . | nindent 12 }}
+            {{- toYaml .Values.runner.runEnvironment.containerSecurityContext | nindent 12 }}
+          {{- else if .Values.containerSecurityContext }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          {{- else }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - all
+            readOnlyRootFilesystem: true
+            seccompProfile:
+              type: "RuntimeDefault"
           {{- end }}
-          {{- with .Values.runner.runEnvironment.securityContext }}
+
+          # ------------------------
+          # Pod-level securityContext (Pod)
+          # If runEnvironment.securityContext is set, use it;
+          # else if global .Values.podSecurityContext is set, use that.
+          # ------------------------
+          {{- if .Values.runner.runEnvironment.securityContext }}
           podSecurityContext:
-            {{- toYaml . | nindent 12 }}
+            {{- toYaml .Values.runner.runEnvironment.securityContext | nindent 12 }}
+          {{- else if .Values.podSecurityContext }}
+          podSecurityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
           {{- end }}
+
           {{- if or (eq .Values.platformArch "arm64") (not (empty .Values.tolerations)) (not (empty .Values.runner.runEnvironment.pod.tolerations)) }}
           tolerations:
           {{- if eq .Values.platformArch "arm64" }}
@@ -176,6 +246,7 @@ data:
           {{- toYaml . | nindent 10 }}
           {{- end }}
           {{- end }}
+
           {{- with .Values.runner.runEnvironment.volumes }}
           volumes:
             {{- toYaml . | nindent 12 }}
