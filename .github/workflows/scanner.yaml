@@ -159,8 +159,8 @@ jobs:
             | flatten
             | unique_by(.VulnerabilityID, .InstalledVersion, .FixedVersion)
             | sort_by(.Registry)
-            | (["Registry", "Vulnerability ID", "Installed Version", "Fixed Version", "Severity"] 
-               | (., map(length * "-"))),
+            | (["Registry","Vulnerability ID","Installed Version","Fixed Version","Severity"] 
+              | (., map(length * "-"))),
               (.[] 
                 | [.Registry, .VulnerabilityID, .InstalledVersion, .FixedVersion, .Severity])
             | @tsv
