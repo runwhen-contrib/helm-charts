@@ -23,25 +23,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          ref: ${{ github.ref }}
           fetch-depth: 0
 
 
-      - name: Enforce local branch
-        # This step ensures we're not in detached HEAD, but on a real branch
+      - name: Determine and check out correct branch
         run: |
-          # If the ref is "refs/heads/<branch>", strip off "refs/heads/".
-          # That becomes our local branch name.
-          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
-          
-          # For pull_request events, GITHUB_REF might be "refs/pull/<PR>/merge";
-          # in that case, you might want to do:
-          #   BRANCH_NAME="${GITHUB_HEAD_REF}"
-          #   git checkout -B "$BRANCH_NAME"
-          #
-          # But for push/schedule, the below works fine:
-          git checkout -B "$BRANCH_NAME"
+          # If GITHUB_HEAD_REF is non-empty, we're dealing with a pull request.
+          if [ -n "${GITHUB_HEAD_REF}" ]; then
+            echo "Detected Pull Request. HEAD ref is ${GITHUB_HEAD_REF}."
+            BRANCH_NAME="${GITHUB_HEAD_REF}"
+          else
+            echo "Detected Push/Schedule. GITHUB_REF is ${GITHUB_REF}."
+            # Strip off refs/heads/
+            BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          fi
 
+          # Now we forcibly check out that branch locally (no more detached HEAD).
+          git checkout -B "$BRANCH_NAME"
+        
       - name: Install Helm
         run: |
           curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
