@@ -26,20 +26,23 @@ jobs:
           fetch-depth: 0
 
 
-      - name: Determine and check out correct branch
+      - name: Determine branch
+        id: determine-branch
         run: |
-          # If GITHUB_HEAD_REF is non-empty, we're dealing with a pull request.
-          if [ -n "${GITHUB_HEAD_REF}" ]; then
-            echo "Detected Pull Request. HEAD ref is ${GITHUB_HEAD_REF}."
-            BRANCH_NAME="${GITHUB_HEAD_REF}"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # Pull Request => use github.head_ref (e.g., "feature/my-branch")
+            echo "BRANCH_NAME=${GITHUB_HEAD_REF}" >> $GITHUB_OUTPUT
           else
-            echo "Detected Push/Schedule. GITHUB_REF is ${GITHUB_REF}."
-            # Strip off refs/heads/
-            BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+            # Push => strip 'refs/heads/' from github.ref
+            echo "BRANCH_NAME=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
           fi
 
-          # Now we forcibly check out that branch locally (no more detached HEAD).
+
+      - name: Enforce local branch
+        run: |
+          BRANCH_NAME="${{ steps.determine-branch.outputs.BRANCH_NAME }}"
           git checkout -B "$BRANCH_NAME"
+
         
       - name: Install Helm
         run: |
@@ -218,17 +221,18 @@ jobs:
           #    `sed -i "/$start_marker/ r /dev/stdin" README.md <<< "$summary"`
           #    reads summary from stdin and inserts it after the line with $start_marker.
           sed -i "/$start_marker/ r /dev/stdin" README.md <<< "$summary"
-    
-      - name: Commit changes (README only)
+          
+      - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           git add README.md
           if git diff --cached --exit-code; then
-            echo "No changes in README.md. Skipping commit."
+            echo "No changes."
             exit 0
           else
-            git commit -m "chore: update README with Trivy summary"
+            git commit -m "Automated update"
+            BRANCH_NAME="${{ steps.determine-branch.outputs.BRANCH_NAME }}"
             git push origin "$BRANCH_NAME"
           fi
