@@ -230,7 +230,5 @@ jobs:
             exit 0
           else
             git commit -m "chore: update README with Trivy summary"
-            # Push to the same branch
-            BRANCH_NAME="${GITHUB_REF#refs/heads/}"
             git push origin "$BRANCH_NAME"
           fi
