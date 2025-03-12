@@ -22,7 +22,28 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
+
+      - name: Determine branch
+        id: determine-branch
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # Pull Request => use github.head_ref (e.g., "feature/my-branch")
+            echo "BRANCH_NAME=${GITHUB_HEAD_REF}" >> $GITHUB_OUTPUT
+          else
+            # Push => strip 'refs/heads/' from github.ref
+            echo "BRANCH_NAME=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+          fi
+
+
+      - name: Enforce local branch
+        run: |
+          BRANCH_NAME="${{ steps.determine-branch.outputs.BRANCH_NAME }}"
+          git checkout -B "$BRANCH_NAME"
+
+        
       - name: Install Helm
         run: |
           curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
@@ -178,43 +199,40 @@ jobs:
       # Step to insert/overwrite summary in README
       # -------------------------------------------
       - name: Update README with Trivy Summary
-        # This step depends on the summary from 'generate-summary'
         run: |
           # 1) Grab the summary string from the previous step
-          summary="${{ steps.generate-summary.outputs.summary }}"
+          summary="$(echo '```'; echo "${{ steps.generate-summary.outputs.summary }}"; echo '```')"
 
           # 2) Define start and end markers
           start_marker="<!-- START_TRIVY_SUMMARY -->"
           end_marker="<!-- END_TRIVY_SUMMARY -->"
 
-          # If the markers do NOT exist, append them to the end of README
+          # 3) If the markers do NOT exist, append them at the end of README
           if ! grep -q "$start_marker" README.md; then
             echo "" >> README.md
             echo "$start_marker" >> README.md
             echo "$end_marker" >> README.md
           else
-            # If they do exist, remove everything in between
+            # If they do exist, remove everything in between, leaving the markers
             sed -i "/$start_marker/,/$end_marker/{/$start_marker/!{/$end_marker/!d}}" README.md
           fi
 
-          # 3) Now insert the new summary between the markers
-          #    Use `sed` to read from stdin (the '<<< "$summary"' part)
+          # 4) Insert the new summary between those markers
+          #    `sed -i "/$start_marker/ r /dev/stdin" README.md <<< "$summary"`
+          #    reads summary from stdin and inserts it after the line with $start_marker.
           sed -i "/$start_marker/ r /dev/stdin" README.md <<< "$summary"
-
-      - name: Commit changes (README only)
+          
+      - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Stage the README if it changed:
           git add README.md
-
-          # Check if there is something to commit
           if git diff --cached --exit-code; then
-            echo "No changes detected in README.md. Skipping commit."
+            echo "No changes."
             exit 0
           else
-            git commit -m "chore: update README with Trivy summary"
-            git push
+            git commit -m "Automated update"
+            BRANCH_NAME="${{ steps.determine-branch.outputs.BRANCH_NAME }}"
+            git push origin "$BRANCH_NAME"
           fi
-
