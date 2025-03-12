@@ -22,7 +22,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
+        fetch-depth: 0
+        
       - name: Install Helm
         run: |
           curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
