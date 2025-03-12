@@ -181,7 +181,7 @@ jobs:
         # This step depends on the summary from 'generate-summary'
         run: |
           # 1) Grab the summary string from the previous step
-          summary="\n\`\`\`${{ steps.generate-summary.outputs.summary }}\n\`\`\`"
+          summary="\`\`\`\\n${{ steps.generate-summary.outputs.summary }}\\n\`\`\`\\n"
 
           # 2) Define start and end markers
           start_marker="<!-- START_TRIVY_SUMMARY -->"
