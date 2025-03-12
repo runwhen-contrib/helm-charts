@@ -12,7 +12,8 @@ on:
         default: |
           - us-docker.pkg.dev/runwhen-nonprod-shared/public-images/robot-runtime-base-image:latest
   schedule:
-    - cron: "0 19 * * *"
+    # This cron runs at 11:00 UTC and 21:00 UTC every day
+    - cron: "0 11,21 * * *"
   pull_request:
     types: [opened, synchronize]
 
