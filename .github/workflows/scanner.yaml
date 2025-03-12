@@ -26,6 +26,22 @@ jobs:
           ref: ${{ github.ref }}
           fetch-depth: 0
 
+
+      - name: Enforce local branch
+        # This step ensures we're not in detached HEAD, but on a real branch
+        run: |
+          # If the ref is "refs/heads/<branch>", strip off "refs/heads/".
+          # That becomes our local branch name.
+          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          
+          # For pull_request events, GITHUB_REF might be "refs/pull/<PR>/merge";
+          # in that case, you might want to do:
+          #   BRANCH_NAME="${GITHUB_HEAD_REF}"
+          #   git checkout -B "$BRANCH_NAME"
+          #
+          # But for push/schedule, the below works fine:
+          git checkout -B "$BRANCH_NAME"
+
       - name: Install Helm
         run: |
           curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
@@ -203,20 +219,19 @@ jobs:
           #    `sed -i "/$start_marker/ r /dev/stdin" README.md <<< "$summary"`
           #    reads summary from stdin and inserts it after the line with $start_marker.
           sed -i "/$start_marker/ r /dev/stdin" README.md <<< "$summary"
-
+    
       - name: Commit changes (README only)
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Stage the README if it changed:
           git add README.md
-
-          # Check if there is something to commit
           if git diff --cached --exit-code; then
-            echo "No changes detected in README.md. Skipping commit."
+            echo "No changes in README.md. Skipping commit."
             exit 0
           else
             git commit -m "chore: update README with Trivy summary"
-            git push
+            # Push to the same branch
+            BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+            git push origin "$BRANCH_NAME"
           fi
