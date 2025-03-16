@@ -19,42 +19,41 @@ trivy image --severity CRITICAL,HIGH --ignore-unfixed --scanners vuln --format j
 
 <!-- START_TRIVY_SUMMARY -->
 ```
-Registry                                      Package           Vulnerability ID  Installed Version  Fixed Version         Severity
---------                                      -------           ----------------  -----------------  -------------         --------
-ghcr.io/runwhen-contrib/runwhen-local:latest  vim               CVE-2023-2610     2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  vim-common        CVE-2023-2610     2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  vim-runtime       CVE-2023-2610     2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  vim               CVE-2023-4738     2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  vim-common        CVE-2023-4738     2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  vim-runtime       CVE-2023-4738     2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  vim               CVE-2023-4752     2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  vim-common        CVE-2023-4752     2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  vim-runtime       CVE-2023-4752     2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  vim               CVE-2023-4781     2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  vim-common        CVE-2023-4781     2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  vim-runtime       CVE-2023-4781     2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  vim               CVE-2023-5344     2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  vim-common        CVE-2023-5344     2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  vim-runtime       CVE-2023-5344     2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  vim               CVE-2024-22667    2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  vim-common        CVE-2024-22667    2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  vim-runtime       CVE-2024-22667    2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  wget              CVE-2024-38428    1.21.3-1+b2        1.21.3-1+deb12u1      CRITICAL
-ghcr.io/runwhen-contrib/runwhen-local:latest  golang.org/x/net  CVE-2024-45338    v0.30.0            0.33.0                HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev    CVE-2024-49989    6.1.128-1          6.1.129-1             HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev    CVE-2024-50061    6.1.128-1          6.1.129-1             HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev    CVE-2024-57980    6.1.128-1          6.1.129-1             HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev    CVE-2024-58007    6.1.128-1          6.1.129-1             HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev    CVE-2024-58069    6.1.128-1          6.1.129-1             HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev    CVE-2025-21703    6.1.128-1          6.1.129-1             HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev    CVE-2025-21718    6.1.128-1          6.1.129-1             HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev    CVE-2025-21726    6.1.128-1          6.1.129-1             HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev    CVE-2025-21735    6.1.128-1          6.1.129-1             HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev    CVE-2025-21753    6.1.128-1          6.1.129-1             HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev    CVE-2025-21782    6.1.128-1          6.1.129-1             HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev    CVE-2025-21785    6.1.128-1          6.1.129-1             HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev    CVE-2025-21791    6.1.128-1          6.1.129-1             HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev    CVE-2025-21794    6.1.128-1          6.1.129-1             HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev    CVE-2025-21812    6.1.128-1          6.1.129-1             HIGH
+Registry                                      Package         Vulnerability ID  Installed Version  Fixed Version         Severity
+--------                                      -------         ----------------  -----------------  -------------         --------
+ghcr.io/runwhen-contrib/runwhen-local:latest  vim             CVE-2023-2610     2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  vim-common      CVE-2023-2610     2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  vim-runtime     CVE-2023-2610     2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  vim             CVE-2023-4738     2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  vim-common      CVE-2023-4738     2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  vim-runtime     CVE-2023-4738     2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  vim             CVE-2023-4752     2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  vim-common      CVE-2023-4752     2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  vim-runtime     CVE-2023-4752     2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  vim             CVE-2023-4781     2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  vim-common      CVE-2023-4781     2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  vim-runtime     CVE-2023-4781     2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  vim             CVE-2023-5344     2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  vim-common      CVE-2023-5344     2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  vim-runtime     CVE-2023-5344     2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  vim             CVE-2024-22667    2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  vim-common      CVE-2024-22667    2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  vim-runtime     CVE-2024-22667    2:9.0.1378-2       2:9.0.1378-2+deb12u1  HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  wget            CVE-2024-38428    1.21.3-1+b2        1.21.3-1+deb12u1      CRITICAL
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev  CVE-2024-49989    6.1.128-1          6.1.129-1             HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev  CVE-2024-50061    6.1.128-1          6.1.129-1             HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev  CVE-2024-57980    6.1.128-1          6.1.129-1             HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev  CVE-2024-58007    6.1.128-1          6.1.129-1             HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev  CVE-2024-58069    6.1.128-1          6.1.129-1             HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev  CVE-2025-21703    6.1.128-1          6.1.129-1             HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev  CVE-2025-21718    6.1.128-1          6.1.129-1             HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev  CVE-2025-21726    6.1.128-1          6.1.129-1             HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev  CVE-2025-21735    6.1.128-1          6.1.129-1             HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev  CVE-2025-21753    6.1.128-1          6.1.129-1             HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev  CVE-2025-21782    6.1.128-1          6.1.129-1             HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev  CVE-2025-21785    6.1.128-1          6.1.129-1             HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev  CVE-2025-21791    6.1.128-1          6.1.129-1             HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev  CVE-2025-21794    6.1.128-1          6.1.129-1             HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev  CVE-2025-21812    6.1.128-1          6.1.129-1             HIGH
 ```
 <!-- END_TRIVY_SUMMARY -->
