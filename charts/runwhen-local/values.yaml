@@ -378,7 +378,7 @@ runner:
       resources:
         default:
           requests:
-            cpu: "100m"
+            cpu: "150m"
             memory: "64Mi"
           limits:
             cpu: "500m"
@@ -401,7 +401,7 @@ runner:
       resources:
         default:
           requests:
-            cpu: "100m"
+            cpu: "150m"
             memory: "128Mi"
           limits:
             cpu: "1"
