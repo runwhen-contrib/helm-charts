@@ -44,6 +44,7 @@ ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-
 ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2024-50061    6.1.128-1              6.1.129-1              HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2024-57980    6.1.128-1              6.1.129-1              HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2024-58007    6.1.128-1              6.1.129-1              HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2024-58055    6.1.128-1              6.1.129-1              HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2024-58069    6.1.128-1              6.1.129-1              HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2025-21703    6.1.128-1              6.1.129-1              HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2025-21718    6.1.128-1              6.1.129-1              HIGH
