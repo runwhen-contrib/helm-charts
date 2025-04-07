@@ -98,7 +98,6 @@ jobs:
           registry_prefix="us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images"
           branch="main"
           # 1) Download codecollections.yaml
-          rm registries.txt || true
           curl -L https://raw.githubusercontent.com/runwhen-contrib/codecollection-registry/main/codecollections.yaml -o codecollections.yaml
 
           # 2) Determine the branch name to use (default to 'main' if empty)
@@ -108,8 +107,6 @@ jobs:
           fi
 
           # 3) Extract 'org' and 'codecollection' from each 'git_url'
-          # Example line:  git_url: https://github.com/runwhen-solution-samples/tanzu-advanced
-          # This yields org=runwhen-solution-samples, codecollection=tanzu-advanced
           grep -E 'git_url:' codecollections.yaml \
             | sed -E 's|.*github.com/([^/]+)/([^/[:space:]]+)(\.git)?|\1 \2|' \
             > codecollections_raw.txt
