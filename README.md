@@ -23,8 +23,21 @@ Registry                                      Package                       Vuln
 --------                                      -------                       ----------------  -----------------  -------------  --------
 ghcr.io/runwhen-contrib/runwhen-local:latest  github.com/golang-jwt/jwt/v4  CVE-2025-30204    v4.5.1             4.5.2          HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest  github.com/golang-jwt/jwt/v5  CVE-2025-30204    v5.2.1             5.2.2          HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  liblzma5                      CVE-2025-31115    5.4.1-0.2          5.4.1-1        HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest  xz-utils                      CVE-2025-31115    5.4.1-0.2          5.4.1-1        HIGH
-otel/opentelemetry-collector:0.120.0          github.com/expr-lang/expr     CVE-2025-29786    v1.16.9            1.17.0         HIGH
 ```
 <!-- END_TRIVY_SUMMARY -->
+<!-- START_SCANNED_IMAGES -->
+```
+
+ghcr.io/runwhen-contrib/runwhen-local:latest
+otel/opentelemetry-collector:0.123.0
+us-docker.pkg.dev/runwhen-nonprod-shared/public-images/runner:latest
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/infracloudio-ifc-rw-codecollection-main:latest
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-aws-c7n-codecollection-main:latest
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-rw-cli-codecollection-main:latest
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-rw-generic-codecollection-main:latest
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-rw-public-codecollection-main:latest
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-rw-workspace-utils-main:latest
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-ternary-codecollection-main:latest
+```
+<!-- END_SCANNED_IMAGES -->
