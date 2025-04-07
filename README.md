@@ -25,6 +25,8 @@ ghcr.io/runwhen-contrib/runwhen-local:latest  github.com/golang-jwt/jwt/v4  CVE-
 ghcr.io/runwhen-contrib/runwhen-local:latest  github.com/golang-jwt/jwt/v5  CVE-2025-30204    v5.2.1             5.2.2          HIGH
 ```
 <!-- END_TRIVY_SUMMARY -->
+
+**Below, you can find the list of images that were scanned and may be utilized while executing Tasks securely in your infrastructure.**  
 <!-- START_SCANNED_IMAGES -->
 ```
 
