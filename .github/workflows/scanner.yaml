@@ -1,6 +1,5 @@
 name: Trivy Scan for Critical Vulnerabilities
 
-# Not strictly required if you're using a PAT, but leaving it doesn't hurt
 permissions: 
   contents: write
 
@@ -90,7 +89,45 @@ jobs:
             | sed 's/^ *//;s/ *$//' \
             >> registries.txt
           sort -u registries.txt -o registries.txt
-          echo "Combined list of registries:"
+          echo "Combined list of registries (after user input):"
+          cat registries.txt
+          echo "Total registries found: $(wc -l < registries.txt)"
+
+      - name: Download codecollections.yaml and parse images
+        run: |
+          registry_prefix="us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images"
+          branch="main"
+          # 1) Download codecollections.yaml
+          rm registries.txt || true
+          curl -L https://raw.githubusercontent.com/runwhen-contrib/codecollection-registry/main/codecollections.yaml -o codecollections.yaml
+
+          # 2) Determine the branch name to use (default to 'main' if empty)
+          branch="${{ steps.determine-branch.outputs.BRANCH_NAME }}"
+          if [ -z "$branch" ]; then
+            branch="main"
+          fi
+
+          # 3) Extract 'org' and 'codecollection' from each 'git_url'
+          # Example line:  git_url: https://github.com/runwhen-solution-samples/tanzu-advanced
+          # This yields org=runwhen-solution-samples, codecollection=tanzu-advanced
+          grep -E 'git_url:' codecollections.yaml \
+            | sed -E 's|.*github.com/([^/]+)/([^/[:space:]]+)(\.git)?|\1 \2|' \
+            > codecollections_raw.txt
+
+          echo "Extracted org and codecollection from codecollections.yaml:"
+          cat codecollections_raw.txt
+
+          # 4) Construct the image pattern: us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/${org}-${codecollection}-${branch}:latest
+          while read -r org codecollection; do
+            # Trim possible trailing .git if it wasn't removed by sed
+            codecollection="${codecollection%.git}"
+            echo "${registry_prefix}/${org}-${codecollection}-${branch}:latest"
+          done < codecollections_raw.txt >> registries.txt
+
+          # 5) Sort & ensure uniqueness
+          sort -u registries.txt -o registries.txt
+
+          echo "Updated list of registries after adding codecollections:"
           cat registries.txt
           echo "Total registries found: $(wc -l < registries.txt)"
 
@@ -168,11 +205,11 @@ jobs:
       - name: Generate summary output
         id: generate-summary
         run: |
-          # Save the summary to a variable
+          # Save the vulnerability summary to a variable
           summary=$(jq -r '
             def group_vulns:
               reduce .[] as $v ({}; 
-                # Include PkgName in the key to group on
+                # Group on ID + PkgName + versions
                 .[$v.VulnerabilityID + "@" + $v.PkgName + "@" + $v.InstalledVersion + "@" + $v.FixedVersion]
                   += [ $v ]
               );
@@ -193,21 +230,57 @@ jobs:
           echo "$summary" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Update README with Trivy Summary
+      - name: Generate scanned images list
+        id: generate-image-list
         run: |
-          summary="$(echo '```'; echo "${{ steps.generate-summary.outputs.summary }}"; echo '```')"
-          start_marker="<!-- START_TRIVY_SUMMARY -->"
-          end_marker="<!-- END_TRIVY_SUMMARY -->"
+          # Final list of all images that were scanned is simply registries.txt
+          # Sort them once more just to be safe
+          sort -u registries.txt -o registries.txt
+          images_list="$(cat registries.txt)"
+          echo "images_list<<EOF" >> $GITHUB_OUTPUT
+          echo "$images_list" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
-          if ! grep -q "$start_marker" README.md; then
-            echo "" >> README.md
-            echo "$start_marker" >> README.md
-            echo "$end_marker" >> README.md
-          else
-            sed -i "/$start_marker/,/$end_marker/{/$start_marker/!{/$end_marker/!d}}" README.md
+      - name: Update README with Trivy Summary & Scanned Images
+        run: |
+          summary_marker_start="<!-- START_TRIVY_SUMMARY -->"
+          summary_marker_end="<!-- END_TRIVY_SUMMARY -->"
+          images_marker_start="<!-- START_SCANNED_IMAGES -->"
+          images_marker_end="<!-- END_SCANNED_IMAGES -->"
+
+          summary="$(echo '```'; echo "${{ steps.generate-summary.outputs.summary }}"; echo '```')"
+          images_list="$(echo '```'; echo "${{ steps.generate-image-list.outputs.images_list }}"; echo '```')"
+
+          # Ensure README exists
+          if [ ! -f README.md ]; then
+            touch README.md
           fi
 
-          sed -i "/$start_marker/ r /dev/stdin" README.md <<< "$summary"
+          # 1) Insert/Update the Trivy summary
+          if ! grep -q "$summary_marker_start" README.md; then
+            # Markers don't exist, append them
+            {
+              echo ""
+              echo "$summary_marker_start"
+              echo "$summary_marker_end"
+            } >> README.md
+          fi
+          # Now replace text between markers
+          sed -i "/$summary_marker_start/,/$summary_marker_end/{/$summary_marker_start/!{/$summary_marker_end/!d}}" README.md
+          sed -i "/$summary_marker_start/ r /dev/stdin" README.md <<< "$summary"
+
+          # 2) Insert/Update the Scanned Images list
+          if ! grep -q "$images_marker_start" README.md; then
+            # Markers don't exist, append them
+            {
+              echo ""
+              echo "$images_marker_start"
+              echo "$images_marker_end"
+            } >> README.md
+          fi
+          # Now replace text between markers
+          sed -i "/$images_marker_start/,/$images_marker_end/{/$images_marker_start/!{/$images_marker_end/!d}}" README.md
+          sed -i "/$images_marker_start/ r /dev/stdin" README.md <<< "$images_list"
 
       - name: Commit and force-push to main
         run: |
