@@ -100,13 +100,7 @@ jobs:
           # 1) Download codecollections.yaml
           curl -L https://raw.githubusercontent.com/runwhen-contrib/codecollection-registry/main/codecollections.yaml -o codecollections.yaml
 
-          # 2) Determine the branch name to use (default to 'main' if empty)
-          branch="${{ steps.determine-branch.outputs.BRANCH_NAME }}"
-          if [ -z "$branch" ]; then
-            branch="main"
-          fi
-
-          # 3) Extract 'org' and 'codecollection' from each 'git_url'
+          # 2) Extract 'org' and 'codecollection' from each 'git_url'
           grep -E 'git_url:' codecollections.yaml \
             | sed -E 's|.*github.com/([^/]+)/([^/[:space:]]+)(\.git)?|\1 \2|' \
             > codecollections_raw.txt
@@ -114,14 +108,14 @@ jobs:
           echo "Extracted org and codecollection from codecollections.yaml:"
           cat codecollections_raw.txt
 
-          # 4) Construct the image pattern: us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/${org}-${codecollection}-${branch}:latest
+          # 3) Construct the image pattern: us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/${org}-${codecollection}-${branch}:latest
           while read -r org codecollection; do
             # Trim possible trailing .git if it wasn't removed by sed
             codecollection="${codecollection%.git}"
             echo "${registry_prefix}/${org}-${codecollection}-${branch}:latest"
           done < codecollections_raw.txt >> registries.txt
 
-          # 5) Sort & ensure uniqueness
+          # 4) Sort & ensure uniqueness
           sort -u registries.txt -o registries.txt
 
           echo "Updated list of registries after adding codecollections:"
