@@ -261,7 +261,7 @@ jobs:
               echo "$summary_marker_end"
             } >> README.md
           fi
-          # Now replace text between markers
+          # Replace any existing summary block
           sed -i "/$summary_marker_start/,/$summary_marker_end/{/$summary_marker_start/!{/$summary_marker_end/!d}}" README.md
           sed -i "/$summary_marker_start/ r /dev/stdin" README.md <<< "$summary"
 
@@ -274,11 +274,11 @@ jobs:
               echo "$images_marker_end"
             } >> README.md
           fi
-          # Now replace text between markers
+          # Replace any existing scanned-images block
           sed -i "/$images_marker_start/,/$images_marker_end/{/$images_marker_start/!{/$images_marker_end/!d}}" README.md
           sed -i "/$images_marker_start/ r /dev/stdin" README.md <<< "$images_list"
 
-      - name: Commit and force-push to main
+      - name: Commit and force-push to current branch (or main)
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -290,5 +290,15 @@ jobs:
           fi
 
           git commit -m "Automated update"
-          # Force push to main using the PAT
-          git push origin main --force
+
+          # Use the branch we discovered earlier; default to main if empty
+          BRANCH_NAME="${{ steps.determine-branch.outputs.BRANCH_NAME }}"
+          if [ -z "$BRANCH_NAME" ]; then
+            BRANCH_NAME="main"
+          fi
+
+          # Ensure we actually have a local branch for pushing
+          git checkout -B "$BRANCH_NAME"
+
+          # Force push to the same branch
+          git push origin "$BRANCH_NAME" --force
