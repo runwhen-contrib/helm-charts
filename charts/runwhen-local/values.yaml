@@ -256,7 +256,7 @@ runwhenLocal:
 ###############################################################################
 
 runner:
-  enabled: false
+  enabled: true
 
   log:
     level: info
@@ -457,7 +457,7 @@ opentelemetry-collector:
   image:
     repository: "otel/opentelemetry-collector"
     pullPolicy: IfNotPresent
-    tag: "0.120.0"
+    tag: "0.123.0"
   imagePullSecrets: []
   command:
     name: "otelcol"
