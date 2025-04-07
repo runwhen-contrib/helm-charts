@@ -148,9 +148,14 @@ jobs:
               continue
             fi
 
-            trivy image --severity CRITICAL,HIGH --ignore-unfixed --scanners vuln --format json "$registry" > trivy_result.json
+            trivy image --severity CRITICAL,HIGH --ignore-unfixed --scanners vuln --format json "$registry" > trivy_result.json || {
+              echo "Trivy scan failed (image not found or other error) for '$registry'. Skipping..."
+              continue
+            }
+
+            # Then still check if we ended up with an empty file for any reason
             if [[ ! -s trivy_result.json ]]; then
-              echo "Error: Trivy scan failed for '$registry'. Skipping..."
+              echo "Error: Trivy scan produced no output for '$registry'. Skipping..."
               continue
             fi
 
