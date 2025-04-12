@@ -21,6 +21,24 @@ trivy image --severity CRITICAL,HIGH --ignore-unfixed --scanners vuln --format j
 ```
 Registry                                      Package                       Vulnerability ID  Installed Version  Fixed Version  Severity
 --------                                      -------                       ----------------  -----------------  -------------  --------
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2024-26982    6.1.129-1          6.1.133-1      HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2024-35866    6.1.129-1          6.1.133-1      HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2024-50246    6.1.129-1          6.1.133-1      HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2024-53166    6.1.129-1          6.1.133-1      HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2024-58002    6.1.129-1          6.1.133-1      HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2025-21702    6.1.129-1          6.1.133-1      HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2025-21855    6.1.129-1          6.1.133-1      HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2025-21858    6.1.129-1          6.1.133-1      HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2025-21919    6.1.129-1          6.1.133-1      HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2025-21920    6.1.129-1          6.1.133-1      HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2025-21926    6.1.129-1          6.1.133-1      HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2025-21928    6.1.129-1          6.1.133-1      HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2025-21934    6.1.129-1          6.1.133-1      HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2025-21945    6.1.129-1          6.1.133-1      HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2025-21979    6.1.129-1          6.1.133-1      HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2025-21991    6.1.129-1          6.1.133-1      HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2025-21993    6.1.129-1          6.1.133-1      HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2025-21999    6.1.129-1          6.1.133-1      HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest  github.com/golang-jwt/jwt/v4  CVE-2025-30204    v4.5.1             4.5.2          HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest  github.com/golang-jwt/jwt/v5  CVE-2025-30204    v5.2.1             5.2.2          HIGH
 ```
