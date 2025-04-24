@@ -23,6 +23,7 @@ Registry                                      Package                       Vuln
 --------                                      -------                       ----------------  -----------------  -------------  --------
 ghcr.io/runwhen-contrib/runwhen-local:latest  github.com/golang-jwt/jwt/v4  CVE-2025-30204    v4.5.1             4.5.2          HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest  github.com/golang-jwt/jwt/v5  CVE-2025-30204    v5.2.1             5.2.2          HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  h11                           CVE-2025-43859    0.14.0             0.16.0         CRITICAL
 ```
 <!-- END_TRIVY_SUMMARY -->
 
