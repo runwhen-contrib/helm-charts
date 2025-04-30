@@ -23,7 +23,9 @@ Registry                                      Package                       Vuln
 --------                                      -------                       ----------------  -----------------  -------------  --------
 ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2024-46774    6.1.133-1          6.1.135-1      HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2024-50063    6.1.133-1          6.1.135-1      HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2025-22038    6.1.133-1          6.1.135-1      HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2025-22055    6.1.133-1          6.1.135-1      HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2025-22056    6.1.133-1          6.1.135-1      HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest  linux-libc-dev                CVE-2025-22058    6.1.133-1          6.1.135-1      HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest  github.com/golang-jwt/jwt/v4  CVE-2025-30204    v4.5.1             4.5.2          HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest  github.com/golang-jwt/jwt/v5  CVE-2025-30204    v5.2.1             5.2.2          HIGH
