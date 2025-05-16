@@ -89,6 +89,9 @@ spec:
             - name: runner-config-volume
               mountPath: "/etc/runwhen/runner/config.yaml"
               subPath: "config.yaml"
+            - name: bolt-data
+              mountPath: "/data"
+              subPath: "data"
 
             {{- if .Values.proxy.enabled }}
             {{- with .Values.proxyCA }}
@@ -106,6 +109,8 @@ spec:
         - name: runner-config-volume
           configMap:
             name: {{ .Values.runner.configMap.name }}
+        - name: bolt-data
+          emptyDir: {}
 
         {{- if .Values.proxy.enabled }}
         {{- with .Values.proxyCA }}
