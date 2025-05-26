@@ -23,7 +23,6 @@ Registry                                                                        
 --------                                                                                                   -------                       ----------------  -----------------  -------------  --------
 ghcr.io/runwhen-contrib/runwhen-local:latest                                                               linux-libc-dev                CVE-2024-53203    6.1.137-1          6.1.140-1      HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest                                                               linux-libc-dev                CVE-2025-37897    6.1.137-1          6.1.140-1      HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest                                                               linux-libc-dev                CVE-2025-37902    6.1.137-1          6.1.140-1      HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest                                                               linux-libc-dev                CVE-2025-37909    6.1.137-1          6.1.140-1      HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest                                                               linux-libc-dev                CVE-2025-37911    6.1.137-1          6.1.140-1      HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest                                                               linux-libc-dev                CVE-2025-37912    6.1.137-1          6.1.140-1      HIGH
