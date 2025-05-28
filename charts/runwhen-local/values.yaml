@@ -378,11 +378,11 @@ runner:
       resources:
         default:
           requests:
-            cpu: "10m"
-            memory: "64Mi"
+            cpu: "1"
+            memory: "1024Mi"
           limits:
-            cpu: "500m"
-            memory: "512Mi"
+            cpu: "1"
+            memory: "1024Mi"
         EKS_Fargate:
           requests:
             cpu: "300m"
