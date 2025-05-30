@@ -38,7 +38,8 @@ containerSecurityContext:
   capabilities:
     drop:
       - all
-  readOnlyRootFilesystem: true
+  # readOnlyRootFilesystem: true
+  readOnlyRootFilesystem: false
   seccompProfile:
     type: "RuntimeDefault"
 
