@@ -7,7 +7,7 @@ appVersion: "0.10.11"
 icon: https://storage.googleapis.com/runwhen-nonprod-shared-images/icons/runwhen_icon.png
 dependencies:
   - name: opentelemetry-collector
-    version: "0.122.5"
+    version: "0.126.0"
     repository: "https://open-telemetry.github.io/opentelemetry-helm-charts"
     condition: runner.enabled
 maintainers:
