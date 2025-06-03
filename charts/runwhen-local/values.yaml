@@ -276,7 +276,7 @@ runner:
     #   # ref: abc123
     #   # Optional: custom name for this collection (defaults to repo name)
     #   # name: custom-collection-name
-    - repoURL: https://github.com/runwhen-contrib/rw-cli-codecollection.git
+    - repoURL: https://github.com/runwhen-contrib/rw-cli-codecollection
       branch: main
       workerReplicas: 4
     # - repoURL: https://github.com/runwhen-contrib/rw-workspace-utils.git
