@@ -48,6 +48,9 @@ spec:
             - name: metrics
               containerPort: 9090
               protocol: TCP
+            - name: relay
+              containerPort: 8000
+              protocol: TCP
 
           resources:
             {{- if eq .Values.platformType "EKS_Fargate" }}
