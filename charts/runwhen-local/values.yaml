@@ -279,9 +279,9 @@ runner:
     # - repoURL: https://github.com/runwhen-contrib/rw-cli-codecollection.git
     #   tag: v0.0.24
     #   workerReplicas: 2
-    - repoURL: https://github.com/runwhen-contrib/rw-workspace-utils.git
-      branch: main
-      workerReplicas: 1
+    # - repoURL: https://github.com/runwhen-contrib/rw-workspace-utils.git
+    #   branch: main
+    #   workerReplicas: 1
     # - repoURL: https://github.com/runwhen-contrib/rw-generic-codecollection.git
     #   tag: v0.0.1
     #   workerReplicas: 1
