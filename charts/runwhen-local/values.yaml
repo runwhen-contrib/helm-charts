@@ -277,7 +277,7 @@ runner:
     #   # Optional: custom name for this collection (defaults to repo name)
     #   # name: custom-collection-name
     - repoURL: https://github.com/runwhen-contrib/rw-cli-codecollection.git
-      branch: latest
+      branch: main
       workerReplicas: 4
     # - repoURL: https://github.com/runwhen-contrib/rw-workspace-utils.git
     #   branch: main
