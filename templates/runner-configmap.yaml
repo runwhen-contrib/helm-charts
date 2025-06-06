@@ -1,0 +1,21 @@
+{{- with .Values.runner.codeCollections }}
+codeCollections:
+  {{- range $index, $collection := . }}
+  - repoURL: {{ $collection.repoURL }}
+    {{- if $collection.tag }}
+    tag: {{ $collection.tag }}
+    {{- end }}
+    {{- if $collection.branch }}
+    branch: {{ $collection.branch }}
+    {{- end }}
+    {{- if $collection.ref }}
+    ref: {{ $collection.ref }}
+    {{- end }}
+    {{- if $collection.workerReplicas }}
+    workerReplicas: {{ $collection.workerReplicas }}
+    {{- end }}
+    {{- if $collection.name }}
+    name: {{ $collection.name }}
+    {{- end }}
+  {{- end }}
+{{- end }} 
