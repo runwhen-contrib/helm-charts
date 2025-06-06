@@ -259,9 +259,12 @@ runwhenLocal:
 runner:
   enabled: true
 
+  # following value is added to config, where as service code reads log level from env var
+  # TODO:remove this and associated code in runner-configmap.yaml
   log:
     level: info
     format: console
+  debugLogs: true
 
   # CodeCollection Runner Configuration
   # Configure multiple code collections with their specific settings

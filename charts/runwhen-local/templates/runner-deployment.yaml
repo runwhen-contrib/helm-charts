@@ -62,6 +62,10 @@ spec:
           env:
             - name: RUNNER_CONTROL_ADDR
               value: "{{ .Values.runner.controlAddr | default "https://runner.beta.runwhen.com" }}"
+            {{- if .Values.runner.debugLogs }}
+            - name: RUNNER_LOG_LEVEL
+              value: "true"
+            {{- end }}
             - name: RUNNER_NAMESPACE
               valueFrom:
                 fieldRef:
