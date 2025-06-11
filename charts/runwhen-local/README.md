@@ -65,3 +65,40 @@ helm show values runwhen-contrib/runwhen-local
 ```
 
 For more information please refer to the [runwhen-local](https://docs.runwhen.com/public/v/runwhen-local) documentation.
+
+## CodeCollections Runner Configuration
+
+The runner component supports configuring multiple code collections with specific repositories, tags/branches/refs, and worker replicas. This allows you to deploy and manage different versions of code collections based on your requirements.
+
+### Example Configuration
+
+```yaml
+runner:
+  enabled: true
+  codeCollections:
+    - repoURL: https://github.com/runwhen-contrib/rw-public-codecollection.git
+      tag: v0.0.17
+      workerReplicas: 1
+    - repoURL: https://github.com/runwhen-contrib/rw-cli-codecollection.git
+      tag: v0.0.24
+      workerReplicas: 2
+    - repoURL: https://github.com/runwhen-contrib/rw-workspace-utils.git
+      tag: v0.0.3
+      workerReplicas: 1
+    - repoURL: https://github.com/runwhen-contrib/rw-generic-codecollection.git
+      tag: v0.0.1
+      workerReplicas: 1
+```
+
+### Configuration Options
+
+Each code collection entry supports the following fields:
+
+- `repoURL` (required): The Git repository URL for the code collection
+- `tag` (optional): Use a specific Git tag
+- `branch` (optional): Use a specific Git branch (alternative to tag)
+- `ref` (optional): Use a specific Git commit ref (alternative to tag/branch)
+- `workerReplicas` (optional): Number of worker replicas to deploy (defaults to 1)
+- `name` (optional): Custom name for the collection (defaults to repository name)
+
+**Note**: Only one of `tag`, `branch`, or `ref` should be specified per collection. If none are specified, it defaults to `main` branch.
