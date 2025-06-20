@@ -21,12 +21,15 @@ trivy image --severity CRITICAL,HIGH --ignore-unfixed --scanners vuln --format j
 ```
 Registry                                                                                                       Package                       Vulnerability ID  Installed Version                         Fixed Version                 Severity
 --------                                                                                                       -------                       ----------------  -----------------                         -------------                 --------
-us-docker.pkg.dev/runwhen-nonprod-shared/public-images/runner:pr-21-8bc8fa0                                    golang.org/x/crypto           CVE-2025-22869    v0.31.0                                   0.35.0                        HIGH
-us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/infracloudio-ifc-rw-codecollection-main:latest      istio.io/istio                CVE-2019-14993    v0.0.0-20250506181944-c2e9871f340c+dirty  1.1.13, 1.2.4                 HIGH
-us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/infracloudio-ifc-rw-codecollection-main:latest      istio.io/istio                CVE-2021-39155    v0.0.0-20250506181944-c2e9871f340c+dirty  1.9.8, 1.10.4, 1.11.1         HIGH
-us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/infracloudio-ifc-rw-codecollection-main:latest      istio.io/istio                CVE-2021-39156    v0.0.0-20250506181944-c2e9871f340c+dirty  1.9.8, 1.10.4, 1.11.1         HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest                                                                   stdlib                        CVE-2025-22874    v1.24.1                                   1.24.4                        HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest                                                                   stdlib                        CVE-2025-22874    v1.24.2                                   1.24.4                        HIGH
+otel/opentelemetry-collector:0.127.0                                                                           stdlib                        CVE-2025-22874    v1.24.3                                   1.24.4                        HIGH
+us-docker.pkg.dev/runwhen-nonprod-shared/public-images/runner:pr-21-984f162                                    golang.org/x/crypto           CVE-2025-22869    v0.31.0                                   0.35.0                        HIGH
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/infracloudio-ifc-rw-codecollection-main:latest      istio.io/istio                CVE-2019-14993    v0.0.0-20250527174434-2ce3ad897b98+dirty  1.1.13, 1.2.4                 HIGH
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/infracloudio-ifc-rw-codecollection-main:latest      istio.io/istio                CVE-2021-39155    v0.0.0-20250527174434-2ce3ad897b98+dirty  1.9.8, 1.10.4, 1.11.1         HIGH
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/infracloudio-ifc-rw-codecollection-main:latest      istio.io/istio                CVE-2021-39156    v0.0.0-20250527174434-2ce3ad897b98+dirty  1.9.8, 1.10.4, 1.11.1         HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/infracloudio-ifc-rw-codecollection-main:latest      libxml2                       CVE-2022-2309     2.9.14+dfsg-1.3~deb12u1                   2.9.14+dfsg-1.3               HIGH
-us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/infracloudio-ifc-rw-codecollection-main:latest      istio.io/istio                CVE-2022-23635    v0.0.0-20250506181944-c2e9871f340c+dirty  1.13.1, 1.12.4, 1.11.7        HIGH
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/infracloudio-ifc-rw-codecollection-main:latest      istio.io/istio                CVE-2022-23635    v0.0.0-20250527174434-2ce3ad897b98+dirty  1.13.1, 1.12.4, 1.11.7        HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/infracloudio-ifc-rw-codecollection-main:latest      less                          CVE-2022-48624    590-2.1~deb12u2                           590-2.1                       HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/infracloudio-ifc-rw-codecollection-main:latest      git                           CVE-2023-25652    1:2.39.5-0+deb12u2                        1:2.40.1-1                    HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/infracloudio-ifc-rw-codecollection-main:latest      git-man                       CVE-2023-25652    1:2.39.5-0+deb12u2                        1:2.40.1-1                    HIGH
@@ -185,6 +188,7 @@ us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/infracloudio-ifc-rw-c
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/infracloudio-ifc-rw-codecollection-main:latest      libicu72                      CVE-2025-5222     72.1-3                                    76.1-4                        HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-aws-c7n-codecollection-main:latest  github.com/golang-jwt/jwt/v4  CVE-2025-30204    v4.5.1                                    4.5.2                         HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-aws-c7n-codecollection-main:latest  github.com/golang-jwt/jwt/v5  CVE-2025-30204    v5.2.1                                    5.2.2                         HIGH
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-aws-c7n-codecollection-main:latest  protobuf                      CVE-2025-4565     5.29.4                                    4.25.8, 5.29.5, 6.31.1        HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-aws-c7n-codecollection-main:latest  setuptools                    CVE-2025-47273    75.8.0                                    78.1.1                        HIGH
 ```
 <!-- END_TRIVY_SUMMARY -->
@@ -195,7 +199,7 @@ us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-aws-c
 
 ghcr.io/runwhen-contrib/runwhen-local:latest
 otel/opentelemetry-collector:0.127.0
-us-docker.pkg.dev/runwhen-nonprod-shared/public-images/runner:pr-21-8bc8fa0
+us-docker.pkg.dev/runwhen-nonprod-shared/public-images/runner:pr-21-984f162
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/infracloudio-ifc-rw-codecollection-main:latest
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-aws-c7n-codecollection-main:latest
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest
