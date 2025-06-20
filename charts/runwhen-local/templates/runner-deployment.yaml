@@ -39,7 +39,7 @@ spec:
 
       containers:
         - name: runner
-          image: "{{ (.Values.runner.image.registry | default .Values.registryOverride ) | default "us-docker.pkg.dev" }}/{{ .Values.runner.image.repository | default "runwhen-nonprod-shared/public-images/runner" }}:{{ .Values.runner.image.tag | default "latest" }}"
+          image: "{{ (.Values.runner.image.registry | default .Values.registryOverride ) | default "us-docker.pkg.dev" }}/{{ .Values.runner.image.repository | default "runwhen-nonprod-shared/public-images/runner" }}:{{ .Values.runner.image.tag | default "2025-06-19.1" }}"
           imagePullPolicy: {{ .Values.runner.imagePullPolicy | default "Always" }}
           # Container-level securityContext (if you want to share the same helper as local):
           {{- include "runwhen-local.containerSecurityContext" . | nindent 10 }}
@@ -47,6 +47,9 @@ spec:
           ports:
             - name: metrics
               containerPort: 9090
+              protocol: TCP
+            - name: relay
+              containerPort: 8000
               protocol: TCP
 
           resources:
@@ -59,6 +62,10 @@ spec:
           env:
             - name: RUNNER_CONTROL_ADDR
               value: "{{ .Values.runner.controlAddr | default "https://runner.beta.runwhen.com" }}"
+            {{- if .Values.runner.debugLogs }}
+            - name: RUNNER_LOG_LEVEL
+              value: "DEBUG"
+            {{- end }}
             - name: RUNNER_NAMESPACE
               valueFrom:
                 fieldRef:
@@ -89,6 +96,9 @@ spec:
             - name: runner-config-volume
               mountPath: "/etc/runwhen/runner/config.yaml"
               subPath: "config.yaml"
+            - name: bolt-data
+              mountPath: "/data"
+              subPath: "data"
 
             {{- if .Values.proxy.enabled }}
             {{- with .Values.proxyCA }}
@@ -106,6 +116,8 @@ spec:
         - name: runner-config-volume
           configMap:
             name: {{ .Values.runner.configMap.name }}
+        - name: bolt-data
+          emptyDir: {}
 
         {{- if .Values.proxy.enabled }}
         {{- with .Values.proxyCA }}
