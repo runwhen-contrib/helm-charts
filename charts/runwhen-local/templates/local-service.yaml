@@ -1,7 +1,8 @@
+{{- if .Values.runwhenLocal.enabled -}}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "runwhen-local.fullname" . }}
+  name: runwhen-local
   labels:
     {{- include "runwhen-local.labels" . | nindent 4 }}
 spec:
@@ -17,3 +18,4 @@ spec:
       targetPort: 8000
   selector:
     {{- include "runwhen-local.selectorLabels" . | nindent 4 }}
+{{- end }}
