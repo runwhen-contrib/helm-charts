@@ -38,7 +38,8 @@ containerSecurityContext:
   capabilities:
     drop:
       - all
-  readOnlyRootFilesystem: true
+  # readOnlyRootFilesystem: true
+  readOnlyRootFilesystem: false
   seccompProfile:
     type: "RuntimeDefault"
 
@@ -258,9 +259,35 @@ runwhenLocal:
 runner:
   enabled: true
 
+  # following value is added to config, where as service code reads log level from env var
+  # TODO:remove this and associated code in runner-configmap.yaml
   log:
     level: info
     format: console
+  debugLogs: true
+
+  # CodeCollection Runner Configuration
+  # Configure multiple code collections with their specific settings
+  # Each collection can specify repository URL, tag/ref/branch, and number of worker replicas
+  codeCollections:
+    # - repoURL: https://github.com/runwhen-contrib/rw-public-codecollection.git
+    #   tag: v0.0.17
+    #   workerReplicas: 1
+    #   # Optional: specify branch instead of tag
+    #   # branch: main
+    #   # Optional: specify ref instead of tag
+    #   # ref: abc123
+    #   # Optional: custom name for this collection (defaults to repo name)
+    #   # name: custom-collection-name
+    - repoURL: https://github.com/runwhen-contrib/rw-cli-codecollection
+      branch: main
+      workerReplicas: 4
+    # - repoURL: https://github.com/runwhen-contrib/rw-workspace-utils.git
+    #   branch: main
+    #   workerReplicas: 1
+    # - repoURL: https://github.com/runwhen-contrib/rw-generic-codecollection.git
+    #   tag: v0.0.1
+    #   workerReplicas: 1
 
   configMap:
     create: true
@@ -378,11 +405,11 @@ runner:
       resources:
         default:
           requests:
-            cpu: "10m"
-            memory: "64Mi"
-          limits:
-            cpu: "500m"
+            cpu: "100m"
             memory: "512Mi"
+          limits:
+            cpu: "1"
+            memory: "1024Mi"
         EKS_Fargate:
           requests:
             cpu: "300m"
@@ -457,7 +484,7 @@ opentelemetry-collector:
   image:
     repository: "otel/opentelemetry-collector"
     pullPolicy: IfNotPresent
-    tag: "0.123.0"
+    tag: "0.127.0"
   imagePullSecrets: []
   command:
     name: "otelcol"

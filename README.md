@@ -172,7 +172,6 @@ us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/infracloudio-ifc-rw-c
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/infracloudio-ifc-rw-codecollection-main:latest      libcurl3-gnutls               CVE-2024-6197     7.88.1-10+deb12u12                        8.9.0-1                       HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/infracloudio-ifc-rw-codecollection-main:latest      libcurl4                      CVE-2024-6197     7.88.1-10+deb12u12                        8.9.0-1                       HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/infracloudio-ifc-rw-codecollection-main:latest      libexpat1                     CVE-2024-8176     2.5.0-1+deb12u1                           2.7.0-1                       HIGH
-us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/infracloudio-ifc-rw-codecollection-main:latest      stdlib                        CVE-2025-22874    v1.24.3                                   1.24.4                        HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/infracloudio-ifc-rw-codecollection-main:latest      libxml2                       CVE-2025-24928    2.9.14+dfsg-1.3~deb12u1                   2.12.7+dfsg+really2.9.14-0.4  HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/infracloudio-ifc-rw-codecollection-main:latest      libxml2                       CVE-2025-27113    2.9.14+dfsg-1.3~deb12u1                   2.12.7+dfsg+really2.9.14-0.4  HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/infracloudio-ifc-rw-codecollection-main:latest      libsqlite3-0                  CVE-2025-29087    3.40.1-2+deb12u1                          3.46.1-3                      HIGH
@@ -197,8 +196,8 @@ us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-aws-c
 ```
 
 ghcr.io/runwhen-contrib/runwhen-local:latest
-otel/opentelemetry-collector:0.123.0
-us-docker.pkg.dev/runwhen-nonprod-shared/public-images/runner:latest
+otel/opentelemetry-collector:0.127.0
+us-docker.pkg.dev/runwhen-nonprod-shared/public-images/runner:2025-06-19.1
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/infracloudio-ifc-rw-codecollection-main:latest
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-aws-c7n-codecollection-main:latest
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest
