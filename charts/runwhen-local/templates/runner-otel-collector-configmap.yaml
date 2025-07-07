@@ -29,7 +29,7 @@ data:
                   namespaces:
                     names:
                       - {{ .Release.Namespace }}
-              scrape_interval: 15s
+              scrape_interval: 60s
               scrape_timeout: 10s
               metrics_path: /metrics
               scheme: http
@@ -64,24 +64,18 @@ data:
                   target_label: service
                   replacement: 'runwhen-runtime'
                 # Add custom labels for your metrics engine
-                - source_labels: []
+                - source_labels: [__meta_kubernetes_pod_label_ccID]
                   target_label: ccID
-                  replacement: '{{ .Values.runner.ccID | default "unknown" }}'
-                - source_labels: []
+                - source_labels: [__meta_kubernetes_pod_label_type]
                   target_label: type
-                  replacement: 'runner-worker'
-                - source_labels: []
+                - source_labels: [__meta_kubernetes_pod_label_imageTag]
                   target_label: imageTag
-                  replacement: '{{ .Values.runner.image.tag | default "latest" }}'
-                - source_labels: []
+                - source_labels: [__meta_kubernetes_pod_label_workspace]
                   target_label: workspace
-                  replacement: '{{ include "runwhen-local.workspaceName" . }}'
-                - source_labels: []
+                - source_labels: [__meta_kubernetes_pod_label_namespace]
                   target_label: namespace
-                  replacement: '{{ .Release.Namespace }}'
-                - source_labels: []
+                - source_labels: [__meta_kubernetes_pod_label_release]
                   target_label: release
-                  replacement: '{{ .Release.Name }}'
                 # Add pod-specific labels
                 - source_labels: [__meta_kubernetes_pod_name]
                   target_label: pod_name
