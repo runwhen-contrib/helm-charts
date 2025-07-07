@@ -20,6 +20,70 @@ data:
           grpc:
             endpoint: ${env:MY_POD_IP}:4317
 
+      prometheus:
+        config:
+          scrape_configs:
+            - job_name: 'runwhen-runtime-metrics'
+              kubernetes_sd_configs:
+                - role: pod
+                  namespaces:
+                    names:
+                      - {{ .Release.Namespace }}
+              scrape_interval: 60s
+              scrape_timeout: 10s
+              metrics_path: /metrics
+              scheme: http
+              # Relabel configs to filter and label
+              relabel_configs:
+                # Only scrape pods with type=runner-worker label
+                - source_labels: [__meta_kubernetes_pod_label_type]
+                  regex: runner-worker
+                  action: keep
+                # Use prometheus.io annotations for scraping configuration
+                - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+                  action: keep
+                  regex: "true"
+                - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+                  action: replace
+                  target_label: __metrics_path__
+                  regex: (.+)
+                - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scheme]
+                  action: replace
+                  regex: (https?)
+                  target_label: __scheme__
+                - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+                  action: replace
+                  regex: ([^:]+)(?::\d+)?;(\d+)
+                  replacement: $$1:$$2
+                  target_label: __address__
+                # Set instance label to pod name
+                - source_labels: [__meta_kubernetes_pod_name]
+                  target_label: instance
+                # Set service label
+                - source_labels: []
+                  target_label: service
+                  replacement: 'runwhen-runtime'
+                # Add custom labels for your metrics engine
+                - source_labels: [__meta_kubernetes_pod_label_ccID]
+                  target_label: ccID
+                - source_labels: [__meta_kubernetes_pod_label_type]
+                  target_label: type
+                - source_labels: [__meta_kubernetes_pod_label_imageTag]
+                  target_label: imageTag
+                - source_labels: [__meta_kubernetes_pod_label_workspace]
+                  target_label: workspace
+                - source_labels: [__meta_kubernetes_pod_label_namespace]
+                  target_label: namespace
+                - source_labels: [__meta_kubernetes_pod_label_release]
+                  target_label: release
+                # Add pod-specific labels
+                - source_labels: [__meta_kubernetes_pod_name]
+                  target_label: pod_name
+                - source_labels: [__meta_kubernetes_pod_node_name]
+                  target_label: node_name
+                - source_labels: [__meta_kubernetes_pod_host_ip]
+                  target_label: host_ip
+
     exporters:
       prometheusremotewrite:
         endpoint: {{ .Values.runner.metrics.url }}
@@ -46,12 +110,35 @@ data:
 
     processors:
       batch:
+        timeout: 10s
+        send_batch_size: 1024
+        send_batch_max_size: 2048
+
+      # Add resource processor to enrich metrics with additional labels
+      resource:
+        attributes:
+          - key: k8s.cluster.name
+            value: {{ if .Values.cluster }}{{ .Values.cluster.name | default "unknown" }}{{ else }}unknown{{ end }}
+            action: upsert
+          - key: k8s.namespace.name
+            value: {{ .Release.Namespace }}
+            action: upsert
+          - key: deployment.environment
+            value: {{ .Values.environment | default "production" }}
+            action: upsert
 
     service:
       pipelines:
+        # Existing OTLP pipeline (unchanged)
         metrics/otlp:
           receivers: [otlp]
-          processors: [batch]
+          processors: [batch, resource]
+          exporters: [prometheusremotewrite]
+
+        # New Prometheus scraping pipeline for runtime metrics
+        metrics/prometheus:
+          receivers: [prometheus]
+          processors: [batch, resource]
           exporters: [prometheusremotewrite]
 
       extensions:
@@ -61,4 +148,4 @@ data:
         logs:
           level: debug
 
-{{- end }}
+{{- end }} 
