@@ -39,11 +39,6 @@ data:
                 - source_labels: [__meta_kubernetes_pod_label_type]
                   regex: runner-worker
                   action: keep
-                # Use the pod IP and port 9090
-                - source_labels: [__meta_kubernetes_pod_ip]
-                  target_label: __address__
-                  regex: (.+)
-                  replacement: '${1}:9090'
                 # Set instance label to pod name
                 - source_labels: [__meta_kubernetes_pod_name]
                   target_label: instance
@@ -51,32 +46,6 @@ data:
                 - source_labels: []
                   target_label: service
                   replacement: 'runwhen-runtime'
-                # Add custom labels for your metrics engine
-                - source_labels: []
-                  target_label: ccID
-                  replacement: '{{ .Values.runner.ccID | default "unknown" }}'
-                - source_labels: []
-                  target_label: type
-                  replacement: 'runner-worker'
-                - source_labels: []
-                  target_label: imageTag
-                  replacement: '{{ .Values.runner.image.tag | default "latest" }}'
-                - source_labels: []
-                  target_label: workspace
-                  replacement: '{{ include "runwhen-local.workspaceName" . }}'
-                - source_labels: []
-                  target_label: namespace
-                  replacement: '{{ .Release.Namespace }}'
-                - source_labels: []
-                  target_label: release
-                  replacement: '{{ .Release.Name }}'
-                # Add pod-specific labels
-                - source_labels: [__meta_kubernetes_pod_name]
-                  target_label: pod_name
-                - source_labels: [__meta_kubernetes_pod_node_name]
-                  target_label: node_name
-                - source_labels: [__meta_kubernetes_pod_host_ip]
-                  target_label: host_ip
 
     exporters:
       prometheusremotewrite:
