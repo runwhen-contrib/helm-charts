@@ -66,8 +66,10 @@ data:
         {{- end }}
         {{- end }}
         deployment:
-          {{- with .Values.runner.runEnvironment.deployment.annotations }}
           annotations:
+            prometheus.io/port: "9090"
+            prometheus.io/scrape: "true"
+          {{- with .Values.runner.runEnvironment.deployment.annotations }}
             {{- toYaml . | nindent 12 }}
           {{- end }}
           {{- with .Values.runner.runEnvironment.deployment.podAnnotations }}
