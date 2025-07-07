@@ -42,7 +42,8 @@ data:
                 # Use the pod IP and port 9090
                 - source_labels: [__meta_kubernetes_pod_ip]
                   target_label: __address__
-                  replacement: '${__meta_kubernetes_pod_ip}:9090'
+                  regex: (.+)
+                  replacement: '${1}:9090'
                 # Set instance label to pod name
                 - source_labels: [__meta_kubernetes_pod_name]
                   target_label: instance
