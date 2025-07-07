@@ -111,7 +111,7 @@ data:
       resource:
         attributes:
           - key: k8s.cluster.name
-            value: {{ dig "cluster" "name" "unknown" .Values }}
+            value: {{ if .Values.cluster }}{{ .Values.cluster.name | default "unknown" }}{{ else }}unknown{{ end }}
             action: upsert
           - key: k8s.namespace.name
             value: {{ .Release.Namespace }}
