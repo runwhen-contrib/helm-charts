@@ -33,8 +33,6 @@ data:
               scrape_timeout: 10s
               metrics_path: /metrics
               scheme: http
-              # Set port to 9090
-              port: 9090
               # Relabel configs to filter and label
               relabel_configs:
                 # Only scrape pods with type=runner-worker label
