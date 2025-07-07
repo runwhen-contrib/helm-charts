@@ -116,6 +116,10 @@ us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  bind9-host                    CVE-2024-0760     1:9.18.33-1~deb12u2                       1:9.20.0-1                    HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  bind9-libs                    CVE-2024-0760     1:9.18.33-1~deb12u2                       1:9.20.0-1                    HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  dnsutils                      CVE-2024-0760     1:9.18.33-1~deb12u2                       1:9.20.0-1                    HIGH
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  libpam-modules                CVE-2024-10963    1.5.2-6+deb12u1                           1.7.0-5                       HIGH
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  libpam-modules-bin            CVE-2024-10963    1.5.2-6+deb12u1                           1.7.0-5                       HIGH
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  libpam-runtime                CVE-2024-10963    1.5.2-6+deb12u1                           1.7.0-5                       HIGH
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  libpam0g                      CVE-2024-10963    1.5.2-6+deb12u1                           1.7.0-5                       HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  bind9-dnsutils                CVE-2024-11187    1:9.18.33-1~deb12u2                       1:9.20.5-1                    HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  bind9-host                    CVE-2024-11187    1:9.18.33-1~deb12u2                       1:9.20.5-1                    HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  bind9-libs                    CVE-2024-11187    1:9.18.33-1~deb12u2                       1:9.20.5-1                    HIGH
@@ -190,6 +194,10 @@ us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  bind9-libs                    CVE-2025-40775    1:9.18.33-1~deb12u2                       1:9.20.9-1                    HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  dnsutils                      CVE-2025-40775    1:9.18.33-1~deb12u2                       1:9.20.9-1                    HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  libicu72                      CVE-2025-5222     72.1-3                                    76.1-4                        HIGH
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  libpam-modules                CVE-2025-6020     1.5.2-6+deb12u1                           1.7.0-5                       HIGH
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  libpam-modules-bin            CVE-2025-6020     1.5.2-6+deb12u1                           1.7.0-5                       HIGH
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  libpam-runtime                CVE-2025-6020     1.5.2-6+deb12u1                           1.7.0-5                       HIGH
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  libpam0g                      CVE-2025-6020     1.5.2-6+deb12u1                           1.7.0-5                       HIGH
 ```
 <!-- END_TRIVY_SUMMARY -->
 
