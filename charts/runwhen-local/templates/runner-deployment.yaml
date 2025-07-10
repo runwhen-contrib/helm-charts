@@ -39,7 +39,7 @@ spec:
 
       containers:
         - name: runner
-          image: "{{ (.Values.runner.image.registry | default .Values.registryOverride ) | default "us-docker.pkg.dev" }}/{{ .Values.runner.image.repository | default "runwhen-nonprod-shared/public-images/runner" }}:{{ .Values.runner.image.tag | default "2025-06-19.1" }}"
+          image: "{{ (.Values.runner.image.registry | default .Values.registryOverride ) | default "us-docker.pkg.dev" }}/{{ .Values.runner.image.repository | default "runwhen-nonprod-shared/public-images/runner" }}:{{ .Values.runner.image.tag | default "2025-07-10.1" }}"
           imagePullPolicy: {{ .Values.runner.imagePullPolicy | default "Always" }}
           # Container-level securityContext (if you want to share the same helper as local):
           {{- include "runwhen-local.containerSecurityContext" . | nindent 10 }}
