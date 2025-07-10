@@ -23,7 +23,7 @@ Registry                                                                        
 --------                                                                                                         -------                       ----------------  -----------------                         -------------                 --------
 ghcr.io/runwhen-contrib/runwhen-local:latest                                                                     stdlib                        CVE-2025-22874    v1.24.1                                   1.24.4                        HIGH
 otel/opentelemetry-collector:0.127.0                                                                             stdlib                        CVE-2025-22874    v1.24.3                                   1.24.4                        HIGH
-us-docker.pkg.dev/runwhen-nonprod-shared/public-images/runner:2025-06-19.1                                       golang.org/x/crypto           CVE-2025-22869    v0.31.0                                   0.35.0                        HIGH
+us-docker.pkg.dev/runwhen-nonprod-shared/public-images/runner:2025-07-10.1                                       golang.org/x/crypto           CVE-2025-22869    v0.31.0                                   0.35.0                        HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-aws-c7n-codecollection-main:latest    github.com/golang-jwt/jwt/v4  CVE-2025-30204    v4.5.1                                    4.5.2                         HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-aws-c7n-codecollection-main:latest    github.com/golang-jwt/jwt/v5  CVE-2025-30204    v5.2.1                                    5.2.2                         HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-aws-c7n-codecollection-main:latest    protobuf                      CVE-2025-4565     5.29.4                                    4.25.8, 5.29.5, 6.31.1        HIGH
@@ -202,6 +202,18 @@ us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  libpam-modules-bin            CVE-2025-6020     1.5.2-6+deb12u1                           1.7.0-5                       HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  libpam-runtime                CVE-2025-6020     1.5.2-6+deb12u1                           1.7.0-5                       HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  libpam0g                      CVE-2025-6020     1.5.2-6+deb12u1                           1.7.0-5                       HIGH
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-rw-cli-codecollection-main:latest     istio.io/istio                CVE-2019-14993    v0.0.0-20250616142415-455f269485ea+dirty  1.1.13, 1.2.4                 HIGH
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-rw-cli-codecollection-main:latest     istio.io/istio                CVE-2021-39155    v0.0.0-20250616142415-455f269485ea+dirty  1.9.8, 1.10.4, 1.11.1         HIGH
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-rw-cli-codecollection-main:latest     istio.io/istio                CVE-2021-39156    v0.0.0-20250616142415-455f269485ea+dirty  1.9.8, 1.10.4, 1.11.1         HIGH
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-rw-cli-codecollection-main:latest     libxml2                       CVE-2022-2309     2.9.14+dfsg-1.3~deb12u2                   2.9.14+dfsg-1.3               HIGH
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-rw-cli-codecollection-main:latest     istio.io/istio                CVE-2022-23635    v0.0.0-20250616142415-455f269485ea+dirty  1.13.1, 1.12.4, 1.11.7        HIGH
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-rw-cli-codecollection-main:latest     libxml2                       CVE-2024-25062    2.9.14+dfsg-1.3~deb12u2                   2.12.7+dfsg+really2.9.14-1    HIGH
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-rw-cli-codecollection-main:latest     libxml2                       CVE-2024-56171    2.9.14+dfsg-1.3~deb12u2                   2.12.7+dfsg+really2.9.14-0.4  HIGH
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-rw-cli-codecollection-main:latest     libxml2                       CVE-2025-24928    2.9.14+dfsg-1.3~deb12u2                   2.12.7+dfsg+really2.9.14-0.4  HIGH
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-rw-cli-codecollection-main:latest     libxml2                       CVE-2025-27113    2.9.14+dfsg-1.3~deb12u2                   2.12.7+dfsg+really2.9.14-0.4  HIGH
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-rw-cli-codecollection-main:latest     libxml2                       CVE-2025-32414    2.9.14+dfsg-1.3~deb12u2                   2.12.7+dfsg+really2.9.14-1    HIGH
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-rw-cli-codecollection-main:latest     libxml2                       CVE-2025-32415    2.9.14+dfsg-1.3~deb12u2                   2.12.7+dfsg+really2.9.14-1    HIGH
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-rw-cli-codecollection-main:latest     libicu72                      CVE-2025-5222     72.1-3+deb12u1                            76.1-4                        HIGH
 ```
 <!-- END_TRIVY_SUMMARY -->
 
@@ -211,7 +223,7 @@ us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure
 
 ghcr.io/runwhen-contrib/runwhen-local:latest
 otel/opentelemetry-collector:0.127.0
-us-docker.pkg.dev/runwhen-nonprod-shared/public-images/runner:2025-06-19.1
+us-docker.pkg.dev/runwhen-nonprod-shared/public-images/runner:2025-07-10.1
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-aws-c7n-codecollection-main:latest
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-rw-cli-codecollection-main:latest
