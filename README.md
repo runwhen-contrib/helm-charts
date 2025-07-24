@@ -21,9 +21,12 @@ trivy image --severity CRITICAL,HIGH --ignore-unfixed --scanners vuln --format j
 ```
 Registry                                                                                                         Package                       Vulnerability ID  Installed Version                         Fixed Version                 Severity
 --------                                                                                                         -------                       ----------------  -----------------                         -------------                 --------
+ghcr.io/runwhen-contrib/runwhen-local:latest                                                                     golang.org/x/oauth2           CVE-2025-22868    v0.10.0                                   0.27.0                        HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest                                                                     stdlib                        CVE-2025-22874    v1.24.1                                   1.24.4                        HIGH
 otel/opentelemetry-collector:0.127.0                                                                             stdlib                        CVE-2025-22874    v1.24.3                                   1.24.4                        HIGH
+us-docker.pkg.dev/runwhen-nonprod-shared/public-images/runner:2025-07-10.1                                       golang.org/x/oauth2           CVE-2025-22868    v0.24.0                                   0.27.0                        HIGH
 us-docker.pkg.dev/runwhen-nonprod-shared/public-images/runner:2025-07-10.1                                       golang.org/x/crypto           CVE-2025-22869    v0.31.0                                   0.35.0                        HIGH
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-aws-c7n-codecollection-main:latest    golang.org/x/oauth2           CVE-2025-22868    v0.23.0                                   0.27.0                        HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-aws-c7n-codecollection-main:latest    github.com/golang-jwt/jwt/v4  CVE-2025-30204    v4.5.1                                    4.5.2                         HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-aws-c7n-codecollection-main:latest    github.com/golang-jwt/jwt/v5  CVE-2025-30204    v5.2.1                                    5.2.2                         HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-aws-c7n-codecollection-main:latest    protobuf                      CVE-2025-4565     5.29.4                                    4.25.8, 5.29.5, 6.31.1        HIGH
@@ -196,12 +199,15 @@ us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  dnsutils                      CVE-2025-40775    1:9.18.33-1~deb12u2                       1:9.20.9-1                    HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  jq                            CVE-2025-48060    1.6-2.1                                   1.7.1-6+deb13u1               HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  libjq1                        CVE-2025-48060    1.6-2.1                                   1.7.1-6+deb13u1               HIGH
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  libxml2                       CVE-2025-49794    2.9.14+dfsg-1.3~deb12u2                   2.12.7+dfsg+really2.9.14-2    CRITICAL
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  libxml2                       CVE-2025-49796    2.9.14+dfsg-1.3~deb12u2                   2.12.7+dfsg+really2.9.14-2    CRITICAL
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  libicu72                      CVE-2025-5222     72.1-3+deb12u1                            76.1-4                        HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  helm.sh/helm/v3               CVE-2025-53547    v3.17.3                                   3.18.4, 3.17.4                HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  libpam-modules                CVE-2025-6020     1.5.2-6+deb12u1                           1.7.0-5                       HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  libpam-modules-bin            CVE-2025-6020     1.5.2-6+deb12u1                           1.7.0-5                       HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  libpam-runtime                CVE-2025-6020     1.5.2-6+deb12u1                           1.7.0-5                       HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  libpam0g                      CVE-2025-6020     1.5.2-6+deb12u1                           1.7.0-5                       HIGH
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  libxml2                       CVE-2025-6021     2.9.14+dfsg-1.3~deb12u2                   2.12.7+dfsg+really2.9.14-2    HIGH
 ```
 <!-- END_TRIVY_SUMMARY -->
 
