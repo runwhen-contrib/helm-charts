@@ -484,7 +484,7 @@ opentelemetry-collector:
   image:
     repository: "otel/opentelemetry-collector"
     pullPolicy: IfNotPresent
-    tag: "0.127.0"
+    tag: "0.130.1"
   imagePullSecrets: []
   command:
     name: "otelcol"
