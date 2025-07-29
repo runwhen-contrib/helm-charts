@@ -2,12 +2,12 @@ apiVersion: v2
 name: runwhen-local
 description: The RunWhen Local Helm Chart - The private runner c
 type: application
-version: 0.4.2
-appVersion: "0.10.18"
+version: 0.4.3
+appVersion: "0.10.20"
 icon: https://storage.googleapis.com/runwhen-nonprod-shared-images/icons/runwhen_icon.png
 dependencies:
   - name: opentelemetry-collector
-    version: "0.126.0"
+    version: "0.129.0"
     repository: "https://open-telemetry.github.io/opentelemetry-helm-charts"
     condition: runner.enabled
 maintainers:
