@@ -2,7 +2,7 @@ FROM python:3.12.6-slim
 
 # Create a non-root user `runwhen` to run commands
 ENV RUNWHEN_HOME=/home/runwhen
-ENV REPO=iac-org
+ENV REPO=helm-charts
 RUN groupadd -r runwhen && \
     useradd -r -g runwhen -d $RUNWHEN_HOME -m -s /bin/bash runwhen && \
     mkdir -p $RUNWHEN_HOME && \
