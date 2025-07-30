@@ -489,7 +489,8 @@ opentelemetry-collector:
   command:
     name: "otelcol"
     ## Keep this feature gate disabled to preserve our metric naming convention
-    extraArgs: ["--feature-gates=-pkg.translator.prometheus.NormalizeName"]
+    ## Commented out with 0.130.1 https://github.com/open-telemetry/opentelemetry-collector-contrib/issues/26488
+    # extraArgs: ["--feature-gates=-pkg.translator.prometheus.NormalizeName"]
   serviceAccount:
     create: false
     annotations: {}
