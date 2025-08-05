@@ -2,3 +2,11 @@
 *.tgz
 test-values.yaml
 **.secret
+deploy/image-scripts/aws-ecr/codecollections_raw.txt
+deploy/image-scripts/aws-ecr/codecollections.yaml
+deploy/image-scripts/aws-ecr/helm_chart_images.txt
+deploy/image-scripts/aws-ecr/rendered_chart.yaml
+rendered_chart.yaml
+helm_chart_images.txt
+codecollections.yaml
+codecollections_raw.txt
