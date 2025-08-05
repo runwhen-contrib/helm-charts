@@ -498,7 +498,7 @@ opentelemetry-collector:
   
   # Proxy configuration for opentelemetry-collector
   # These environment variables will be set on the opentelemetry-collector container
-  extraEnvs:
+  env:
     # HTTP_PROXY environment variable
     - name: HTTP_PROXY
       value: ""  # Set your HTTP proxy URL here, e.g., "http://proxy.example.com:8080"

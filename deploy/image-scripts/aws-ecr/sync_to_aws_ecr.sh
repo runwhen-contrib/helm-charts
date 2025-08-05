@@ -20,7 +20,7 @@ desired_architecture="amd64"
 destination_prefix="test-rwl-runwhen"
 
 # Specify values file
-values_file=""
+values_file="values.yaml"
 new_values_file="updated_values.yaml"
 
 # Tag exclusion list
@@ -170,10 +170,18 @@ extract_helm_chart_images() {
     # Render Helm chart to YAML
     local rendered_yaml="rendered_chart.yaml"
     
-    if [[ -n "$values_file" && -f "$values_file" ]]; then
-        helm template "$chart_path" -f "$values_file" > "$rendered_yaml"
-    else
+    # Check if this is a Helm repository reference (contains '/')
+    if [[ "$chart_path" == *"/"* ]]; then
+        # For repository references, don't use local values file to avoid schema issues
+        echo "📦 Rendering repository chart without local values file to avoid schema conflicts" >&2
         helm template "$chart_path" > "$rendered_yaml"
+    else
+        # For local charts, use values file if provided
+        if [[ -n "$values_file" && -f "$values_file" ]]; then
+            helm template "$chart_path" -f "$values_file" > "$rendered_yaml"
+        else
+            helm template "$chart_path" > "$rendered_yaml"
+        fi
     fi
     
     if [[ ! -s "$rendered_yaml" ]]; then
