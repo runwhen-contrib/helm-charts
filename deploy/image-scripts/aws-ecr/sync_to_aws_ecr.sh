@@ -17,11 +17,7 @@ aws_region="us-west-2"
 desired_architecture="amd64"
 
 # Set Destination Prefix for ECR repositories
-destination_prefix="test-rwl-runwhen"
-
-# Specify values file
-values_file="values.yaml"
-new_values_file="updated_values.yaml"
+destination_prefix="test-rwl-runwhen2"
 
 # Tag exclusion list
 tag_exclusion_list=("tester")
@@ -141,29 +137,58 @@ OPTIONS:
     -c, --chart PATH        Path to Helm chart directory to extract images from
     -e, --extra-images FILE Path to file containing additional images
     -b, --branch BRANCH     CodeCollection branch to use (default: main)
-    -f, --values FILE       Helm values file to use for chart rendering and updates
-    -p, --prefix PREFIX     Destination prefix for ECR repositories (default: test-rwl-runwhen)
+    -p, --prefix PREFIX     Destination prefix for ECR repositories (default: test-rwl-runwhen2)
 
 CONFIGURATION:
     Edit the variables at the top of this script:
     - private_registry: AWS ECR registry URL
     - aws_region: AWS region for ECR
-    - new_values_file: Path to output Helm values file
+    - destination_prefix: ECR repository prefix
 
 EXAMPLE:
     ./sync_to_aws_ecr.sh
     ./sync_to_aws_ecr.sh --date-tags
-    ./sync_to_aws_ecr.sh -c ./charts/runwhen-local -f values.yaml
-    ./sync_to_aws_ecr.sh -c ./charts/runwhen-local -f values.yaml -e extra-images.txt
+    ./sync_to_aws_ecr.sh -c runwhen-contrib/runwhen-local
+    ./sync_to_aws_ecr.sh -c runwhen-contrib/runwhen-local -e extra-images.txt
 
 EOF
+}
+
+# Function to check and add Helm repositories if needed
+check_helm_repositories() {
+    echo "🔍 Checking Helm repositories..." >&2
+    
+    # Check if runwhen-contrib repository is available
+    if ! helm repo list | grep -q "runwhen-contrib"; then
+        echo "📦 Adding runwhen-contrib Helm repository..." >&2
+        helm repo add runwhen-contrib https://runwhen-contrib.github.io/helm-charts
+        if [ $? -ne 0 ]; then
+            echo "❌ Failed to add runwhen-contrib repository" >&2
+            return 1
+        fi
+    fi
+    
+    # Check if open-telemetry repository is available (needed for dependencies)
+    if ! helm repo list | grep -q "open-telemetry"; then
+        echo "📦 Adding open-telemetry Helm repository..." >&2
+        helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+        if [ $? -ne 0 ]; then
+            echo "❌ Failed to add open-telemetry repository" >&2
+            return 1
+        fi
+    fi
+    
+    # Update repositories
+    echo "🔄 Updating Helm repositories..." >&2
+    helm repo update
+    
+    echo "✅ Helm repositories ready" >&2
 }
 
 # Function to extract images from Helm chart
 extract_helm_chart_images() {
     local chart_path=$1
-    local values_file=$2
-    local extra_images_file=$3
+    local extra_images_file=$2
     
     echo "📦 Extracting images from Helm chart: $chart_path" >&2
     
@@ -173,15 +198,11 @@ extract_helm_chart_images() {
     # Check if this is a Helm repository reference (contains '/')
     if [[ "$chart_path" == *"/"* ]]; then
         # For repository references, don't use local values file to avoid schema issues
-        echo "📦 Rendering repository chart without local values file to avoid schema conflicts" >&2
+        echo "📦 Rendering repository chart" >&2
         helm template "$chart_path" > "$rendered_yaml"
     else
-        # For local charts, use values file if provided
-        if [[ -n "$values_file" && -f "$values_file" ]]; then
-            helm template "$chart_path" -f "$values_file" > "$rendered_yaml"
-        else
-            helm template "$chart_path" > "$rendered_yaml"
-        fi
+        # For local charts, render without values file
+        helm template "$chart_path" > "$rendered_yaml"
     fi
     
     if [[ ! -s "$rendered_yaml" ]]; then
@@ -220,8 +241,26 @@ extract_helm_chart_images() {
             local repo_name=$(echo "$repo" | sed 's/.*\///')
             local destination="$destination_prefix/$repo_name"
             
+            # Map repository to the correct helm_key
+            local helm_key=""
+            case "$repo_name" in
+                "runwhen-local")
+                    helm_key="runwhenLocal"
+                    ;;
+                "runner")
+                    helm_key="runner"
+                    ;;
+                "opentelemetry-collector")
+                    helm_key="opentelemetry/collector"
+                    ;;
+                *)
+                    # For unknown repositories, skip Helm values update
+                    helm_key="unknown"
+                    ;;
+            esac
+            
             # Add to JSON array
-            helm_images_json=$(echo "$helm_images_json" | jq --arg repo "$repo" --arg dest "$destination" --arg tag "$tag" '. += [{"repository_image": $repo, "destination": $dest, "helm_key": "helmChart", "tag": $tag}]')
+            helm_images_json=$(echo "$helm_images_json" | jq --arg repo "$repo" --arg dest "$destination" --arg tag "$tag" --arg key "$helm_key" '. += [{"repository_image": $repo, "destination": $dest, "helm_key": $key, "tag": $tag}]')
         fi
     done < "$images_list"
     
@@ -284,7 +323,7 @@ discover_codecollection_images() {
         fi
         
         # Add to JSON array - ensure no line breaks in the middle
-        discovered_images_json=$(echo "$discovered_images_json" | jq --arg img "$image_name" --arg dest "$destination" --arg tag "$tag_to_use" '. += [{"repository_image": $img, "destination": $dest, "helm_key": "codecollection", "tag": $tag}]' 2>/dev/null || echo "$discovered_images_json")
+        discovered_images_json=$(echo "$discovered_images_json" | jq --arg img "$image_name" --arg dest "$destination" --arg tag "$tag_to_use" '. += [{"repository_image": $img, "destination": $dest, "helm_key": "runner.runEnvironment", "tag": $tag}]' 2>/dev/null || echo "$discovered_images_json")
     done < "$codecollections_raw"
     
     # Clean up temporary files
@@ -307,18 +346,34 @@ create_ecr_repository() {
     
     echo "🔍 Checking if ECR repository '$repository_name' exists..."
     
+    # Check if repository exists
     if aws ecr describe-repositories --repository-names "$repository_name" --region "$aws_region" --no-cli-pager >/dev/null 2>&1; then
         echo "✅ Repository '$repository_name' already exists"
-    else
-        echo "📦 Creating ECR repository '$repository_name'..."
-        aws ecr create-repository \
-            --repository-name "$repository_name" \
-            --region "$aws_region" \
-            --image-scanning-configuration scanOnPush=true \
-            --encryption-configuration encryptionType=AES256 \
-            --no-cli-pager >/dev/null 2>&1
-        
+        return 0
+    fi
+    
+    echo "📦 Creating ECR repository '$repository_name'..."
+    
+    # Try to create the repository and capture both output and errors
+    local create_output
+    local create_result
+    
+    create_output=$(aws ecr create-repository \
+        --repository-name "$repository_name" \
+        --region "$aws_region" \
+        --image-scanning-configuration scanOnPush=true \
+        --encryption-configuration encryptionType=AES256 \
+        --no-cli-pager 2>&1)
+    create_result=$?
+    
+    if [ $create_result -eq 0 ]; then
         echo "✅ Repository '$repository_name' created successfully"
+        return 0
+    else
+        echo "❌ Failed to create ECR repository '$repository_name'"
+        echo "   AWS CLI Error:"
+        echo "$create_output" | sed 's/^/   /'
+        return 1
     fi
 }
 
@@ -333,20 +388,44 @@ copy_image() {
     
     # Create ECR repository if it doesn't exist
     create_ecr_repository "$destination"
+    if [ $? -ne 0 ]; then
+        echo "❌ Cannot proceed without ECR repository"
+        return 1
+    fi
     
     # Get ECR authentication token
     echo "Authenticating with ECR..."
-    local auth_token=$(aws ecr get-login-password --region "$aws_region" --no-cli-pager)
-    if [ -z "$auth_token" ]; then
+    local auth_output
+    local auth_result
+    
+    auth_output=$(aws ecr get-login-password --region "$aws_region" --no-cli-pager 2>&1)
+    auth_result=$?
+    
+    if [ $auth_result -ne 0 ]; then
         echo "❌ Failed to get ECR authentication token"
+        echo "   AWS CLI Error:"
+        echo "$auth_output" | sed 's/^/   /'
+        return 1
+    fi
+    
+    local auth_token="$auth_output"
+    if [ -z "$auth_token" ]; then
+        echo "❌ ECR authentication token is empty"
         return 1
     fi
     
     # Login to ECR using docker
     echo "Logging into ECR..."
-    echo "$auth_token" | docker login "$private_registry" --username AWS --password-stdin >/dev/null 2>&1
-    if [ $? -ne 0 ]; then
+    local login_output
+    local login_result
+    
+    login_output=$(echo "$auth_token" | docker login "$private_registry" --username AWS --password-stdin 2>&1)
+    login_result=$?
+    
+    if [ $login_result -ne 0 ]; then
         echo "❌ Failed to login to ECR"
+        echo "   Docker Error:"
+        echo "$login_output" | sed 's/^/   /'
         return 1
     fi
     
@@ -360,12 +439,18 @@ FROM $repository_image:$src_tag
 EOF
     
     # Build and push using docker buildx with proper build context
-    if docker buildx build \
+    local buildx_output
+    local buildx_result
+    
+    buildx_output=$(docker buildx build \
         --platform linux/amd64 \
         --file "$temp_context/Dockerfile" \
         --tag "$private_registry/$destination:$dest_tag" \
         --push \
-        "$temp_context" 2>/dev/null; then
+        "$temp_context" 2>&1)
+    buildx_result=$?
+    
+    if [ $buildx_result -eq 0 ]; then
         echo "✅ Successfully copied image using docker buildx"
         rm -rf "$temp_context"
         return 0
@@ -373,6 +458,8 @@ EOF
         echo "❌ Failed to copy image using docker buildx"
         echo "   Source: $repository_image:$src_tag"
         echo "   Destination: $private_registry/$destination:$dest_tag"
+        echo "   Docker Buildx Error:"
+        echo "$buildx_output" | sed 's/^/   /'
         echo "   This may be due to:"
         echo "   - Network connectivity issues"
         echo "   - Source image not found or inaccessible"
@@ -506,33 +593,56 @@ get_available_tags() {
 }
 
 # Function to update Helm values file
-update_helm_values() {
-    local values_file=$1
-    local new_values_file=$2
-    local image_name=$3
-    local new_tag=$4
-    
-    # Only update if values file is provided
-    if [ -z "$values_file" ] || [ ! -f "$values_file" ]; then
-        echo "📝 Skipping Helm values update (no values file provided)"
-        return 0
-    fi
-    
-    echo "📝 Updating Helm values: $image_name -> $new_tag"
-    
-    # Create backup of original file
-    cp "$values_file" "${values_file}.backup"
-    
-    # Update the image tag using yq
-    yq eval ".images.$image_name.tag = \"$new_tag\"" "$values_file" > "$new_values_file"
-    
-    if [ $? -eq 0 ]; then
-        echo "✅ Updated Helm values file: $new_values_file"
-    else
-        echo "❌ Failed to update Helm values file"
-        return 1
-    fi
-}
+# update_helm_values() {
+#     local values_file=$1
+#     local new_values_file=$2
+#     local helm_key=$3
+#     local new_tag=$4
+#     
+#     # Only update if values file is provided
+#     if [ -z "$values_file" ] || [ ! -f "$values_file" ]; then
+#         echo "📝 Skipping Helm values update (no values file provided)"
+#         return 0
+#     fi
+#     
+#     echo "📝 Updating Helm values: $helm_key -> $new_tag"
+#     
+#     # Create backup of original file
+#     cp "$values_file" "${values_file}.backup"
+#     
+#     # Map helm_key to the correct yq path in the values file
+#     local yq_path=""
+#     case "$helm_key" in
+#         "runwhenLocal")
+#             yq_path="runwhenLocal.image.tag"
+#             ;;
+#         "runner")
+#             yq_path="runner.image.tag"
+#             ;;
+#         "opentelemetry/collector")
+#             yq_path="opentelemetry-collector.image.tag"
+#             ;;
+#         "runner.runEnvironment")
+#             yq_path="runner.runEnvironment.image.tag"
+#             ;;
+#         "unknown")
+#             echo "📝 Skipping Helm values update for unknown helm_key: $helm_key"
+#             return 0
+#             ;;
+#         *)
+#             echo "❌ Unknown helm_key: $helm_key - cannot update Helm values"
+#             return 1
+#             ;;
+#     esac
+#     
+#     # Update the image tag using yq with the correct path
+#     if yq eval ".$yq_path = \"$new_tag\"" "$values_file" > "$new_values_file" 2>/dev/null; then
+#         echo "✅ Updated Helm values file: $new_values_file (path: .$yq_path)"
+#     else
+#         echo "❌ Failed to update Helm values file for key: $helm_key (path: .$yq_path)"
+#         return 1
+#     fi
+# }
 
 # Function to sync images
 sync_images() {
@@ -595,20 +705,10 @@ sync_images() {
                 local dest_tag="$date_based_tag"
                 echo "🔄 Copying from latest tag, using date-based destination tag: $dest_tag"
             fi
-            if copy_image "$repository_image" "latest" "$destination" "$dest_tag"; then
-                # Update Helm values with the destination tag
-                update_helm_values "$values_file" "$new_values_file" "$helm_key" "$dest_tag"
-            else
-                echo "❌ Failed to copy image: $repository_image:latest"
-            fi
+            copy_image "$repository_image" "latest" "$destination" "$dest_tag"
         else
             # Use the same tag for source and destination
-            if copy_image "$repository_image" "$selected_tag" "$destination" "$selected_tag"; then
-                # Update Helm values
-                update_helm_values "$values_file" "$new_values_file" "$helm_key" "$selected_tag"
-            else
-                echo "❌ Failed to copy image: $repository_image:$selected_tag"
-            fi
+            copy_image "$repository_image" "$selected_tag" "$destination" "$selected_tag"
         fi
         
         echo "---"
@@ -652,10 +752,6 @@ main() {
                 codecollection_branch="$2"
                 shift 2
                 ;;
-            -f|--values)
-                values_file="$2"
-                shift 2
-                ;;
             -p|--prefix)
                 destination_prefix="$2"
                 shift 2
@@ -688,25 +784,22 @@ main() {
     echo "🚀 Starting AWS ECR Registry Sync"
     echo "Registry: $private_registry"
     echo "Region: $aws_region"
-    if [ -n "$values_file" ]; then
-        echo "Values file: $values_file"
-    else
-        echo "Values file: None (will not update Helm values)"
-    fi
-    echo "Output file: $new_values_file"
     echo "Architecture: ${desired_architecture:-amd64}"
     echo "---"
     
     # Extract images from Helm chart if specified
     local helm_chart_images_json="[]"
     if [ -n "$chart_path" ]; then
+        # Check and add Helm repositories if needed
+        check_helm_repositories
+        
         # Check if it's a local directory or a Helm repository reference
         if [ -d "$chart_path" ]; then
             echo "📦 Processing Helm chart from local directory: $chart_path"
-            helm_chart_images_json=$(extract_helm_chart_images "$chart_path" "$values_file" "$extra_images_file")
+            helm_chart_images_json=$(extract_helm_chart_images "$chart_path" "$extra_images_file")
         elif [[ "$chart_path" == *"/"* ]]; then
             echo "📦 Processing Helm chart from repository: $chart_path"
-            helm_chart_images_json=$(extract_helm_chart_images "$chart_path" "$values_file" "$extra_images_file")
+            helm_chart_images_json=$(extract_helm_chart_images "$chart_path" "$extra_images_file")
         else
             echo "❌ Invalid Helm chart path: $chart_path"
             echo "   Use either a local directory path or a repository reference (e.g., runwhen-contrib/runwhen-local)"
@@ -776,9 +869,6 @@ main() {
     fi
     
     echo "✅ AWS ECR Registry Sync completed"
-    if [ -n "$values_file" ] && [ -f "$values_file" ]; then
-        echo "📄 Updated Helm values saved to: $new_values_file"
-    fi
     
     # Clean up temporary files
     rm -f rendered_chart.yaml helm_chart_images.txt
