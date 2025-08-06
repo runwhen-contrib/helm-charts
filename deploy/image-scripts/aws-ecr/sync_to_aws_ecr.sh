@@ -8,7 +8,7 @@
 set -euo pipefail
 
 # Set Private Registry (AWS ECR)
-private_registry="982534371594.dkr.ecr.us-west-2.amazonaws.com"
+private_registry="123456789.dkr.ecr.us-west-2.amazonaws.com"
 
 # Set AWS Region
 aws_region="us-west-2"
@@ -17,7 +17,7 @@ aws_region="us-west-2"
 desired_architecture="amd64"
 
 # Set Destination Prefix for ECR repositories
-destination_prefix="test-rwl-runwhen2"
+destination_prefix="runwhen"
 
 # Tag exclusion list
 tag_exclusion_list=("tester")
