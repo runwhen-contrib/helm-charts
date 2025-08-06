@@ -497,16 +497,16 @@ opentelemetry-collector:
     name: "otel-collector"
   # Proxy configuration for opentelemetry-collector
   # These environment variables will be set on the opentelemetry-collector container
-  extraEnvs:
-    # HTTP_PROXY environment variable
-    - name: HTTP_PROXY
-      value: ""  # Set your HTTP proxy URL here, e.g., "http://proxy.example.com:8080"
-    # HTTPS_PROXY environment variable
-    - name: HTTPS_PROXY
-      value: ""  # Set your HTTPS proxy URL here, e.g., "http://proxy.example.com:8080"
-    # NO_PROXY environment variable
-    - name: NO_PROXY
-      value: "127.0.0.1,localhost,$(KUBERNETES_SERVICE_HOST)"
+  # extraEnvs:
+  #   # HTTP_PROXY environment variable
+  #   - name: HTTP_PROXY
+  #     value: ""  # Set your HTTP proxy URL here, e.g., "http://proxy.example.com:8080"
+  #   # HTTPS_PROXY environment variable
+  #   - name: HTTPS_PROXY
+  #     value: ""  # Set your HTTPS proxy URL here, e.g., "http://proxy.example.com:8080"
+  #   # NO_PROXY environment variable
+  #   - name: NO_PROXY
+  #     value: "127.0.0.1,localhost,$(KUBERNETES_SERVICE_HOST)"
   extraVolumes:
     - name: tls-secret-volume
       secret:
