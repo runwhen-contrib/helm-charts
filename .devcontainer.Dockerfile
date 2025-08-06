@@ -27,6 +27,13 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 RUN   echo "runwhen ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
+# Install AWS CLI v2 using tarball
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip" && \
+    unzip /tmp/awscliv2.zip -d /tmp && \
+    /tmp/aws/install && \
+    rm -rf /tmp/awscliv2.zip /tmp/aws
+
+
 # Install yq
 RUN curl -Lo /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 && \
     chmod +x /usr/local/bin/yq
@@ -64,6 +71,7 @@ ENV PATH="/home/runwhen/.linuxbrew/bin:$PATH"
 USER runwhen
 
 RUN brew install \
-    go-task   
+    go-task \
+    helm
 
 CMD ["bash"]

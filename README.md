@@ -22,8 +22,8 @@ trivy image --severity CRITICAL,HIGH --ignore-unfixed --scanners vuln --format j
 Registry                                                                                                         Package                       Vulnerability ID  Installed Version                         Fixed Version                 Severity
 --------                                                                                                         -------                       ----------------  -----------------                         -------------                 --------
 ghcr.io/runwhen-contrib/runwhen-local:latest                                                                     stdlib                        CVE-2025-22874    v1.24.1                                   1.24.4                        HIGH
-us-docker.pkg.dev/runwhen-nonprod-shared/public-images/runner:2025-07-10.1                                       golang.org/x/oauth2           CVE-2025-22868    v0.24.0                                   0.27.0                        HIGH
-us-docker.pkg.dev/runwhen-nonprod-shared/public-images/runner:2025-07-10.1                                       golang.org/x/crypto           CVE-2025-22869    v0.31.0                                   0.35.0                        HIGH
+us-docker.pkg.dev/runwhen-nonprod-shared/public-images/runner:latest                                             golang.org/x/oauth2           CVE-2025-22868    v0.24.0                                   0.27.0                        HIGH
+us-docker.pkg.dev/runwhen-nonprod-shared/public-images/runner:latest                                             golang.org/x/crypto           CVE-2025-22869    v0.31.0                                   0.35.0                        HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-aws-c7n-codecollection-main:latest    golang.org/x/oauth2           CVE-2025-22868    v0.10.0                                   0.27.0                        HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-aws-c7n-codecollection-main:latest    golang.org/x/oauth2           CVE-2025-22868    v0.23.0                                   0.27.0                        HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-aws-c7n-codecollection-main:latest    github.com/golang-jwt/jwt/v4  CVE-2025-30204    v4.5.1                                    4.5.2                         HIGH
@@ -217,7 +217,7 @@ us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure
 
 ghcr.io/runwhen-contrib/runwhen-local:latest
 otel/opentelemetry-collector:0.130.1
-us-docker.pkg.dev/runwhen-nonprod-shared/public-images/runner:2025-07-10.1
+us-docker.pkg.dev/runwhen-nonprod-shared/public-images/runner:latest
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-aws-c7n-codecollection-main:latest
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-rw-cli-codecollection-main:latest

@@ -57,7 +57,7 @@ proxy:
   # HTTPS_PROXY environment variable
   httpsProxy: ""
   # NO_PROXY environment variable
-  noProxy: "127.0.0.1,localhost,$($KUBERNETES_SERVICE_HOST),pushgateway"
+  noProxy: "127.0.0.1,localhost,$($KUBERNETES_SERVICE_HOST)"
 
 # Set the proxy CA details, if the runner is being deployed be sure to set
 # the grafana-agent mounts and volumes to match the proxyCA configuration
@@ -446,7 +446,7 @@ runner:
       # enabled: false
       # httpProxy: ""
       # httpsProxy: ""
-      # noProxy: "127.0.0.1,$($KUBERNETES_SERVICE_HOST),pushgateway"
+      # noProxy: "127.0.0.1,$($KUBERNETES_SERVICE_HOST)"
     # The proxy CA details, if the runner is being deployed be sure to set
     # the grafana-agent mounts and volumes to match the proxyCA configuration
     proxyCA: {}
@@ -495,6 +495,18 @@ opentelemetry-collector:
     create: false
     annotations: {}
     name: "otel-collector"
+  # Proxy configuration for opentelemetry-collector
+  # These environment variables will be set on the opentelemetry-collector container
+  # extraEnvs:
+  #   # HTTP_PROXY environment variable
+  #   - name: HTTP_PROXY
+  #     value: ""  # Set your HTTP proxy URL here, e.g., "http://proxy.example.com:8080"
+  #   # HTTPS_PROXY environment variable
+  #   - name: HTTPS_PROXY
+  #     value: ""  # Set your HTTPS proxy URL here, e.g., "http://proxy.example.com:8080"
+  #   # NO_PROXY environment variable
+  #   - name: NO_PROXY
+  #     value: "127.0.0.1,localhost,$(KUBERNETES_SERVICE_HOST)"
   extraVolumes:
     - name: tls-secret-volume
       secret:
