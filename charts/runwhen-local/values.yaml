@@ -235,6 +235,8 @@ runwhenLocal:
           kubernetes:
             inClusterAuth: true
         codeCollections: []
+        taskTagExclusions: 
+        - "access:read-write"
         custom:
           # Note: Most of these are simple keys, such as the name of a secret that
           # should be referenced from the platform. The secret itself (key and value)
