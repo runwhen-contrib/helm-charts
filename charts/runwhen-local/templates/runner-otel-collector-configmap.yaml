@@ -88,14 +88,6 @@ data:
       prometheusremotewrite:
         endpoint: {{ .Values.runner.metrics.url }}
         {{- if .Values.proxy.enabled }}
-        http_client_settings:
-          {{- with .Values.proxy.httpsProxy }}
-          proxy_url: "{{ . }}"
-          {{- end }}
-          {{- with .Values.proxy.noProxy }}
-          no_proxy: "{{ . }}"
-          {{- end }}
-        {{- end }}
         tls:
           {{- if .Values.proxyCA }}
           ca_file: "/etc/ssl/certs/proxy-ca.crt"
