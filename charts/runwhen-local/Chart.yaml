@@ -2,8 +2,8 @@ apiVersion: v2
 name: runwhen-local
 description: The RunWhen Local Helm Chart - Private runners powering Agentic AI
 type: application
-version: 0.4.6
-appVersion: "0.10.20"
+version: 0.4.7
+appVersion: "0.10.22"
 icon: https://storage.googleapis.com/runwhen-nonprod-shared-images/icons/runwhen_icon.png
 dependencies:
   - name: opentelemetry-collector
