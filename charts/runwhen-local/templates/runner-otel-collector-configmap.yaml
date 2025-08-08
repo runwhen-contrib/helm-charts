@@ -87,7 +87,6 @@ data:
     exporters:
       prometheusremotewrite:
         endpoint: {{ .Values.runner.metrics.url }}
-        {{- if .Values.proxy.enabled }}
         tls:
           {{- if .Values.proxyCA }}
           ca_file: "/etc/ssl/certs/proxy-ca.crt"
