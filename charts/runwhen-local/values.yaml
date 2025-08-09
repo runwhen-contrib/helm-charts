@@ -486,13 +486,12 @@ opentelemetry-collector:
   image:
     repository: "otel/opentelemetry-collector"
     pullPolicy: IfNotPresent
-    tag: "0.130.1"
+    tag: "0.127.0"
   imagePullSecrets: []
   command:
     name: "otelcol"
     ## Keep this feature gate disabled to preserve our metric naming convention
-    ## Commented out with 0.130.1 https://github.com/open-telemetry/opentelemetry-collector-contrib/issues/26488
-    # extraArgs: ["--feature-gates=-pkg.translator.prometheus.NormalizeName"]
+    extraArgs: ["--feature-gates=-pkg.translator.prometheus.NormalizeName"]
   serviceAccount:
     create: false
     annotations: {}
