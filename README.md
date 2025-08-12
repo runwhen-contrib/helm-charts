@@ -219,6 +219,7 @@ us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  libpam0g                      CVE-2025-6020     1.5.2-6+deb12u1                           1.7.0-5                       HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  libxml2                       CVE-2025-6021     2.9.14+dfsg-1.3~deb12u2                   2.12.7+dfsg+really2.9.14-2    HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  libsqlite3-0                  CVE-2025-6965     3.40.1-2+deb12u1                          3.46.1-7                      CRITICAL
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  libsqlite3-0                  CVE-2025-7458     3.40.1-2+deb12u1                          3.42.0-1                      CRITICAL
 ```
 <!-- END_TRIVY_SUMMARY -->
 
