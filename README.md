@@ -93,6 +93,8 @@ us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  git                           CVE-2025-48385    1:2.47.2-0.2                              1:2.47.3-0+deb13u1                HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  git-man                       CVE-2025-48385    1:2.47.2-0.2                              1:2.47.3-0+deb13u1                HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  helm.sh/helm/v3               CVE-2025-53547    v3.17.3                                   3.18.4, 3.17.4                    HIGH
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  libpcre2-8-0                  CVE-2025-58050    10.45-1                                   10.46-1~deb13u1                   CRITICAL
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  libpcre2-posix3               CVE-2025-58050    10.45-1                                   10.46-1~deb13u1                   CRITICAL
 ```
 <!-- END_TRIVY_SUMMARY -->
 
