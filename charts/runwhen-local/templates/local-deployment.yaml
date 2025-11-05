@@ -49,6 +49,10 @@ spec:
           - name: DEBUG_LOGGING
             value: "true"
           {{- end }}
+          {{- if .Values.runwhenLocal.cheatSheet.disabled }}
+          - name: WB_DEBUG_SUPPRESS_CHEAT_SHEET
+            value: "yes"
+          {{- end }}
           {{- if .Values.runwhenLocal.discoveryKubeconfig.inClusterAuth.createKubeconfigSecret }}
           - name: RW_CREATE_KUBECONFIG_SECRET
             value: "true"
@@ -78,7 +82,7 @@ spec:
           {{- end }}
           {{- end }}
           {{- with .Values.runwhenLocal.extraEnv }}
-          {{- toYaml . | nindent 8 }}
+          {{- toYaml . | nindent 10 }}
           {{- end }}
           ports:
             - name: mkdocs

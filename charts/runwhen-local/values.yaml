@@ -200,6 +200,21 @@ runwhenLocal:
   # Enable debug logging
   debugLogs: false
 
+  # Cheat Sheet: Enable or disable the troubleshooting cheat sheet display
+  # Setting this to true will suppress the cheat sheet from being displayed
+  cheatSheet:
+    disabled: true
+
+  # Additional environment variables for the runwhen-local container
+  # Use this to pass custom environment variables to the container
+  # Example:
+  #   extraEnv:
+  #     - name: MY_CUSTOM_VAR
+  #       value: "my-value"
+  #     - name: ANOTHER_VAR
+  #       value: "another-value"
+  extraEnv: []
+
   ## uploadInfo
   # The upload configuration applies only to users to leverage RunWhen Local as an
   # onboarding tool into RunWhen Platform (https://docs.runwhen.com/public/v/runwhen-local/user-guide/features/upload-to-runwhen-platform for more details)
