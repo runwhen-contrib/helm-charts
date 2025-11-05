@@ -82,7 +82,7 @@ spec:
           {{- end }}
           {{- end }}
           {{- with .Values.runwhenLocal.extraEnv }}
-          {{- toYaml . | nindent 8 }}
+          {{- toYaml . | nindent 10 }}
           {{- end }}
           ports:
             - name: mkdocs
