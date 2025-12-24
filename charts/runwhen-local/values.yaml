@@ -314,8 +314,8 @@ runner:
     raw: {}
 
   image:
-    registry: "us-docker.pkg.dev"
-    repository: "runwhen-nonprod-shared/public-images/runner"
+    registry: ""
+    repository: ""
     tag: "pr-29-8a1855a"
   controlAddr: "https://runner.beta.runwhen.com"
   metrics:
