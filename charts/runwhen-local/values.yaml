@@ -314,9 +314,9 @@ runner:
     raw: {}
 
   image:
-    registry: ""
-    repository: ""
-    tag: ""
+    registry: "us-docker.pkg.dev"
+    repository: "runwhen-nonprod-shared/public-images/runner"
+    tag: "pr-29-8a1855a"
   controlAddr: "https://runner.beta.runwhen.com"
   metrics:
     url: "https://runner-cortex-tenant.beta.runwhen.com/push"
