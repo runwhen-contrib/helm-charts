@@ -112,8 +112,7 @@ data:
               metric_relabel_configs:
                 - source_labels: [__name__]
                   action: keep
-                  regex: vault_token_cache_hits_total|vault_token_renewal_total|vault_token_ttl_seconds|vault_token_age_seconds|vault_auth_total|vault_auth_success_total|vault_auth_duration_seconds_bucket|go_goroutines|go_gc_duration_seconds|process_cpu_seconds_total|process_resident_memory_bytes|process_open_fds|process_start_time_seconds
-
+                  regex: vault_token_cache_hits_total|vault_token_renewal_total|vault_token_ttl_seconds|vault_token_age_seconds|vault_auth_total|vault_auth_success_total|vault_auth_duration_seconds_bucket|worker_tasks_executed_total|worker_task_execution_seconds_bucket|go_goroutines|go_gc_duration_seconds|process_cpu_seconds_total|process_resident_memory_bytes|process_open_fds|process_start_time_seconds
 
     exporters:
       prometheusremotewrite:
