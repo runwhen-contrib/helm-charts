@@ -316,7 +316,7 @@ runner:
   image:
     registry: ""
     repository: ""
-    tag: "pr-29-8a1855a"
+    tag: "pr-29-f816060"
   controlAddr: "https://runner.beta.runwhen.com"
   metrics:
     url: "https://runner-cortex-tenant.beta.runwhen.com/push"
