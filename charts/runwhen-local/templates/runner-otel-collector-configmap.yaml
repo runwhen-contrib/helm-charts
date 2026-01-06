@@ -84,6 +84,36 @@ data:
                 - source_labels: [__meta_kubernetes_pod_host_ip]
                   target_label: host_ip
 
+            - job_name: 'runwhen-runtime-worker-mertrics'
+              kubernetes_sd_configs:
+                - role: pod
+                  namespaces:
+                    names:
+                      - {{ .Release.Namespace }}
+
+              scrape_interval: 60s
+              scrape_timeout: 10s
+              metrics_path: /metrics
+              scheme: http
+
+              # Force port 9091 for separate go worker metrics
+              relabel_configs:
+                - source_labels: [__meta_kubernetes_pod_label_type]
+                  regex: runner-worker
+                  action: keep
+                - source_labels: [__address__]
+                  regex: ([^:]+)(?::\d+)?
+                  replacement: $$1:9091
+                  target_label: __address__
+                - source_labels: [__meta_kubernetes_pod_name]
+                  target_label: instance
+                - target_label: service
+                  replacement: 'runwhen-runtime-vault'
+              metric_relabel_configs:
+                - source_labels: [__name__]
+                  action: keep
+                  regex: vault_token_cache_hits_total|vault_token_renewal_total|vault_token_ttl_seconds|vault_token_age_seconds|vault_auth_total|vault_auth_success_total|vault_auth_duration_seconds_bucket|worker_tasks_executed_total|worker_task_execution_seconds_bucket|go_goroutines|go_gc_duration_seconds|process_cpu_seconds_total|process_resident_memory_bytes|process_open_fds|process_start_time_seconds
+
     exporters:
       prometheusremotewrite:
         endpoint: {{ .Values.runner.metrics.url }}
