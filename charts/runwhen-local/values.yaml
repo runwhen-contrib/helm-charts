@@ -147,6 +147,24 @@ runwhenLocal:
     #    hosts:
     #      - chart-example.local
 
+  # Health probes configuration
+  # Customize liveness and readiness probes for the runwhen-local container
+  # Uncomment and modify to override the defaults defined in the deployment template
+  # livenessProbe:
+  #   httpGet:
+  #     path: /
+  #     port: django
+  #   initialDelaySeconds: 10
+  #   periodSeconds: 20
+  #   failureThreshold: 20
+
+  # readinessProbe:
+  #   tcpSocket:
+  #     port: django
+  #   initialDelaySeconds: 10
+  #   periodSeconds: 5
+  #   failureThreshold: 5
+
   resources:
     default:
       requests:
