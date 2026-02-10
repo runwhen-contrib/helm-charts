@@ -96,8 +96,7 @@ spec:
             {{- toYaml .Values.runwhenLocal.livenessProbe | nindent 12 }}
           {{- else }}
           livenessProbe:
-            httpGet:
-              path: /
+            tcpSocket:
               port: django
             initialDelaySeconds: 10
             periodSeconds: 20

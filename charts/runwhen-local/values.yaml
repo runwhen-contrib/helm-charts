@@ -151,8 +151,7 @@ runwhenLocal:
   # Customize liveness and readiness probes for the runwhen-local container
   # Uncomment and modify to override the defaults defined in the deployment template
   # livenessProbe:
-  #   httpGet:
-  #     path: /
+  #   tcpSocket:
   #     port: django
   #   initialDelaySeconds: 10
   #   periodSeconds: 20
