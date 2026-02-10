@@ -91,19 +91,29 @@ spec:
             - name: django
               containerPort: 8000
               protocol: TCP
+          {{- if .Values.runwhenLocal.livenessProbe }}
+          livenessProbe:
+            {{- toYaml .Values.runwhenLocal.livenessProbe | nindent 12 }}
+          {{- else }}
           livenessProbe:
             httpGet:
               path: /
-              port: mkdocs
+              port: django
             initialDelaySeconds: 10
             periodSeconds: 20
             failureThreshold: 20
+          {{- end }}
+          {{- if .Values.runwhenLocal.readinessProbe }}
+          readinessProbe:
+            {{- toYaml .Values.runwhenLocal.readinessProbe | nindent 12 }}
+          {{- else }}
           readinessProbe:
             tcpSocket:
-              port: 8000
+              port: django
             initialDelaySeconds: 10
             periodSeconds: 5
             failureThreshold: 5
+          {{- end }}
           resources:
             {{- if eq .Values.platformType "EKS_Fargate" }}
             {{- toYaml .Values.runwhenLocal.resources.EKS_Fargate | nindent 12 }}
