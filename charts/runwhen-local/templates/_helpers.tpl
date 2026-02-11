@@ -51,13 +51,27 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
+Create the workspace-builder deployment name.
+*/}}
+{{- define "runwhen-local.workspaceBuilderFullname" -}}
+{{- printf "%s-workspace-builder" (include "runwhen-local.fullname" . | trunc 44 | trimSuffix "-") }}
+{{- end }}
+
+{{/*
+Create the runner deployment name.
+*/}}
+{{- define "runwhen-local.runnerFullname" -}}
+{{- printf "%s-runner" (include "runwhen-local.fullname" . | trunc 56 | trimSuffix "-") }}
+{{- end }}
+
+{{/*
 Create the name of the service account to use
 */}}
 {{- define "runwhen-local.serviceAccountName" -}}
-{{- if .Values.runwhenLocal.serviceAccount.create }}
-{{- default (include "runwhen-local.fullname" .) .Values.runwhenLocal.serviceAccount.name }}
+{{- if .Values.workspaceBuilder.serviceAccount.create }}
+{{- default (include "runwhen-local.fullname" .) .Values.workspaceBuilder.serviceAccount.name }}
 {{- else }}
-{{- default "default" .Values.runwhenLocal.serviceAccount.name }}
+{{- default "default" .Values.workspaceBuilder.serviceAccount.name }}
 {{- end }}
 {{- end }}
 

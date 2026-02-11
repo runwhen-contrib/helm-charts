@@ -1,10 +1,10 @@
-{{- if .Values.runwhenLocal.enabled -}}
-{{- if .Values.runwhenLocal.ingress.enabled -}}
-{{- $fullName := include "runwhen-local.fullname" . -}}
-{{- $svcPort := .Values.runwhenLocal.service.port -}}
-{{- if and .Values.runwhenLocal.ingress.className (not (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion)) }}
-  {{- if not (hasKey .Values.runwhenLocal.ingress.annotations "kubernetes.io/ingress.class") }}
-  {{- $_ := set .Values.runwhenLocal.ingress.annotations "kubernetes.io/ingress.class" .Values.runwhenLocal.ingress.className}}
+{{- if .Values.workspaceBuilder.enabled -}}
+{{- if .Values.workspaceBuilder.ingress.enabled -}}
+{{- $fullName := include "runwhen-local.workspaceBuilderFullname" . -}}
+{{- $svcPort := .Values.workspaceBuilder.service.port -}}
+{{- if and .Values.workspaceBuilder.ingress.className (not (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion)) }}
+  {{- if not (hasKey .Values.workspaceBuilder.ingress.annotations "kubernetes.io/ingress.class") }}
+  {{- $_ := set .Values.workspaceBuilder.ingress.annotations "kubernetes.io/ingress.class" .Values.workspaceBuilder.ingress.className}}
   {{- end }}
 {{- end }}
 {{- if semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion -}}
@@ -19,17 +19,17 @@ metadata:
   name: {{ $fullName }}
   labels:
     {{- include "runwhen-local.labels" . | nindent 4 }}
-  {{- with .Values.runwhenLocal.ingress.annotations }}
+  {{- with .Values.workspaceBuilder.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  {{- if and .Values.runwhenLocal.ingress.className (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion) }}
-  ingressClassName: {{ .Values.runwhenLocal.ingress.className }}
+  {{- if and .Values.workspaceBuilder.ingress.className (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion) }}
+  ingressClassName: {{ .Values.workspaceBuilder.ingress.className }}
   {{- end }}
-  {{- if .Values.runwhenLocal.ingress.tls }}
+  {{- if .Values.workspaceBuilder.ingress.tls }}
   tls:
-    {{- range .Values.runwhenLocal.ingress.tls }}
+    {{- range .Values.workspaceBuilder.ingress.tls }}
     - hosts:
         {{- range .hosts }}
         - {{ . | quote }}
@@ -38,7 +38,7 @@ spec:
     {{- end }}
   {{- end }}
   rules:
-    {{- range .Values.runwhenLocal.ingress.hosts }}
+    {{- range .Values.workspaceBuilder.ingress.hosts }}
     - host: {{ .host | quote }}
       http:
         paths:

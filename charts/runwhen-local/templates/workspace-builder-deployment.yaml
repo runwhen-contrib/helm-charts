@@ -1,8 +1,8 @@
-{{- if .Values.runwhenLocal.enabled -}}
+{{- if .Values.workspaceBuilder.enabled -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "runwhen-local.fullname" . }}
+  name: {{ include "runwhen-local.workspaceBuilderFullname" . }}
   labels:
     {{- include "runwhen-local.labels" . | nindent 4 }}
 spec:
@@ -12,7 +12,7 @@ spec:
       {{- include "runwhen-local.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- with .Values.runwhenLocal.podAnnotations }}
+      {{- with .Values.workspaceBuilder.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
@@ -25,40 +25,40 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ .Values.runwhenLocal.serviceAccount.name }}
+      serviceAccountName: {{ .Values.workspaceBuilder.serviceAccount.name }}
       automountServiceAccountToken: true
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
         - name: {{ .Chart.Name }}
           {{- include "runwhen-local.containerSecurityContext" . | nindent 10 }}
-          image: "{{ (.Values.runwhenLocal.image.registry | default .Values.registryOverride)| default "ghcr.io" }}/{{ .Values.runwhenLocal.image.repository | default "runwhen-contrib/runwhen-local" }}:{{ .Values.runwhenLocal.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.runwhenLocal.image.pullPolicy }}
+          image: "{{ (.Values.workspaceBuilder.image.registry | default .Values.registryOverride)| default "ghcr.io" }}/{{ .Values.workspaceBuilder.image.repository | default "runwhen-contrib/runwhen-local" }}:{{ .Values.workspaceBuilder.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.workspaceBuilder.image.pullPolicy }}
           env: 
           - name: TMPDIR
             value: /tmp   
           - name: AUTORUN_WORKSPACE_BUILDER_INTERVAL
-            value: "{{ .Values.runwhenLocal.autoRun.discoveryInterval }}"
+            value: "{{ .Values.workspaceBuilder.autoRun.discoveryInterval }}"
           - name: RW_LOCAL_TERMINAL_DISABLED
-            value: "{{ .Values.runwhenLocal.terminal.disabled }}"
+            value: "{{ .Values.workspaceBuilder.terminal.disabled }}"
           - name: RW_LOCAL_UPLOAD_ENABLED
-            value: "{{ .Values.runwhenLocal.autoRun.uploadEnabled }}"
+            value: "{{ .Values.workspaceBuilder.autoRun.uploadEnabled }}"
           - name: RW_LOCAL_UPLOAD_MERGE_MODE
-            value: "{{ .Values.runwhenLocal.autoRun.uploadMergeMode }}"
-          {{- if .Values.runwhenLocal.debugLogs }}
+            value: "{{ .Values.workspaceBuilder.autoRun.uploadMergeMode }}"
+          {{- if .Values.workspaceBuilder.debugLogs }}
           - name: DEBUG_LOGGING
             value: "true"
           {{- end }}
-          {{- if .Values.runwhenLocal.cheatSheet.disabled }}
+          {{- if .Values.workspaceBuilder.cheatSheet.disabled }}
           - name: WB_DEBUG_SUPPRESS_CHEAT_SHEET
             value: "yes"
           {{- end }}
-          {{- if .Values.runwhenLocal.discoveryKubeconfig.inClusterAuth.createKubeconfigSecret }}
+          {{- if .Values.workspaceBuilder.discoveryKubeconfig.inClusterAuth.createKubeconfigSecret }}
           - name: RW_CREATE_KUBECONFIG_SECRET
             value: "true"
           {{- end }}
           - name: KUBERNETES_CLUSTER_NAME
-            value: {{ .Values.runwhenLocal.clusterName }}
+            value: {{ .Values.workspaceBuilder.clusterName }}
           {{- if .Values.proxy.enabled }}
           {{- with .Values.proxy.httpProxy }}
           - name: HTTP_PROXY
@@ -72,7 +72,7 @@ spec:
           - name: NO_PROXY
             value: {{ . }}
           {{- end }}
-          {{- if or .Values.proxyCA .Values.runwhenLocal.proxyCA }}
+          {{- if or .Values.proxyCA .Values.workspaceBuilder.proxyCA }}
           - name: SLI_CERT_FILE
             value: "/etc/ssl/certs/ca-certificates.crt"
           - name: REQUESTS_CA_BUNDLE
@@ -81,7 +81,7 @@ spec:
             value: "/etc/ssl/certs/ca-certificates.crt"
           {{- end }}
           {{- end }}
-          {{- with .Values.runwhenLocal.extraEnv }}
+          {{- with .Values.workspaceBuilder.extraEnv }}
           {{- toYaml . | nindent 10 }}
           {{- end }}
           ports:
@@ -91,9 +91,9 @@ spec:
             - name: django
               containerPort: 8000
               protocol: TCP
-          {{- if .Values.runwhenLocal.livenessProbe }}
+          {{- if .Values.workspaceBuilder.livenessProbe }}
           livenessProbe:
-            {{- toYaml .Values.runwhenLocal.livenessProbe | nindent 12 }}
+            {{- toYaml .Values.workspaceBuilder.livenessProbe | nindent 12 }}
           {{- else }}
           livenessProbe:
             tcpSocket:
@@ -102,9 +102,9 @@ spec:
             periodSeconds: 20
             failureThreshold: 20
           {{- end }}
-          {{- if .Values.runwhenLocal.readinessProbe }}
+          {{- if .Values.workspaceBuilder.readinessProbe }}
           readinessProbe:
-            {{- toYaml .Values.runwhenLocal.readinessProbe | nindent 12 }}
+            {{- toYaml .Values.workspaceBuilder.readinessProbe | nindent 12 }}
           {{- else }}
           readinessProbe:
             tcpSocket:
@@ -115,16 +115,16 @@ spec:
           {{- end }}
           resources:
             {{- if eq .Values.platformType "EKS_Fargate" }}
-            {{- toYaml .Values.runwhenLocal.resources.EKS_Fargate | nindent 12 }}
+            {{- toYaml .Values.workspaceBuilder.resources.EKS_Fargate | nindent 12 }}
             {{- else }}
-            {{- toYaml .Values.runwhenLocal.resources.default | nindent 12 }}
+            {{- toYaml .Values.workspaceBuilder.resources.default | nindent 12 }}
             {{- end }}
           volumeMounts:
-          {{- with .Values.runwhenLocal.volumeMounts }}
+          {{- with .Values.workspaceBuilder.volumeMounts }}
             {{- toYaml . | nindent 10 }}
           {{- end }}
-          {{- if or .Values.proxy.enabled .Values.runwhenLocal.proxy }}
-          {{- if or .Values.proxyCA .Values.runwhenLocal.proxyCA }}
+          {{- if or .Values.proxy.enabled .Values.workspaceBuilder.proxy }}
+          {{- if or .Values.proxyCA .Values.workspaceBuilder.proxyCA }}
           - name: proxy-ca
             mountPath: /etc/ssl/certs/ca-certificates.crt
             subPath: ca-certificates.crt
@@ -134,7 +134,7 @@ spec:
             mountPath: "/shared"
           - name: tmpdir
             mountPath: "/tmp"
-          {{- if .Values.runwhenLocal.discoveryKubeconfig.secretProvided.enabled }}
+          {{- if .Values.workspaceBuilder.discoveryKubeconfig.secretProvided.enabled }}
           - name: kubeconfig-secret-volume
             mountPath: "/shared/kubeconfig"
             subPath: "kubeconfig"
@@ -142,17 +142,17 @@ spec:
           - name: configmap-volume
             mountPath: "/shared/workspaceInfo.yaml"
             subPath: "workspaceInfo.yaml"
-          {{- if .Values.runwhenLocal.uploadInfo.secretProvided.enabled }}
+          {{- if .Values.workspaceBuilder.uploadInfo.secretProvided.enabled }}
           - name: upload-secret-volume
             mountPath: "/shared/uploadInfo.yaml"
             subPath: "uploadInfo.yaml"
           {{- end }}
       volumes:
-      {{- with .Values.runwhenLocal.volumes }}
+      {{- with .Values.workspaceBuilder.volumes }}
       {{- toYaml . | nindent 6 }}
       {{- end }}
-      {{- if or .Values.proxy.enabled .Values.runwhenLocal.proxy }}
-      {{- with or .Values.proxyCA .Values.runwhenLocal.proxyCA }}
+      {{- if or .Values.proxy.enabled .Values.workspaceBuilder.proxy }}
+      {{- with or .Values.proxyCA .Values.workspaceBuilder.proxyCA }}
       - name: proxy-ca
         {{- if .secretName }}
         secret:
@@ -171,25 +171,25 @@ spec:
         emptyDir: {}
       - name: tmpdir
         emptyDir: {}
-      {{- if .Values.runwhenLocal.discoveryKubeconfig.secretProvided.enabled }}
+      {{- if .Values.workspaceBuilder.discoveryKubeconfig.secretProvided.enabled }}
       - name: kubeconfig-secret-volume
         secret:
-          secretName: {{ .Values.runwhenLocal.discoveryKubeconfig.secretProvided.secretName }}
+          secretName: {{ .Values.workspaceBuilder.discoveryKubeconfig.secretProvided.secretName }}
           items:
-            - key: {{ .Values.runwhenLocal.discoveryKubeconfig.secretProvided.secretKey }}
-              path: {{ .Values.runwhenLocal.discoveryKubeconfig.secretProvided.secretPath }}
+            - key: {{ .Values.workspaceBuilder.discoveryKubeconfig.secretProvided.secretKey }}
+              path: {{ .Values.workspaceBuilder.discoveryKubeconfig.secretProvided.secretPath }}
       {{- end }}
-      {{- if .Values.runwhenLocal.uploadInfo.secretProvided.enabled }}
+      {{- if .Values.workspaceBuilder.uploadInfo.secretProvided.enabled }}
       - name: upload-secret-volume
         secret:
-          secretName: {{ .Values.runwhenLocal.uploadInfo.secretProvided.secretName }}
+          secretName: {{ .Values.workspaceBuilder.uploadInfo.secretProvided.secretName }}
           items:
-            - key: {{ .Values.runwhenLocal.uploadInfo.secretProvided.secretKey }}
-              path: {{ .Values.runwhenLocal.uploadInfo.secretProvided.secretPath }}
+            - key: {{ .Values.workspaceBuilder.uploadInfo.secretProvided.secretKey }}
+              path: {{ .Values.workspaceBuilder.uploadInfo.secretProvided.secretPath }}
       {{- end }}
       - name: configmap-volume
         configMap:
-          name: {{ if .Values.runwhenLocal.workspaceInfo.useExistingConfigMap }}{{ .Values.runwhenLocal.workspaceInfo.existingConfigMapName }}{{ else }}{{ .Values.runwhenLocal.workspaceInfo.configMap.name }}{{ end }}
+          name: {{ if .Values.workspaceBuilder.workspaceInfo.useExistingConfigMap }}{{ .Values.workspaceBuilder.workspaceInfo.existingConfigMapName }}{{ else }}{{ .Values.workspaceBuilder.workspaceInfo.configMap.name }}{{ end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -198,7 +198,7 @@ spec:
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- if or (eq .Values.platformArch "arm64") (not (empty .Values.tolerations)) (not (empty .Values.runwhenLocal.tolerations)) }}
+      {{- if or (eq .Values.platformArch "arm64") (not (empty .Values.tolerations)) (not (empty .Values.workspaceBuilder.tolerations)) }}
       tolerations:
       {{- if eq .Values.platformArch "arm64" }}
       - key: "kubernetes.io/arch"
@@ -209,7 +209,7 @@ spec:
       {{- with .Values.tolerations }}
       {{- toYaml . | nindent 6 }}
       {{- end }}
-      {{- with .Values.runwhenLocal.tolerations }}
+      {{- with .Values.workspaceBuilder.tolerations }}
       {{- toYaml . | nindent 6 }}
       {{- end }}
       {{- end }}

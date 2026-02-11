@@ -2,7 +2,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: runner
+  name: {{ include "runwhen-local.runnerFullname" . }}
   labels:
     {{ include "runwhen-local.labels" . | nindent 4 }}
 spec:
@@ -28,8 +28,8 @@ spec:
       # Pod-level securityContext (if any)
       {{- include "runwhen-local.podSecurityContext" . | nindent 6 }}
 
-      serviceAccount: runner
-      serviceAccountName: runner
+      serviceAccount: {{ include "runwhen-local.runnerFullname" . }}
+      serviceAccountName: {{ include "runwhen-local.runnerFullname" . }}
       automountServiceAccountToken: true
 
       {{- with .Values.imagePullSecrets }}

@@ -1,12 +1,12 @@
-{{- if .Values.runwhenLocal.enabled -}}
+{{- if .Values.workspaceBuilder.enabled -}}
 apiVersion: v1
 kind: Service
 metadata:
-  name: runwhen-local
+  name: {{ include "runwhen-local.workspaceBuilderFullname" . }}
   labels:
     {{- include "runwhen-local.labels" . | nindent 4 }}
 spec:
-  type: {{ .Values.runwhenLocal.service.type }}
+  type: {{ .Values.workspaceBuilder.service.type }}
   ports:
     - name: mkdocs
       protocol: TCP
