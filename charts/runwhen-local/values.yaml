@@ -431,8 +431,8 @@ runner:
     #### The configurations applied to the SLI (CronCodeRun) Deployments ####
     deployment:
       # Override the service account for SLI (CronCodeRun) Deployments
-      # If not set, the runner will create and manage service accounts
-      serviceAccount: "runner"
+      # If not set, defaults to the runner's service account name
+      serviceAccount: ""
       annotations: {}
       podAnnotations: {}
       affinity: {}
@@ -458,8 +458,8 @@ runner:
     pod:
       runAsJob: false
       # Override the service account for TaskSet (CodeRun) Pods
-      # If not set, the runner will create and manage service accounts
-      serviceAccount: "runner"
+      # If not set, defaults to the runner's service account name
+      serviceAccount: ""
       annotations: {}
       affinity: {}
       nodeName: ""
