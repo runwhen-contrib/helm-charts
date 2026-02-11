@@ -51,6 +51,21 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
+Resolve workspace builder values with backward compatibility.
+DEPRECATED: Support for the old "runwhenLocal" values key.
+  If a user's values file still uses "runwhenLocal:", those values are merged
+  over the "workspaceBuilder:" defaults so existing installs keep working.
+  Remove this fallback once all consumers have migrated to "workspaceBuilder:".
+*/}}
+{{- define "runwhen-local.resolveWorkspaceBuilder" -}}
+{{- if .Values.runwhenLocal -}}
+{{- mergeOverwrite (deepCopy .Values.workspaceBuilder) .Values.runwhenLocal | toYaml -}}
+{{- else -}}
+{{- .Values.workspaceBuilder | toYaml -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Create the workspace-builder deployment name.
 */}}
 {{- define "runwhen-local.workspaceBuilderFullname" -}}
@@ -68,10 +83,11 @@ Create the runner deployment name.
 Create the name of the service account to use
 */}}
 {{- define "runwhen-local.serviceAccountName" -}}
-{{- if .Values.workspaceBuilder.serviceAccount.create }}
-{{- default (include "runwhen-local.fullname" .) .Values.workspaceBuilder.serviceAccount.name }}
+{{- $wb := include "runwhen-local.resolveWorkspaceBuilder" . | fromYaml -}}
+{{- if $wb.serviceAccount.create }}
+{{- default (include "runwhen-local.fullname" .) $wb.serviceAccount.name }}
 {{- else }}
-{{- default "default" .Values.workspaceBuilder.serviceAccount.name }}
+{{- default "default" $wb.serviceAccount.name }}
 {{- end }}
 {{- end }}
 

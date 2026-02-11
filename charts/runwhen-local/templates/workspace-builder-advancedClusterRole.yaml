@@ -1,24 +1,25 @@
-{{- if .Values.workspaceBuilder.enabled -}}
-{{- if .Values.workspaceBuilder.serviceAccountRoles.advancedClusterRole.enabled -}}
+{{- $wb := include "runwhen-local.resolveWorkspaceBuilder" . | fromYaml -}}
+{{- if $wb.enabled -}}
+{{- if $wb.serviceAccountRoles.advancedClusterRole.enabled -}}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ .Values.workspaceBuilder.serviceAccount.name }}-advanced-view
+  name: {{ $wb.serviceAccount.name }}-advanced-view
 rules:
-{{ toYaml .Values.workspaceBuilder.serviceAccountRoles.advancedClusterRole.rules | indent 2 }}
+{{ toYaml $wb.serviceAccountRoles.advancedClusterRole.rules | indent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ .Values.workspaceBuilder.serviceAccount.name }}-advanced-crb
+  name: {{ $wb.serviceAccount.name }}-advanced-crb
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ .Values.workspaceBuilder.serviceAccount.name }}-advanced-view
+  name: {{ $wb.serviceAccount.name }}-advanced-view
 subjects:
   - kind: ServiceAccount
-    name: {{ .Values.workspaceBuilder.serviceAccount.name }}
+    name: {{ $wb.serviceAccount.name }}
     namespace: {{ .Release.Namespace }}
 {{- end }}
 {{- end }}

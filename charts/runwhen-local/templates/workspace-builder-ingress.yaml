@@ -1,10 +1,11 @@
-{{- if .Values.workspaceBuilder.enabled -}}
-{{- if .Values.workspaceBuilder.ingress.enabled -}}
+{{- $wb := include "runwhen-local.resolveWorkspaceBuilder" . | fromYaml -}}
+{{- if $wb.enabled -}}
+{{- if $wb.ingress.enabled -}}
 {{- $fullName := include "runwhen-local.workspaceBuilderFullname" . -}}
-{{- $svcPort := .Values.workspaceBuilder.service.port -}}
-{{- if and .Values.workspaceBuilder.ingress.className (not (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion)) }}
-  {{- if not (hasKey .Values.workspaceBuilder.ingress.annotations "kubernetes.io/ingress.class") }}
-  {{- $_ := set .Values.workspaceBuilder.ingress.annotations "kubernetes.io/ingress.class" .Values.workspaceBuilder.ingress.className}}
+{{- $svcPort := $wb.service.port -}}
+{{- if and $wb.ingress.className (not (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion)) }}
+  {{- if not (hasKey $wb.ingress.annotations "kubernetes.io/ingress.class") }}
+  {{- $_ := set $wb.ingress.annotations "kubernetes.io/ingress.class" $wb.ingress.className}}
   {{- end }}
 {{- end }}
 {{- if semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion -}}
@@ -19,17 +20,17 @@ metadata:
   name: {{ $fullName }}
   labels:
     {{- include "runwhen-local.labels" . | nindent 4 }}
-  {{- with .Values.workspaceBuilder.ingress.annotations }}
+  {{- with $wb.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  {{- if and .Values.workspaceBuilder.ingress.className (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion) }}
-  ingressClassName: {{ .Values.workspaceBuilder.ingress.className }}
+  {{- if and $wb.ingress.className (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion) }}
+  ingressClassName: {{ $wb.ingress.className }}
   {{- end }}
-  {{- if .Values.workspaceBuilder.ingress.tls }}
+  {{- if $wb.ingress.tls }}
   tls:
-    {{- range .Values.workspaceBuilder.ingress.tls }}
+    {{- range $wb.ingress.tls }}
     - hosts:
         {{- range .hosts }}
         - {{ . | quote }}
@@ -38,7 +39,7 @@ spec:
     {{- end }}
   {{- end }}
   rules:
-    {{- range .Values.workspaceBuilder.ingress.hosts }}
+    {{- range $wb.ingress.hosts }}
     - host: {{ .host | quote }}
       http:
         paths:

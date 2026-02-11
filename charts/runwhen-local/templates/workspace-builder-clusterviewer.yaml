@@ -1,9 +1,10 @@
-{{- if .Values.workspaceBuilder.enabled -}}
-{{- if .Values.workspaceBuilder.serviceAccountRoles.clusterRoleView.enabled -}}
+{{- $wb := include "runwhen-local.resolveWorkspaceBuilder" . | fromYaml -}}
+{{- if $wb.enabled -}}
+{{- if $wb.serviceAccountRoles.clusterRoleView.enabled -}}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ .Release.Namespace }}-{{ .Values.workspaceBuilder.serviceAccount.name }}-view-crb
+  name: {{ .Release.Namespace }}-{{ $wb.serviceAccount.name }}-view-crb
   namespace: {{ .Release.Namespace }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -11,7 +12,7 @@ roleRef:
   name: view
 subjects:
   - kind: ServiceAccount
-    name: {{ .Values.workspaceBuilder.serviceAccount.name }}
+    name: {{ $wb.serviceAccount.name }}
     namespace: {{ .Release.Namespace }}
 {{- end }}
 {{- end }}
