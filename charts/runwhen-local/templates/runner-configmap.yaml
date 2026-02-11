@@ -66,9 +66,7 @@ data:
         {{- end }}
         {{- end }}
         deployment:
-          {{- with .Values.runner.runEnvironment.deployment.serviceAccount }}
-          serviceAccount: {{ . }}
-          {{- end }}
+          serviceAccount: {{ .Values.runner.runEnvironment.deployment.serviceAccount | default (include "runwhen-local.runnerFullname" .) }}
           {{- with .Values.runner.runEnvironment.deployment.annotations }}
           annotations:
             {{- toYaml . | nindent 12 }}
@@ -169,9 +167,7 @@ data:
 
         pod:
           runAsJob: {{ .Values.runner.runEnvironment.pod.runAsJob }}
-          {{- with .Values.runner.runEnvironment.pod.serviceAccount }}
-          serviceAccount: {{ . }}
-          {{- end }}
+          serviceAccount: {{ .Values.runner.runEnvironment.pod.serviceAccount | default (include "runwhen-local.runnerFullname" .) }}
           {{- with .Values.runner.runEnvironment.pod.annotations }}
           annotations:
             {{- toYaml . | nindent 12 }}

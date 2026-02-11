@@ -77,10 +77,10 @@ platformType: "kubernetes"
 platformArch: "amd64"
 
 ###############################################################################
-######################## RunWhen Local Configuration ##########################
+###################### Workspace Builder Configuration ########################
 ###############################################################################
 
-runwhenLocal:
+workspaceBuilder:
   enabled: true
   image:
     registry: ""
@@ -89,13 +89,13 @@ runwhenLocal:
     # Overrides the image tag whose default is the chart appVersion.
     tag: "latest"
 
-  # Extra volumes for the runwhen-local container
+  # Extra volumes for the workspace-builder container
   volumes: {}
 
-  # Extra volume mounts for the  runwhen-local container
+  # Extra volume mounts for the workspace-builder container
   volumeMounts: {}
 
-  # Additional tolerations for runwhen-local container
+  # Additional tolerations for workspace-builder container
   tolerations: []
 
   serviceAccount:
@@ -104,7 +104,7 @@ runwhenLocal:
     # Annotations to add to the service account
     annotations: {}
     # The name of the service account to use.
-    name: "runwhen-local"
+    name: "workspace-builder"
 
 
   serviceAccountRoles:
@@ -148,7 +148,7 @@ runwhenLocal:
     #      - chart-example.local
 
   # Health probes configuration
-  # Customize liveness and readiness probes for the runwhen-local container
+  # Customize liveness and readiness probes for the workspace-builder container
   # Uncomment and modify to override the defaults defined in the deployment template
   # livenessProbe:
   #   tcpSocket:
@@ -222,7 +222,7 @@ runwhenLocal:
   cheatSheet:
     disabled: true
 
-  # Additional environment variables for the runwhen-local container
+  # Additional environment variables for the workspace-builder container
   # Use this to pass custom environment variables to the container
   # Example:
   #   extraEnv:
@@ -274,7 +274,7 @@ runwhenLocal:
           # should be referenced from the platform. The secret itself (key and value)
           # must be created in the RunWhen Platform by the user. We do not upload
           # or configure secrets automatically.
-          # The default for kubeconfig_secret_name is set to a secret that runwhenLocal
+          # The default for kubeconfig_secret_name is set to a secret that workspaceBuilder
           # creates for the use of the runner. This can be simply swapped out with the
           # name of a secret that is stored in the RunWhen Platform.
           kubeconfig_secret_name: "k8s:file@secret/kubeconfig:kubeconfig"
@@ -431,8 +431,8 @@ runner:
     #### The configurations applied to the SLI (CronCodeRun) Deployments ####
     deployment:
       # Override the service account for SLI (CronCodeRun) Deployments
-      # If not set, the runner will create and manage service accounts
-      serviceAccount: "runner"
+      # If not set, defaults to the runner's service account name
+      serviceAccount: ""
       annotations: {}
       podAnnotations: {}
       affinity: {}
@@ -458,8 +458,8 @@ runner:
     pod:
       runAsJob: false
       # Override the service account for TaskSet (CodeRun) Pods
-      # If not set, the runner will create and manage service accounts
-      serviceAccount: "runner"
+      # If not set, defaults to the runner's service account name
+      serviceAccount: ""
       annotations: {}
       affinity: {}
       nodeName: ""

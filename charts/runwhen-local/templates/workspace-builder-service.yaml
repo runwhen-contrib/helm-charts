@@ -1,12 +1,13 @@
-{{- if .Values.runwhenLocal.enabled -}}
+{{- $wb := include "runwhen-local.resolveWorkspaceBuilder" . | fromYaml -}}
+{{- if $wb.enabled -}}
 apiVersion: v1
 kind: Service
 metadata:
-  name: runwhen-local
+  name: {{ include "runwhen-local.workspaceBuilderFullname" . }}
   labels:
     {{- include "runwhen-local.labels" . | nindent 4 }}
 spec:
-  type: {{ .Values.runwhenLocal.service.type }}
+  type: {{ $wb.service.type }}
   ports:
     - name: mkdocs
       protocol: TCP
