@@ -74,9 +74,11 @@ Create the workspace-builder deployment name.
 
 {{/*
 Create the runner deployment name.
+Truncate to 44 so the longest downstream suffix (-runner-rolebinding = 19 chars)
+still fits within the 63-char Kubernetes DNS label limit.
 */}}
 {{- define "runwhen-local.runnerFullname" -}}
-{{- printf "%s-runner" (include "runwhen-local.fullname" . | trunc 56 | trimSuffix "-") }}
+{{- printf "%s-runner" (include "runwhen-local.fullname" . | trunc 44 | trimSuffix "-") }}
 {{- end }}
 
 {{/*
