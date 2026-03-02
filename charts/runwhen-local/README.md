@@ -17,7 +17,7 @@ The runner is a locally deployed agent that connects to the [RunWhen Platform](h
 
 ### Workers
 
-Workers are short-lived pods created by the runner to execute individual tasks. Each CodeCollection configured in the chart gets its own pool of worker replicas. Workers inherit the runner's service account and security context, and are automatically managed (created, scaled, and cleaned up) by the runner.
+Workers are long-running pods managed by the runner, each dedicated to a specific CodeCollection. They execute tasks defined as CodeBundles within their assigned CodeCollection. Each CodeCollection configured in the chart gets its own pool of worker replicas, and the runner handles their lifecycle (creation, scaling, and replacement). Workers inherit the runner's service account and security context.
 
 ## Configuration Defaults
 
