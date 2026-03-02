@@ -28,8 +28,8 @@ spec:
       # Pod-level securityContext (if any)
       {{- include "runwhen-local.podSecurityContext" . | nindent 6 }}
 
-      serviceAccount: {{ include "runwhen-local.runnerFullname" . }}
-      serviceAccountName: {{ include "runwhen-local.runnerFullname" . }}
+      serviceAccount: runner
+      serviceAccountName: runner
       automountServiceAccountToken: true
 
       {{- with .Values.imagePullSecrets }}

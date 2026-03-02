@@ -1,8 +1,10 @@
+{{/* TODO: prefix relay service name with runnerFullname once
+     runner-control is updated to override this properly. */}}
 {{- if .Values.runner.enabled -}}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "runwhen-local.runnerFullname" . }}-relay
+  name: runner-relay
   labels:
     app: runner
     app.kubernetes.io/component: runner-relay
