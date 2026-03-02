@@ -66,6 +66,87 @@ helm show values runwhen-contrib/runwhen-local
 
 For more information please refer to the [runwhen-local](https://docs.runwhen.com/public/v/runwhen-local) documentation.
 
+## Troubleshooting
+
+All chart resources carry standard Kubernetes labels including `app.kubernetes.io/component` so you can quickly isolate the workspace builder from the runner.
+
+### Identifying pods by component
+
+```console
+# Workspace builder pods only
+kubectl get pods -l app.kubernetes.io/component=workspace-builder -n <namespace>
+
+# Runner pods only
+kubectl get pods -l app.kubernetes.io/component=runner -n <namespace>
+```
+
+### Viewing logs
+
+```console
+# Workspace builder logs
+kubectl logs -l app.kubernetes.io/component=workspace-builder -n <namespace> -f
+
+# Runner logs
+kubectl logs -l app.kubernetes.io/component=runner -n <namespace> -f
+```
+
+### Checking resource status
+
+```console
+# List all resources created by this release
+kubectl get all -l app.kubernetes.io/instance=<release-name> -n <namespace>
+
+# Describe the workspace builder deployment
+kubectl describe deployment <release-name>-workspace-builder -n <namespace>
+
+# Describe the runner deployment
+kubectl describe deployment <release-name>-runner -n <namespace>
+```
+
+### Verifying service selectors
+
+If the workspace builder UI is unreachable or the runner relay is not responding, confirm the services are targeting the correct pods:
+
+```console
+# Workspace builder service endpoints
+kubectl get endpoints <release-name>-workspace-builder -n <namespace>
+
+# Runner relay service endpoints
+kubectl get endpoints runner-relay -n <namespace>
+```
+
+### Inspecting the runner config
+
+The runner reads its configuration from a ConfigMap. To verify the rendered config:
+
+```console
+kubectl get configmap runner-config -n <namespace> -o yaml
+```
+
+### Common issues
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| Workspace builder pod in `CrashLoopBackOff` | Missing or invalid `workspaceInfo` configmap | Check `workspaceBuilder.workspaceInfo` values |
+| Runner pod stuck in `Pending` | Insufficient resources or missing service account | Check `runner.resources` and verify the `runner` SA exists |
+| Service returns no endpoints | Label mismatch after upgrade | Verify pod labels with `kubectl get pods --show-labels` |
+| Runner workloads fail to start | Service account mismatch in runner config | Check `runner.runEnvironment.deployment.serviceAccount` in values |
+
+### Upgrading from pre-0.5.0
+
+Chart 0.5.0 renames several resources and the primary values key:
+
+- The values key `runwhenLocal` is now `workspaceBuilder`. Existing values files using `runwhenLocal` continue to work via an automatic merge, but should be migrated.
+- Deployments are now named `<release>-workspace-builder` and `<release>-runner`.
+- The workspace builder service is now named `<release>-workspace-builder`.
+
+On upgrade, Helm will create new resources with the updated names. The old-named resources are no longer managed and should be cleaned up:
+
+```console
+kubectl delete deployment <old-release-name> -n <namespace>
+kubectl delete service runwhen-local -n <namespace>
+```
+
 ## CodeCollections Runner Configuration
 
 The runner component supports configuring multiple code collections with specific repositories, tags/branches/refs, and worker replicas. This allows you to deploy and manage different versions of code collections based on your requirements.
