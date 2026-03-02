@@ -5,7 +5,7 @@ kind: Service
 metadata:
   name: {{ include "runwhen-local.workspaceBuilderFullname" . }}
   labels:
-    {{- include "runwhen-local.labels" . | nindent 4 }}
+    {{- include "runwhen-local.workspaceBuilderLabels" . | nindent 4 }}
 spec:
   type: {{ $wb.service.type }}
   ports:
@@ -18,5 +18,5 @@ spec:
       port: 8000
       targetPort: 8000
   selector:
-    {{- include "runwhen-local.selectorLabels" . | nindent 4 }}
+    {{- include "runwhen-local.workspaceBuilderSelectorLabels" . | nindent 4 }}
 {{- end }}

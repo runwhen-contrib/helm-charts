@@ -5,12 +5,12 @@ kind: Deployment
 metadata:
   name: {{ include "runwhen-local.workspaceBuilderFullname" . }}
   labels:
-    {{- include "runwhen-local.labels" . | nindent 4 }}
+    {{- include "runwhen-local.workspaceBuilderLabels" . | nindent 4 }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      {{- include "runwhen-local.selectorLabels" . | nindent 6 }}
+      {{- include "runwhen-local.workspaceBuilderSelectorLabels" . | nindent 6 }}
   template:
     metadata:
       {{- with $wb.podAnnotations }}
@@ -18,8 +18,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-          app: runwhen-local
-          {{- include "runwhen-local.selectorLabels" . | nindent 10 }}
+          {{- include "runwhen-local.workspaceBuilderSelectorLabels" . | nindent 10 }}
     spec:
       {{- include "runwhen-local.podSecurityContext" . | nindent 6 }}
       {{- with .Values.imagePullSecrets }}

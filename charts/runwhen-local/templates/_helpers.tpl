@@ -43,11 +43,37 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
 {{/*
-Selector labels
+Selector labels (shared base)
 */}}
 {{- define "runwhen-local.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "runwhen-local.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+
+{{/*
+Workspace-builder component labels and selectors
+*/}}
+{{- define "runwhen-local.workspaceBuilderSelectorLabels" -}}
+{{ include "runwhen-local.selectorLabels" . }}
+app.kubernetes.io/component: workspace-builder
+{{- end }}
+
+{{- define "runwhen-local.workspaceBuilderLabels" -}}
+{{ include "runwhen-local.labels" . }}
+app.kubernetes.io/component: workspace-builder
+{{- end }}
+
+{{/*
+Runner component labels and selectors
+*/}}
+{{- define "runwhen-local.runnerSelectorLabels" -}}
+{{ include "runwhen-local.selectorLabels" . }}
+app.kubernetes.io/component: runner
+{{- end }}
+
+{{- define "runwhen-local.runnerLabels" -}}
+{{ include "runwhen-local.labels" . }}
+app.kubernetes.io/component: runner
 {{- end }}
 
 {{/*

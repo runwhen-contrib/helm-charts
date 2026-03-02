@@ -19,7 +19,7 @@ kind: Ingress
 metadata:
   name: {{ $fullName }}
   labels:
-    {{- include "runwhen-local.labels" . | nindent 4 }}
+    {{- include "runwhen-local.workspaceBuilderLabels" . | nindent 4 }}
   {{- with $wb.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}

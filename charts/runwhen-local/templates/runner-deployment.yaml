@@ -4,12 +4,13 @@ kind: Deployment
 metadata:
   name: {{ include "runwhen-local.runnerFullname" . }}
   labels:
-    {{ include "runwhen-local.labels" . | nindent 4 }}
+    {{ include "runwhen-local.runnerLabels" . | nindent 4 }}
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: runner
+      app.kubernetes.io/component: runner
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -18,7 +19,7 @@ spec:
   template:
     metadata:
       labels:
-        {{ include "runwhen-local.selectorLabels" . | nindent 8 }}
+        {{ include "runwhen-local.runnerSelectorLabels" . | nindent 8 }}
         app: runner
       {{- with .Values.runner.podAnnotations }}
       annotations:
