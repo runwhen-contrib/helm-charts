@@ -1,19 +1,35 @@
 # RunWhen Local Helm Chart
 
-RunWhen Local is a container that discovers Kubernetes and cloud resources and generates a troubleshooting cheat sheet of commands - helping users quickly troubleshoot or debug applications and components. 
+This Helm chart deploys [RunWhen Local](https://www.runwhen.com) into Kubernetes environments. It installs the **Workspace Builder**, a **Runner**, and supporting infrastructure that together provide automated discovery of your environment and private execution of troubleshooting and operational tasks from the [RunWhen Platform](https://docs.runwhen.com/platform-documentation).
 
-This helm chart is designed for running RunWhen Local inside of Kubernetes based environments. 
+## Components
+
+### Workspace Builder
+
+The workspace builder scans your Kubernetes clusters and cloud accounts, matching discovered resources against applicable troubleshooting commands found in CodeCollection repositories. Its output is used to automatically build and maintain a workspace in the [RunWhen Platform](https://docs.runwhen.com/platform-documentation). The workspace builder runs on a configurable interval, continuously keeping the workspace in sync as your environment changes.
+
+### Runner
+
+The runner is a locally deployed agent that connects to the [RunWhen Platform](https://docs.runwhen.com/platform-documentation) and executes tasks privately within your infrastructure. Tasks are defined as CodeBundles in CodeCollection repositories, and the full catalog is available at [registry.runwhen.com](https://registry.runwhen.com). The runner handles two types of work:
+
+- **Tasks** -- investigative troubleshooting or operational readiness checks initiated by a user or Digital Assistant. Results are sent back to the RunWhen Platform.
+- **Health checks (SLIs)** -- continuous measurements of service health, pushed as metrics to the RunWhen Platform.
+
+### Workers
+
+Workers are short-lived pods created by the runner to execute individual tasks. Each CodeCollection configured in the chart gets its own pool of worker replicas. Workers inherit the runner's service account and security context, and are automatically managed (created, scaled, and cleaned up) by the runner.
 
 ## Configuration Defaults
-The default values in this helm chart will: 
-- create a service account with **view** permissions at the **Cluster Scope**, enabling RunWhen Local to discover resources in all namespaces
-- leverage in cluster authentication for discovering the cluster (supports a single cluster discovery only)
-- leverage the `latest` [RunWhen Local image](https://github.com/runwhen-contrib/runwhen-local/pkgs/container/runwhen-local)
-- not create an ingress object
-- disable the in-browser terminal
-- rediscover resources on an interval of 14400 seconds (4 hours)
 
-For more information please refer to the [runwhen-local](https://docs.runwhen.com/public/v/runwhen-local) documentation or view [values.yaml](https://github.com/runwhen-contrib/helm-charts/blob/main/charts/runwhen-local/values.yaml)
+The default values in this helm chart will:
+- Create a service account with **view** permissions at the **cluster scope**, enabling the workspace builder to discover resources in all namespaces
+- Use in-cluster authentication for discovery (single-cluster only)
+- Use the `latest` [workspace builder image](https://github.com/runwhen-contrib/runwhen-local/pkgs/container/runwhen-local)
+- Enable the runner with the [rw-cli-codecollection](https://github.com/runwhen-contrib/rw-cli-codecollection)
+- Not create an ingress object
+- Rediscover resources every 14400 seconds (4 hours)
+
+For full configuration details see [values.yaml](./values.yaml) or the [RunWhen Platform documentation](https://docs.runwhen.com/platform-documentation).
 
 ## Prerequisites
 
@@ -64,7 +80,7 @@ See [Customizing the Chart Before Installing](https://helm.sh/docs/intro/using_h
 helm show values runwhen-contrib/runwhen-local
 ```
 
-For more information please refer to the [runwhen-local](https://docs.runwhen.com/public/v/runwhen-local) documentation.
+For more information see the [RunWhen Platform documentation](https://docs.runwhen.com/platform-documentation).
 
 ## Troubleshooting
 
