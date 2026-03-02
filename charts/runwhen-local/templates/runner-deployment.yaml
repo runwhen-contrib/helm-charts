@@ -2,13 +2,14 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: runner
+  name: {{ include "runwhen-local.runnerFullname" . }}
   labels:
-    {{ include "runwhen-local.labels" . | nindent 4 }}
+    {{ include "runwhen-local.runnerLabels" . | nindent 4 }}
 spec:
   replicas: 1
   selector:
     matchLabels:
+      {{- include "runwhen-local.runnerSelectorLabels" . | nindent 6 }}
       app: runner
   strategy:
     type: RollingUpdate
@@ -18,7 +19,7 @@ spec:
   template:
     metadata:
       labels:
-        {{ include "runwhen-local.selectorLabels" . | nindent 8 }}
+        {{ include "runwhen-local.runnerSelectorLabels" . | nindent 8 }}
         app: runner
       {{- with .Values.runner.podAnnotations }}
       annotations:

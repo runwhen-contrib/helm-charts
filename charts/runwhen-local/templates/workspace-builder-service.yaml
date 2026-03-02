@@ -1,0 +1,22 @@
+{{- $wb := include "runwhen-local.resolveWorkspaceBuilder" . | fromYaml -}}
+{{- if $wb.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "runwhen-local.workspaceBuilderFullname" . }}
+  labels:
+    {{- include "runwhen-local.workspaceBuilderLabels" . | nindent 4 }}
+spec:
+  type: {{ $wb.service.type }}
+  ports:
+    - name: mkdocs
+      protocol: TCP
+      port: 8081
+      targetPort: 8081
+    - name: django
+      protocol: TCP
+      port: 8000
+      targetPort: 8000
+  selector:
+    {{- include "runwhen-local.workspaceBuilderSelectorLabels" . | nindent 4 }}
+{{- end }}
