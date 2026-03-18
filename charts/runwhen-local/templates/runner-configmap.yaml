@@ -86,9 +86,9 @@ data:
           {{- with .Values.runner.runEnvironment.deployment.nodeName }}
           nodeName: {{ . }}
           {{- end }}
-          {{- $globalNodeSelector := .Values.nodeSelector | default dict }}
-          {{- $deploymentNodeSelector := .Values.runner.runEnvironment.deployment.nodeSelector | default dict }}
-          {{- $mergedDeploymentNodeSelector := merge $globalNodeSelector $deploymentNodeSelector }}
+          {{- $globalNodeSelector := .Values.nodeSelector | default dict | deepCopy }}
+          {{- $deploymentNodeSelector := .Values.runner.runEnvironment.deployment.nodeSelector | default dict | deepCopy }}
+          {{- $mergedDeploymentNodeSelector := merge $deploymentNodeSelector $globalNodeSelector }}
           {{- if not (empty $mergedDeploymentNodeSelector) }}
           nodeSelector:
             {{- toYaml $mergedDeploymentNodeSelector | nindent 12 }}
