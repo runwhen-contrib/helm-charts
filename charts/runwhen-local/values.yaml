@@ -356,7 +356,7 @@ runner:
   # Additional tolerations for the runner container
   tolerations: []
 
-  ## The target environments configuration for deploying the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods
+  ## The target environments configuration for runner workloads (SLI and task execution run on deployments)
   runEnvironment:
     image:
       pullSecret: ""
@@ -369,13 +369,13 @@ runner:
     # volumeMounts common for all the pods created by the runner
     volumeMounts: {}
 
-    # extraEnv is used to add additional environment variables for the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods
+    # extraEnv is used to add additional environment variables for runner deployments
     extraEnv: {}
 
-    # containerSecurityContext is used to set the security context for both the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods
+    # containerSecurityContext is used to set the security context for runner deployments
     # securityContext: {}
 
-    # securityContext is used to set the security context for both the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods
+    # securityContext is used to set the security context for runner deployments
     # podSecurityContext: {}
 
     secretProviders: {}
@@ -396,7 +396,7 @@ runner:
       #           name: vault-secret
       #           key: secret-id
 
-    # secretsProvided is used to mount the secrets to the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods
+    # secretsProvided is used to mount the secrets to runner deployments
     # The secrets are mounted as files or environment variables and must come from either a built in provider or a custom provider
     #
     # The built in providers and the format of their secrets provided entries are as follows:
@@ -417,18 +417,18 @@ runner:
       # hello: "k8s:env@secret/my-secret:hello"
       # vaultSecret: "my-vault@/dev/data/simple-test-secret:hello"
 
-    # blockedSecrets is used to block secrets from being mounted to the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods
+    # blockedSecrets is used to block secrets from being mounted to runner deployments
     # The format of the blockedSecrets entries are as follows:
     # - "<provider-name>@<some optional path>:<optional field>"
     blockedSecrets: []
-    # Block the use of all k8s secrets/configmaps being mounted to the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods
+    # Block the use of all k8s secrets/configmaps being mounted to runner deployments
     # - "k8s:file@"
-    # Block the use of all k8s secrets/configmaps being mounted as environment variables to the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods
+    # Block the use of all k8s secrets/configmaps being mounted as environment variables to runner deployments
     # - "k8s:env@"
     # Block the use of a specific secret being mounted to the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods
     # - "myvault@/dev/data/simple-test-secret"
 
-    #### The configurations applied to the SLI (CronCodeRun) Deployments ####
+    #### The configurations applied to runner deployments (SLI and task execution) ####
     deployment:
       # Override the service account for SLI (CronCodeRun) Deployments
       # If not set, the runner will create and manage service accounts
@@ -454,48 +454,21 @@ runner:
           limits:
             cpu: "300m"
             memory: "196Mi"
-    #### The configurations applied to the TaskSet (CodeRun) Pods ####
-    pod:
-      runAsJob: false
-      # Override the service account for TaskSet (CodeRun) Pods
-      # If not set, the runner will create and manage service accounts
-      serviceAccount: "runner"
-      annotations: {}
-      affinity: {}
-      nodeName: ""
-      nodeSelector: {}
-      tolerations: []
-      resources:
-        default:
-          requests:
-            cpu: "50m"
-            memory: "128Mi"
-          limits:
-            cpu: "1"
-            memory: "512Mi"
-        EKS_Fargate:
-          requests:
-            cpu: "300m"
-            memory: "256Mi"
-          limits:
-            cpu: "300m"
-            memory: "256Mi"
-    # The proxy configurations applied to the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods
+    # The proxy configurations applied to runner deployments
     # By default the global values for .Values.proxy and .Values.proxyCA are used.
     proxy: {}
       # enabled: false
       # httpProxy: ""
       # httpsProxy: ""
       # noProxy: "127.0.0.1,$($KUBERNETES_SERVICE_HOST)"
-    # The proxy CA details, if the runner is being deployed be sure to set
-    # the grafana-agent mounts and volumes to match the proxyCA configuration
+    # The proxy CA details; if the runner is deployed, ensure grafana-agent mounts and volumes match
     proxyCA: {}
       # secretName: ""
       # configMapName: ""
       # key: ""
 
-  # proxy configuration for the runner container, set runEnvironment.proxy.enabled to true to use this configuration
-  # for the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods as well, or configure custom proxy settings in the runEnvironment.proxy fields
+  # proxy configuration for the runner container; set runEnvironment.proxy.enabled to true to use this
+  # for runner deployments as well, or configure custom proxy settings in the runEnvironment.proxy fields
   resources:
     default:
       requests:
