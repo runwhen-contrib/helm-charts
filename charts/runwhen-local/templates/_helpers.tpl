@@ -51,16 +51,23 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-Workspace-builder component labels and selectors
+Workspace-builder component labels and selectors.
+app.kubernetes.io/name uses the workspace-builder fullname (e.g. runwhen-local-workspace-builder).
+A pre-upgrade hook deletes the old Deployment so the immutable selector change is safe.
 */}}
 {{- define "runwhen-local.workspaceBuilderSelectorLabels" -}}
-{{ include "runwhen-local.selectorLabels" . }}
+app.kubernetes.io/name: {{ include "runwhen-local.workspaceBuilderFullname" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/component: workspace-builder
 {{- end }}
 
 {{- define "runwhen-local.workspaceBuilderLabels" -}}
-{{ include "runwhen-local.labels" . }}
-app.kubernetes.io/component: workspace-builder
+helm.sh/chart: {{ include "runwhen-local.chart" . }}
+{{ include "runwhen-local.workspaceBuilderSelectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
 {{/*

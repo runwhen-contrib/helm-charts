@@ -200,12 +200,13 @@ workspaceBuilder:
       # secretPath: kubeconfig
 
   ### RunWhen Local Runtime Configuration
-  # autoRun: start discovery on deployment, and re-run discovery evey discoveryInterval seconds
+  # autoRun: start discovery on deployment, and re-run discovery every discoveryInterval seconds
   # also supports upload configuration for continuous updates of RunWhen Platform Workspace
-  # upload is disabled by default; requires a valid uploadInfo.yaml
+  # Note: when runner.enabled is true, uploadEnabled is automatically set to true
+  # and the uploadInfo secret defaults to "uploadinfo" (can still be overridden below)
   autoRun:
     discoveryInterval: 14400                 # seconds to wait until a new discovery
-    uploadEnabled: false                     # upload configuration to RunWhen Platform
+    uploadEnabled: false                     # auto-enabled when runner.enabled is true
     uploadMergeMode: "keep-uploaded"         # 'keep-uploaded' or 'keep-existing'
 
 
@@ -236,14 +237,16 @@ workspaceBuilder:
   # The upload configuration applies only to users to leverage RunWhen Local as an
   # onboarding tool into RunWhen Platform (https://docs.runwhen.com/public/v/runwhen-local/user-guide/features/upload-to-runwhen-platform for more details)
   # When uploading discovered resources and configuration information to RunWhen Platform,
-  # workspaceName, token, workspaceOwnerEmail, defaultLocation and papiURL are mandtatory
-  # can can be obtained immediately after creating a RunWhen Platform workspace.
+  # workspaceName, token, workspaceOwnerEmail, defaultLocation and papiURL are mandatory
+  # and can be obtained immediately after creating a RunWhen Platform workspace.
+  # Note: when runner.enabled is true, this is automatically enabled with the defaults
+  # shown below. Set explicitly to override.
   uploadInfo:
     secretProvided:
       enabled: false
-      # secretName: "uploadinfo"
-      # secretKey: uploadInfo.yaml
-      # secretPath: uploadInfo.yaml
+      secretName: "uploadinfo"
+      secretKey: uploadInfo.yaml
+      secretPath: uploadInfo.yaml
 
 
   ## workspaceInfo

@@ -1,4 +1,19 @@
 {{- $wb := include "runwhen-local.resolveWorkspaceBuilder" . | fromYaml -}}
+{{- if and .Values.runner.enabled (not $wb.autoRun.uploadEnabled) -}}
+  {{- $_ := set $wb.autoRun "uploadEnabled" true -}}
+{{- end -}}
+{{- if and .Values.runner.enabled (not $wb.uploadInfo.secretProvided.enabled) -}}
+  {{- $_ := set $wb.uploadInfo.secretProvided "enabled" true -}}
+  {{- if not $wb.uploadInfo.secretProvided.secretName -}}
+    {{- $_ := set $wb.uploadInfo.secretProvided "secretName" "uploadinfo" -}}
+  {{- end -}}
+  {{- if not $wb.uploadInfo.secretProvided.secretKey -}}
+    {{- $_ := set $wb.uploadInfo.secretProvided "secretKey" "uploadInfo.yaml" -}}
+  {{- end -}}
+  {{- if not $wb.uploadInfo.secretProvided.secretPath -}}
+    {{- $_ := set $wb.uploadInfo.secretProvided "secretPath" "uploadInfo.yaml" -}}
+  {{- end -}}
+{{- end -}}
 {{- if $wb.enabled -}}
 apiVersion: apps/v1
 kind: Deployment
@@ -30,7 +45,7 @@ spec:
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
-        - name: {{ .Chart.Name }}
+        - name: workspace-builder
           {{- include "runwhen-local.containerSecurityContext" . | nindent 10 }}
           image: "{{ ($wb.image.registry | default .Values.registryOverride)| default "ghcr.io" }}/{{ $wb.image.repository | default "runwhen-contrib/runwhen-local" }}:{{ $wb.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ $wb.image.pullPolicy }}
