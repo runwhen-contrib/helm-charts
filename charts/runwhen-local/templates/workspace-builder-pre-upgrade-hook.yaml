@@ -1,0 +1,89 @@
+{{- $wb := include "runwhen-local.resolveWorkspaceBuilder" . | fromYaml -}}
+{{- if $wb.enabled -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "runwhen-local.fullname" . }}-pre-upgrade
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "runwhen-local.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "runwhen-local.fullname" . }}-pre-upgrade
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "runwhen-local.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "runwhen-local.fullname" . }}-pre-upgrade
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "runwhen-local.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "runwhen-local.fullname" . }}-pre-upgrade
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "runwhen-local.fullname" . }}-pre-upgrade
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "runwhen-local.fullname" . }}-pre-upgrade
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "runwhen-local.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 60
+  template:
+    metadata:
+      labels:
+        {{- include "runwhen-local.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "runwhen-local.fullname" . }}-pre-upgrade
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: pre-upgrade
+          image: bitnami/kubectl:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Deleting workspace-builder Deployment to allow selector label migration..."
+              kubectl delete deployment \
+                {{ include "runwhen-local.workspaceBuilderFullname" . }} \
+                --namespace={{ .Release.Namespace }} \
+                --ignore-not-found=true
+              echo "Done. Helm will recreate the Deployment with updated selectors."
+{{- end }}
