@@ -354,6 +354,7 @@ us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-azure-c7n-codecollection-main:latest  github.com/go-jose/go-jose/v4     CVE-2026-34986    v4.1.0                                    4.1.4                              HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-rw-cli-codecollection-main:latest     cryptography                      CVE-2026-26007    46.0.3                                    46.0.5                             HIGH
 us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-rw-public-codecollection-main:latest  pyOpenSSL                         CVE-2026-27459    25.3.0                                    26.0.0                             HIGH
+us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/runwhen-contrib-rw-public-codecollection-main:latest  lxml                              CVE-2026-41066    6.0.2                                     6.1.0                              HIGH
 ```
 <!-- END_TRIVY_SUMMARY -->
 
