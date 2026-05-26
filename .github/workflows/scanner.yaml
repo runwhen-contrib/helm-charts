@@ -1,7 +1,7 @@
 name: Trivy Scan for Critical Vulnerabilities
 
-permissions: 
-  contents: write
+permissions:
+  contents: read
 
 on:
   workflow_dispatch:
@@ -21,12 +21,20 @@ jobs:
   trivy-scan:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out code using PAT
-        uses: actions/checkout@v3
+      - name: Get GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v3
         with:
-          # IMPORTANT: Replace 'PAT' with the actual secret name you defined.
-          token: ${{ secrets.PAT }}
+          app-id: ${{ secrets.CI_GITHUB_APP_ID }}
+          private-key: ${{ secrets.CI_GITHUB_APP_PRIVATE_KEY }}
+          owner: runwhen-contrib
+          repositories: helm-charts
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
           fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Determine branch
         id: determine-branch
@@ -281,7 +289,7 @@ jobs:
       - name: Commit and force-push to current branch (or main)
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           git add README.md
           if git diff --cached --exit-code; then
