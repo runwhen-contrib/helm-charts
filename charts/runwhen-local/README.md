@@ -163,6 +163,12 @@ kubectl delete deployment <old-release-name> -n <namespace>
 kubectl delete service runwhen-local -n <namespace>
 ```
 
+If Helm reports that the workspace-builder Deployment `spec.selector` is immutable, delete the deployment once before retrying the upgrade:
+
+```console
+kubectl delete deployment <release-name>-workspace-builder -n <namespace>
+```
+
 ## CodeCollections Runner Configuration
 
 The runner component supports configuring multiple code collections with specific repositories, tags/branches/refs, and worker replicas. This allows you to deploy and manage different versions of code collections based on your requirements.
