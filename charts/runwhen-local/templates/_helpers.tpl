@@ -53,7 +53,6 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{/*
 Workspace-builder component labels and selectors.
 app.kubernetes.io/name uses the workspace-builder fullname (e.g. runwhen-local-workspace-builder).
-A pre-upgrade hook deletes the old Deployment so the immutable selector change is safe.
 */}}
 {{- define "runwhen-local.workspaceBuilderSelectorLabels" -}}
 app.kubernetes.io/name: {{ include "runwhen-local.workspaceBuilderFullname" . }}
