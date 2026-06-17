@@ -96,15 +96,28 @@ app.kubernetes.io/component: runner
 
 {{/*
 Pod-level extra labels — emits commonLabels + chart-wide podLabels +
-per-service podLabels merged, with most-specific winning on conflicts
-(Sprig `merge` keeps the first argument's value). Used under
-`.spec.template.metadata.labels`, AFTER the selector labels. Render
-with `nindent 8`. No-op when all three maps are empty.
+per-service podLabels merged, with most-specific winning on conflicts.
+Used under `.spec.template.metadata.labels`, AFTER the selector
+labels. Render with `nindent 8`. No-op when all three maps are empty.
 
 Accepts either the root context (chart-wide + commonLabels only) or a
 list `(list . $serviceLabels)` where `$serviceLabels` is the per-service
-overlay (e.g. `.Values.runner.podLabels`). Per-service entries win
-over chart-wide on conflict; chart-wide wins over commonLabels.
+overlay (e.g. `.Values.runner.podLabels`).
+
+Precedence (most-specific wins): per-service > chart-wide > commonLabels.
+
+Sprig `merge` semantics — DOCUMENTED HERE because Bugbot keeps misreading
+the call. From the Sprig docs: "Merge two or more dictionaries into one,
+giving precedence to the dest dictionary" — i.e. the FIRST argument
+wins on conflict, regardless of how many sources follow. This is the
+opposite of `mergeOverwrite`, which lets later args win.
+
+Empirically verified with 3 args:
+  $a := dict "k" "FIRST" }} {{ $b := dict "k" "SECOND" }} {{ $c := dict "k" "THIRD"
+  (merge $a $b $c).k          → FIRST   ← what we want
+  (mergeOverwrite $a $b $c).k → THIRD
+
+So passing per-service first guarantees per-service wins.
 
 Usage:
   # Chart-wide + commonLabels only:
