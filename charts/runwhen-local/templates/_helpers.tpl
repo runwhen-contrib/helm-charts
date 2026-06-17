@@ -166,17 +166,29 @@ proxyCA (or future trustBundle) overlay is configured. Decoupled from
 `.Values.proxy.enabled` because corporate root CAs are independently
 useful on non-proxied clusters (private TLS, internal-only mTLS).
 
+Accepts either the root context (checks `.Values.proxyCA`) or a list
+`(list . $extra)` where `$extra` is an additional per-service overlay
+(e.g. `$wb.proxyCA`). Renders when EITHER source is set, matching the
+volume + volumeMount gating in the workspace-builder template.
+
 Render under a container's `env:` list with `nindent 12` (deployment) or
 `nindent 10` (workspace-builder). Render-or-nothing.
 
 Usage:
-          env:
-            - name: SOMETHING
-              value: "x"
-            {{- include "runwhen-local.trustBundleEnv" . | nindent 12 }}
+  # Chart-wide proxyCA only:
+  {{- include "runwhen-local.trustBundleEnv" . | nindent 12 }}
+
+  # Chart-wide OR per-service overlay (workspace-builder):
+  {{- include "runwhen-local.trustBundleEnv" (list . $wb.proxyCA) | nindent 10 }}
 */}}
 {{- define "runwhen-local.trustBundleEnv" -}}
-{{- if .Values.proxyCA -}}
+{{- $ctx := . -}}
+{{- $extra := dict -}}
+{{- if kindIs "slice" . -}}
+  {{- $ctx = index . 0 -}}
+  {{- $extra = (index . 1) | default dict -}}
+{{- end -}}
+{{- if or $ctx.Values.proxyCA $extra -}}
 {{- $bundle := "/etc/ssl/certs/ca-certificates.crt" -}}
 - name: SSL_CERT_FILE
   value: {{ $bundle | quote }}

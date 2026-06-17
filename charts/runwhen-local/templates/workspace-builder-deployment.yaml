@@ -98,9 +98,12 @@ spec:
           {{- /*
             Trust-bundle env vars are decoupled from proxy.enabled —
             corporate root CAs are independently useful (private TLS,
-            internal mTLS) on non-proxied clusters.
+            internal mTLS) on non-proxied clusters. The volume + mount
+            below gate on `or .Values.proxyCA $wb.proxyCA`, so the env
+            helper takes the same per-service overlay so all three stay
+            in sync.
           */}}
-          {{- include "runwhen-local.trustBundleEnv" . | nindent 10 }}
+          {{- include "runwhen-local.trustBundleEnv" (list . $wb.proxyCA) | nindent 10 }}
           {{- with $wb.extraEnv }}
           {{- toYaml . | nindent 10 }}
           {{- end }}
