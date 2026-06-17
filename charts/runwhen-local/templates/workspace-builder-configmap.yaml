@@ -1,13 +1,15 @@
 {{- $wb := include "runwhen-local.resolveWorkspaceBuilder" . | fromYaml -}}
 {{- if $wb.enabled -}}
-{{ if not $wb.workspaceInfo.useExistingConfigMap }}
+{{- if not $wb.workspaceInfo.useExistingConfigMap }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ $wb.workspaceInfo.configMap.name }}
+  labels:
+    {{- include "runwhen-local.workspaceBuilderLabels" . | nindent 4 }}
 data:
-  workspaceInfo.yaml: | 
+  workspaceInfo.yaml: |
     workspaceName: {{ .Values.workspaceName }}
     {{- $wb.workspaceInfo.configMap.data | toYaml | nindent 4 }}
-{{ end }}
-{{ end }}
+{{- end }}
+{{- end }}
