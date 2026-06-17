@@ -25,7 +25,26 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
+# Annotations and labels stamped on EVERY pod template the chart renders
+# (workspace-builder + runner). Use podAnnotations for sidecar injection
+# (Linkerd/Istio), OPA audit hooks, vault-agent inject, etc. Per-service
+# podAnnotations (workspaceBuilder.podAnnotations / runner.podAnnotations)
+# take precedence on conflict.
 podAnnotations: {}
+
+# Pod-template labels merged with `commonLabels` and stamped under
+# .spec.template.metadata.labels on every chart-rendered pod template.
+# Use for admission-policy enforcement labels (Pod Security Standards,
+# OPA Gatekeeper, Kyverno), service-mesh inject markers, FinOps, etc.
+# These are NOT propagated into spec.selector.matchLabels (which is
+# immutable post-create).
+podLabels: {}
+
+# Labels stamped on EVERY chart-rendered resource's metadata.labels
+# (Deployments, Services, ConfigMaps, ServiceAccounts, RBAC, Ingresses,
+# Secrets). Use for cost-center / compliance / data-classification
+# labels enforced by admission policies.
+commonLabels: {}
 
 nodeSelector: {}
 
@@ -82,12 +101,35 @@ platformArch: "amd64"
 
 workspaceBuilder:
   enabled: true
+
+  # Number of workspace-builder replicas. The workspace-builder reads from
+  # / writes to a shared ConfigMap and the in-cluster K8s API; running >1
+  # replica is generally NOT recommended unless you understand the leader
+  # election story for your codecollections.
+  replicas: 1
+
   image:
     registry: ""
     repository: ""
     pullPolicy: Always
     # Overrides the image tag whose default is the chart appVersion.
     tag: "latest"
+
+  # Override the pod template's automountServiceAccountToken. Default true
+  # for back-compat; set to false on OpenShift restricted-v2 / federal
+  # clusters that block automount and require explicit projected token
+  # volumes.
+  automountServiceAccountToken: true
+
+  # Per-service pod-template labels merged with chart-wide podLabels.
+  # Used for admission-policy markers / sidecar inject hints scoped to
+  # the workspace-builder pod only. NOT propagated into the immutable
+  # spec.selector.matchLabels.
+  podLabels: {}
+
+  # Per-service pod-template annotations merged with chart-wide
+  # podAnnotations. Per-service entries win on conflict.
+  podAnnotations: {}
 
   # Extra volumes for the workspace-builder container
   volumes: {}
@@ -296,6 +338,77 @@ workspaceBuilder:
 runner:
   enabled: true
 
+  # Number of runner replicas. The runner currently establishes a single
+  # control-plane connection and shares state via the runner ConfigMap;
+  # running >1 replica is not generally supported and should only be
+  # considered for HA experiments.
+  replicas: 1
+
+  # Override the pod template's automountServiceAccountToken. Default
+  # true for back-compat (the runner needs the SA token to schedule
+  # CronCodeRun deployments and TaskSet pods). Customers running on
+  # OpenShift restricted-v2 / federal clusters that mandate explicit
+  # projected tokens can set false and project the token via
+  # runner.volumes / runner.volumeMounts.
+  automountServiceAccountToken: true
+
+  # Per-service pod-template labels merged with chart-wide podLabels.
+  # Used for admission-policy markers / sidecar inject hints scoped to
+  # the runner pod only. NOT propagated into the immutable
+  # spec.selector.matchLabels.
+  podLabels: {}
+
+  # Per-service pod-template annotations merged with chart-wide
+  # podAnnotations. Per-service entries win on conflict.
+  podAnnotations: {}
+
+  # ServiceAccount override block. Defaults preserve back-compat with
+  # the existing runner-control wire contract (SA name "runner"). When
+  # two `runwhen-local` releases must coexist in the same namespace,
+  # set `serviceAccount.name` to a unique value AND mirror the change
+  # into runner.runEnvironment.deployment.serviceAccount /
+  # runEnvironment.pod.serviceAccount so spawned CronCodeRun /
+  # TaskSet workloads bind to the same SA.
+  #
+  # NOTE: The chart-rendered Role/RoleBinding follow `serviceAccount.name`
+  # automatically (see runner-service-account.yaml), so a single
+  # override here keeps SA + RBAC in sync. The deferred rename to
+  # `<release>-runner` is tracked by the TODO in
+  # templates/runner-service-account.yaml — it is held until
+  # runner-control supports SA-name override over the wire.
+  serviceAccount:
+    create: true
+    name: "runner"
+    annotations: {}
+
+  # Health probes for the runner pod. Default: not rendered (preserves
+  # existing behaviour). When set, each block is emitted verbatim under
+  # spec.containers[].{startupProbe,readinessProbe,livenessProbe}.
+  # The runner exposes Prometheus metrics on TCP/9090 and a relay on
+  # TCP/8000; TCP probes against 9090 are usually safest because the
+  # relay performs an in-cluster handshake before responding.
+  #
+  # Example:
+  # startupProbe:
+  #   tcpSocket:
+  #     port: metrics
+  #   initialDelaySeconds: 10
+  #   periodSeconds: 5
+  #   failureThreshold: 30
+  # readinessProbe:
+  #   tcpSocket:
+  #     port: metrics
+  #   periodSeconds: 10
+  #   failureThreshold: 3
+  # livenessProbe:
+  #   tcpSocket:
+  #     port: metrics
+  #   periodSeconds: 30
+  #   failureThreshold: 3
+  startupProbe: {}
+  readinessProbe: {}
+  livenessProbe: {}
+
   # following value is added to config, where as service code reads log level from env var
   # TODO:remove this and associated code in runner-configmap.yaml
   log:
@@ -433,9 +546,18 @@ runner:
 
     #### The configurations applied to the SLI (CronCodeRun) Deployments ####
     deployment:
-      # Override the service account for SLI (CronCodeRun) Deployments
-      # If not set, the runner will create and manage service accounts
-      serviceAccount: "runner"
+      # Service account for spawned SLI (CronCodeRun) Deployments.
+      # Empty (default) → resolves to the chart-rendered runner SA via
+      # `runwhen-local.serviceAccountName.runner` (which is `runner`
+      # unless `.runner.serviceAccount.name` is overridden). This keeps
+      # the spawned-workload SA in lock-step with the runner pod's own
+      # SA, so a multi-release operator who sets
+      # `runner.serviceAccount.name=rw2-runner` does NOT end up with
+      # the runner pod on `rw2-runner` and CronCodeRun pods on the
+      # literal `runner` (RBAC mismatch).
+      # Set this to a literal name to pin a specific SA regardless of
+      # the runner override (advanced use).
+      serviceAccount: ""
       annotations: {}
       podAnnotations: {}
       affinity: {}
@@ -460,9 +582,12 @@ runner:
     #### The configurations applied to the TaskSet (CodeRun) Pods ####
     pod:
       runAsJob: false
-      # Override the service account for TaskSet (CodeRun) Pods
-      # If not set, the runner will create and manage service accounts
-      serviceAccount: "runner"
+      # Service account for spawned TaskSet (CodeRun) Pods.
+      # Empty (default) → resolves to the chart-rendered runner SA via
+      # `runwhen-local.serviceAccountName.runner`, matching whatever
+      # the runner pod itself binds to. Set to a literal name to pin
+      # a specific SA regardless of the runner override.
+      serviceAccount: ""
       annotations: {}
       affinity: {}
       nodeName: ""
@@ -518,6 +643,27 @@ runner:
 
 ## opentelemetry-collector is only deployed if runner.enabled is true
 ## https://github.com/open-telemetry/opentelemetry-helm-charts/blob/main/charts/opentelemetry-collector/values.yaml
+##
+## NOTE: This subchart does NOT honour the parent chart's
+## .Values.registryOverride, .Values.commonLabels, .Values.podLabels, or
+## .Values.podAnnotations. Operators running with admission policies,
+## FinOps tagging, or a mirrored container registry must drive each of
+## the subchart's own knobs explicitly:
+##
+##   opentelemetry-collector:
+##     image:
+##       repository: <mirror>/otel/opentelemetry-collector  # FULL path required
+##     additionalLabels:                                    # commonLabels analogue
+##       cost-center: platform-eng
+##     podLabels:                                           # admission/inject markers
+##       policy/enforce: baseline
+##     podAnnotations:                                      # sidecar inject etc.
+##       linkerd.io/inject: enabled
+##     serviceAccount:
+##       automountServiceAccountToken: false                # OpenShift restricted-v2
+##
+## See .cursor/skills/new-service-byo/SKILL.md (Subchart matrix) for the
+## full anchor-and-alias overlay pattern.
 opentelemetry-collector:
   fullnameOverride: otel-collector
   mode: deployment
@@ -527,8 +673,19 @@ opentelemetry-collector:
   image:
     repository: "otel/opentelemetry-collector"
     pullPolicy: IfNotPresent
-    tag: "0.127.0"
+    # Pinned to the chart's tested appVersion (0.158.1 → 0.153.0). Bump
+    # the chart dependency in Chart.yaml and this tag together.
+    tag: "0.153.0"
   imagePullSecrets: []
+  # Pod-level securityContext defaults — hardened to match the chart's
+  # other workloads. The subchart's container `securityContext` block
+  # (below) keeps the existing hardened defaults.
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    fsGroup: 10001
+    seccompProfile:
+      type: "RuntimeDefault"
   command:
     name: "otelcol"
     ## Keep this feature gate disabled to preserve our metric naming convention

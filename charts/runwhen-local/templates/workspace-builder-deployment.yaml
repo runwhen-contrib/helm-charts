@@ -22,18 +22,29 @@ metadata:
   labels:
     {{- include "runwhen-local.workspaceBuilderLabels" . | nindent 4 }}
 spec:
-  replicas: 1
+  replicas: {{ $wb.replicas | default 1 }}
   selector:
     matchLabels:
       {{- include "runwhen-local.workspaceBuilderSelectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- with $wb.podAnnotations }}
-      annotations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
       labels:
-          {{- include "runwhen-local.workspaceBuilderSelectorLabels" . | nindent 10 }}
+        {{- include "runwhen-local.workspaceBuilderSelectorLabels" . | nindent 8 }}
+        {{- include "runwhen-local.podLabels" (list . $wb.podLabels) | nindent 8 }}
+      {{- /*
+        Annotation precedence: per-service $wb.podAnnotations wins over
+        the chart-wide map. Sprig `merge dst src` keeps `dst` values
+        (first arg wins), so passing $wb.podAnnotations as the first
+        arg is correct. Render under a single `annotations:` keyword
+        (strict YAML parsers reject duplicate keys).
+      */}}
+      {{- $podAnnotations := merge (deepCopy ($wb.podAnnotations | default dict)) (deepCopy (.Values.podAnnotations | default dict)) }}
+      {{- if $podAnnotations }}
+      annotations:
+        {{- range $k, $v := $podAnnotations }}
+        {{ $k }}: {{ $v | quote }}
+        {{- end }}
+      {{- end }}
     spec:
       {{- include "runwhen-local.podSecurityContext" . | nindent 6 }}
       {{- with .Values.imagePullSecrets }}
@@ -41,17 +52,15 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ $wb.serviceAccount.name }}
-      automountServiceAccountToken: true
-      securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      automountServiceAccountToken: {{ $wb.automountServiceAccountToken | default true }}
       containers:
         - name: workspace-builder
           {{- include "runwhen-local.containerSecurityContext" . | nindent 10 }}
-          image: "{{ ($wb.image.registry | default .Values.registryOverride)| default "ghcr.io" }}/{{ $wb.image.repository | default "runwhen-contrib/runwhen-local" }}:{{ $wb.image.tag | default .Chart.AppVersion }}"
+          image: {{ include "runwhen-local.image" (list . $wb.image "ghcr.io" "runwhen-contrib/runwhen-local" .Chart.AppVersion) | quote }}
           imagePullPolicy: {{ $wb.image.pullPolicy }}
-          env: 
+          env:
           - name: TMPDIR
-            value: /tmp   
+            value: /tmp
           - name: AUTORUN_WORKSPACE_BUILDER_INTERVAL
             value: "{{ $wb.autoRun.discoveryInterval }}"
           - name: RW_LOCAL_TERMINAL_DISABLED
@@ -87,15 +96,16 @@ spec:
           - name: NO_PROXY
             value: {{ . }}
           {{- end }}
-          {{- if or .Values.proxyCA $wb.proxyCA }}
-          - name: SLI_CERT_FILE
-            value: "/etc/ssl/certs/ca-certificates.crt"
-          - name: REQUESTS_CA_BUNDLE
-            value: "/etc/ssl/certs/ca-certificates.crt"
-          - name: NODE_EXTRA_CA_CERTS
-            value: "/etc/ssl/certs/ca-certificates.crt"
           {{- end }}
-          {{- end }}
+          {{- /*
+            Trust-bundle env vars are decoupled from proxy.enabled —
+            corporate root CAs are independently useful (private TLS,
+            internal mTLS) on non-proxied clusters. The volume + mount
+            below gate on `or .Values.proxyCA $wb.proxyCA`, so the env
+            helper takes the same per-service overlay so all three stay
+            in sync.
+          */}}
+          {{- include "runwhen-local.trustBundleEnv" (list . $wb.proxyCA) | nindent 10 }}
           {{- with $wb.extraEnv }}
           {{- toYaml . | nindent 10 }}
           {{- end }}
@@ -138,12 +148,10 @@ spec:
           {{- with $wb.volumeMounts }}
             {{- toYaml . | nindent 10 }}
           {{- end }}
-          {{- if or .Values.proxy.enabled $wb.proxy }}
           {{- if or .Values.proxyCA $wb.proxyCA }}
           - name: proxy-ca
             mountPath: /etc/ssl/certs/ca-certificates.crt
             subPath: ca-certificates.crt
-          {{- end }}
           {{- end }}
           - name: shared-volume
             mountPath: "/shared"
@@ -166,21 +174,19 @@ spec:
       {{- with $wb.volumes }}
       {{- toYaml . | nindent 6 }}
       {{- end }}
-      {{- if or .Values.proxy.enabled $wb.proxy }}
-      {{- with or .Values.proxyCA $wb.proxyCA }}
+      {{- with (or .Values.proxyCA $wb.proxyCA) }}
       - name: proxy-ca
         {{- if .secretName }}
         secret:
           secretName: {{ .secretName }}
         {{- else if .configMapName }}
         configMap:
-          name: {{.configMapName }}
+          name: {{ .configMapName }}
         {{- end }}
           items:
           - key: {{ .key | default "ca.crt" }}
             path: ca-certificates.crt
           defaultMode: 420
-      {{- end }}
       {{- end }}
       - name: shared-volume
         emptyDir: {}
