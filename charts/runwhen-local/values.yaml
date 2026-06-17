@@ -673,7 +673,9 @@ opentelemetry-collector:
   image:
     repository: "otel/opentelemetry-collector"
     pullPolicy: IfNotPresent
-    tag: "0.127.0"
+    # Pinned to the chart's tested appVersion (0.158.1 → 0.153.0). Bump
+    # the chart dependency in Chart.yaml and this tag together.
+    tag: "0.153.0"
   imagePullSecrets: []
   # Pod-level securityContext defaults — hardened to match the chart's
   # other workloads. The subchart's container `securityContext` block
