@@ -21,12 +21,13 @@ spec:
       labels:
         {{- include "runwhen-local.runnerSelectorLabels" . | nindent 8 }}
         app: runner
-        {{- include "runwhen-local.podLabels" . | nindent 8 }}
+        {{- include "runwhen-local.podLabels" (list . .Values.runner.podLabels) | nindent 8 }}
       {{- /*
         Annotation precedence: per-service .Values.runner.podAnnotations
-        wins over chart-wide .Values.podAnnotations because YAML's last
-        key wins. Render the merged map under a single `annotations:`
-        keyword so we don't emit duplicates (which strict parsers reject).
+        wins over chart-wide .Values.podAnnotations on conflict. Sprig
+        `merge dst src` keeps `dst` values (first arg wins), so passing
+        runner.podAnnotations as the first arg is correct. Render under
+        a single `annotations:` keyword (strict parsers reject dupes).
       */}}
       {{- $podAnnotations := merge (deepCopy (.Values.runner.podAnnotations | default dict)) (deepCopy (.Values.podAnnotations | default dict)) }}
       {{- if $podAnnotations }}

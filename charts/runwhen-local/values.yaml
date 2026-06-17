@@ -546,9 +546,18 @@ runner:
 
     #### The configurations applied to the SLI (CronCodeRun) Deployments ####
     deployment:
-      # Override the service account for SLI (CronCodeRun) Deployments
-      # If not set, the runner will create and manage service accounts
-      serviceAccount: "runner"
+      # Service account for spawned SLI (CronCodeRun) Deployments.
+      # Empty (default) → resolves to the chart-rendered runner SA via
+      # `runwhen-local.serviceAccountName.runner` (which is `runner`
+      # unless `.runner.serviceAccount.name` is overridden). This keeps
+      # the spawned-workload SA in lock-step with the runner pod's own
+      # SA, so a multi-release operator who sets
+      # `runner.serviceAccount.name=rw2-runner` does NOT end up with
+      # the runner pod on `rw2-runner` and CronCodeRun pods on the
+      # literal `runner` (RBAC mismatch).
+      # Set this to a literal name to pin a specific SA regardless of
+      # the runner override (advanced use).
+      serviceAccount: ""
       annotations: {}
       podAnnotations: {}
       affinity: {}
@@ -573,9 +582,12 @@ runner:
     #### The configurations applied to the TaskSet (CodeRun) Pods ####
     pod:
       runAsJob: false
-      # Override the service account for TaskSet (CodeRun) Pods
-      # If not set, the runner will create and manage service accounts
-      serviceAccount: "runner"
+      # Service account for spawned TaskSet (CodeRun) Pods.
+      # Empty (default) → resolves to the chart-rendered runner SA via
+      # `runwhen-local.serviceAccountName.runner`, matching whatever
+      # the runner pod itself binds to. Set to a literal name to pin
+      # a specific SA regardless of the runner override.
+      serviceAccount: ""
       annotations: {}
       affinity: {}
       nodeName: ""

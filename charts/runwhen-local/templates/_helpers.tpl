@@ -95,19 +95,33 @@ app.kubernetes.io/component: runner
 {{- end }}
 
 {{/*
-Pod-level extra labels — emits commonLabels + podLabels merged. Used
-under `.spec.template.metadata.labels`, AFTER the selector labels.
-Render with `nindent 8`. No-op when both maps are empty.
+Pod-level extra labels — emits commonLabels + chart-wide podLabels +
+per-service podLabels merged, with most-specific winning on conflicts
+(Sprig `merge` keeps the first argument's value). Used under
+`.spec.template.metadata.labels`, AFTER the selector labels. Render
+with `nindent 8`. No-op when all three maps are empty.
+
+Accepts either the root context (chart-wide + commonLabels only) or a
+list `(list . $serviceLabels)` where `$serviceLabels` is the per-service
+overlay (e.g. `.Values.runner.podLabels`). Per-service entries win
+over chart-wide on conflict; chart-wide wins over commonLabels.
 
 Usage:
-  template:
-    metadata:
-      labels:
-        {{- include "runwhen-local.runnerSelectorLabels" . | nindent 8 }}
-        {{- include "runwhen-local.podLabels" . | nindent 8 }}
+  # Chart-wide + commonLabels only:
+  {{- include "runwhen-local.podLabels" . | nindent 8 }}
+
+  # With per-service overlay:
+  {{- include "runwhen-local.podLabels" (list . .Values.runner.podLabels) | nindent 8 }}
+  {{- include "runwhen-local.podLabels" (list . $wb.podLabels) | nindent 8 }}
 */}}
 {{- define "runwhen-local.podLabels" -}}
-{{- $labels := merge (deepCopy (.Values.podLabels | default dict)) (deepCopy (.Values.commonLabels | default dict)) -}}
+{{- $ctx := . -}}
+{{- $extra := dict -}}
+{{- if kindIs "slice" . -}}
+  {{- $ctx = index . 0 -}}
+  {{- $extra = (index . 1) | default dict -}}
+{{- end -}}
+{{- $labels := merge (deepCopy $extra) (deepCopy ($ctx.Values.podLabels | default dict)) (deepCopy ($ctx.Values.commonLabels | default dict)) -}}
 {{- range $k, $v := $labels }}
 {{ $k }}: {{ $v | quote }}
 {{- end }}

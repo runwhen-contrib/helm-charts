@@ -30,11 +30,13 @@ spec:
     metadata:
       labels:
         {{- include "runwhen-local.workspaceBuilderSelectorLabels" . | nindent 8 }}
-        {{- include "runwhen-local.podLabels" . | nindent 8 }}
+        {{- include "runwhen-local.podLabels" (list . $wb.podLabels) | nindent 8 }}
       {{- /*
-        Annotation precedence: per-service podAnnotations wins over the
-        chart-wide map. Render under a single `annotations:` keyword so
-        we don't emit duplicates (which strict YAML parsers reject).
+        Annotation precedence: per-service $wb.podAnnotations wins over
+        the chart-wide map. Sprig `merge dst src` keeps `dst` values
+        (first arg wins), so passing $wb.podAnnotations as the first
+        arg is correct. Render under a single `annotations:` keyword
+        (strict YAML parsers reject duplicate keys).
       */}}
       {{- $podAnnotations := merge (deepCopy ($wb.podAnnotations | default dict)) (deepCopy (.Values.podAnnotations | default dict)) }}
       {{- if $podAnnotations }}
