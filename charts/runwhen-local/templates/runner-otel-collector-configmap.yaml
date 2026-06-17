@@ -119,6 +119,14 @@ data:
     exporters:
       prometheusremotewrite:
         endpoint: {{ .Values.runner.metrics.url }}
+        # Disable Prometheus naming normalization so metric names match
+        # the OTel-side names (no `_total` counter suffix, no `_seconds`
+        # unit suffix, etc). Replaces the historical
+        # `--feature-gates=-pkg.translator.prometheus.NormalizeName`
+        # CLI flag, which was removed when the gate graduated to stable
+        # in collector v0.146.0+. Keeps existing dashboards/alerts in
+        # cortex valid across the 0.127 → 0.153 image bump.
+        add_metric_suffixes: false
         tls:
           {{- if .Values.proxyCA }}
           ca_file: "/etc/ssl/certs/proxy-ca.crt"

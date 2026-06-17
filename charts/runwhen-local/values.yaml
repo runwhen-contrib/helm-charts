@@ -688,8 +688,15 @@ opentelemetry-collector:
       type: "RuntimeDefault"
   command:
     name: "otelcol"
-    ## Keep this feature gate disabled to preserve our metric naming convention
-    extraArgs: ["--feature-gates=-pkg.translator.prometheus.NormalizeName"]
+    ## Metric-name normalization (no `_total` / unit suffixes) is now
+    ## controlled per-exporter via `add_metric_suffixes: false` in the
+    ## relay config (see runner-otel-collector-configmap.yaml). The
+    ## old `pkg.translator.prometheus.NormalizeName` feature gate
+    ## graduated to stable and was REMOVED in collector v0.146.0+,
+    ## so passing it now hard-fails the pod with
+    ##   invalid argument "-pkg.translator.prometheus.NormalizeName"
+    ##   for "--feature-gates" flag: no such feature gate ...
+    extraArgs: []
   serviceAccount:
     create: false
     annotations: {}
