@@ -106,7 +106,8 @@ Plus, **when applicable**:
 | `runwhen-local.trustBundleEnv`                  | emit 5 SSL/CA env vars when `.Values.proxyCA` is set (decoupled from proxy) |
 | `runwhen-local.serviceAccountName`              | resolves wb SA name with `serviceAccount.create` honoured                   |
 | `runwhen-local.serviceAccountName.runner`       | resolves runner SA name (default `runner`, override via `runner.serviceAccount.name`) |
-| `runwhen-local.serviceAccountName.otelCollector`| resolves OTel collector SA name (default `otel-collector`, override via `runner.otelCollector.serviceAccount.name`) |
+| `runwhen-local.serviceAccountName.otelCollector`| resolves OTel collector SA name; reads `.Values."opentelemetry-collector".serviceAccount.name` (subchart key, default `otel-collector`) so parent SA + subchart Deployment agree |
+| `runwhen-local.configMapName.otelCollector`     | resolves OTel collector ConfigMap name; reads `.Values."opentelemetry-collector".configMap.existingName` (subchart key, default `otel-collector`) so parent CM + subchart Deployment agree |
 | `runwhen-local.workspaceName`                   | echoes `.Values.workspaceName`                                              |
 | `runwhen-local.containerSecurityContext`        | render-or-nothing for `.Values.containerSecurityContext`                    |
 | `runwhen-local.podSecurityContext`              | render-or-nothing for `.Values.podSecurityContext`                          |

@@ -294,17 +294,43 @@ Usage:
 {{- end }}
 
 {{/*
-Resolve the OpenTelemetry collector ServiceAccount name (referenced by
-the parent-chart-rendered SA / RoleBinding and consumed by the OTel
-subchart via `opentelemetry-collector.serviceAccount.name`). Defaults to
-the literal "otel-collector" for back-compat. Override via
-`.Values.runner.otelCollector.serviceAccount.name` when a multi-release
-namespace forces a unique name.
+Resolve the OpenTelemetry collector ServiceAccount name. The subchart
+runs with `serviceAccount.create: false` and binds its Deployment to
+`.Values."opentelemetry-collector".serviceAccount.name` — i.e. the
+subchart is the SOURCE OF TRUTH for the SA name. The parent-chart's
+ServiceAccount + Role + RoleBinding template MUST resolve to the same
+name; otherwise a multi-release operator who renames via the subchart
+key (per README's "Multi-release deployments" section) ends up with
+the subchart Deployment looking for `<release>-otel-collector` while
+the parent renders `otel-collector` — RBAC fails to bind.
+
+Defaults to the literal "otel-collector" for back-compat. Override via
+`opentelemetry-collector.serviceAccount.name` (NOT a parent-only key —
+the value MUST be the subchart key so both sides agree).
 */}}
 {{- define "runwhen-local.serviceAccountName.otelCollector" -}}
-{{- $otel := (((.Values.runner).otelCollector) | default dict) -}}
-{{- $sa := ($otel.serviceAccount | default dict) -}}
+{{- $subchart := index .Values "opentelemetry-collector" | default dict -}}
+{{- $sa := ($subchart.serviceAccount | default dict) -}}
 {{- default "otel-collector" $sa.name }}
+{{- end }}
+
+{{/*
+Resolve the OpenTelemetry collector ConfigMap name. Same coupling
+shape as the SA helper above: the subchart runs with
+`configMap.create: false` + `configMap.existingName: "otel-collector"`
+and the subchart Deployment mounts that ConfigMap by name. The
+parent-chart's ConfigMap template renders the actual relay config,
+so its name MUST equal `.Values."opentelemetry-collector".configMap.existingName`
+or the collector pod gets stuck in `CreateContainerConfigError`.
+
+Defaults to "otel-collector". Override via
+`opentelemetry-collector.configMap.existingName` when running multiple
+releases in one namespace.
+*/}}
+{{- define "runwhen-local.configMapName.otelCollector" -}}
+{{- $subchart := index .Values "opentelemetry-collector" | default dict -}}
+{{- $cm := ($subchart.configMap | default dict) -}}
+{{- default "otel-collector" $cm.existingName }}
 {{- end }}
 
 {{/*
