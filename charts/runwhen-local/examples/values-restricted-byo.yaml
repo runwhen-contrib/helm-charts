@@ -1,15 +1,22 @@
 # =============================================================================
 # Restricted-cluster BYO overlay
 # =============================================================================
-# Demonstrates three common enterprise / regulated-environment requirements
-# layered together:
+# Demonstrates the most-commonly-stacked enterprise / regulated-environment
+# requirements in one file:
 #
-#   1. NO cluster-scoped RBAC                  (line ~25)
-#   2. Mandatory pod labels enforced by an     (line ~50)
-#      admission policy (e.g. Kyverno
-#      / Gatekeeper / OPA)
-#   3. Corporate root-CA trust on a non-proxy  (line ~80)
-#      cluster (private TLS, internal mTLS)
+#   1.  NO cluster-scoped RBAC                       (active by default)
+#   1b. Optional: BYO ServiceAccounts +                 (commented; opt-in)
+#       Roles + RoleBindings (pre-created
+#       out-of-band by Crossplane / Terraform
+#       / GitOps overlay)
+#   2.  Mandatory pod labels enforced by an          (active by default)
+#       admission policy (Kyverno / Gatekeeper / OPA)
+#   3.  Corporate root-CA trust on a non-proxy       (active by default)
+#       cluster (private TLS, internal mTLS)
+#
+# Sections 1, 2, and 3 take effect as-shipped — render the file and
+# `helm install` immediately. Section 1b is opt-in and stays inert
+# unless you uncomment its blocks.
 #
 # Render to inspect:
 #
