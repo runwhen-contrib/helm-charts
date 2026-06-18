@@ -381,6 +381,18 @@ runner:
     name: "runner"
     annotations: {}
 
+  # Parent-side OTel collector ServiceAccount + Role + RoleBinding gate.
+  # The bundled opentelemetry-collector subchart runs with
+  # serviceAccount.create=false and the parent chart owns the RBAC by
+  # default. Set runner.otelCollector.serviceAccount.create to false on
+  # regulated clusters where the SA + RBAC must be pre-created externally
+  # (Crossplane / Terraform / GitOps overlay). The subchart Deployment will
+  # still reference the SA by name via
+  # opentelemetry-collector.serviceAccount.name (single source of truth).
+  otelCollector:
+    serviceAccount:
+      create: true
+
   # Health probes for the runner pod. Default: not rendered (preserves
   # existing behaviour). When set, each block is emitted verbatim under
   # spec.containers[].{startupProbe,readinessProbe,livenessProbe}.

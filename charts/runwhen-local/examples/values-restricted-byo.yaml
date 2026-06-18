@@ -30,6 +30,14 @@
 # clusters where ClusterRoles are forbidden (federal, restricted-v2, locked-
 # down multi-tenant), turn that off and grant a namespace-scoped Role
 # instead. Discovery is then limited to the namespaces you explicitly list.
+#
+# Optional companion: pre-create the SA + RBAC out-of-band (Crossplane,
+# Terraform, GitOps overlay) and disable the chart-rendered SA + RBAC by
+# uncommenting the BYO blocks below. All three layers (workspace-builder,
+# runner, OTel collector) MUST stay aligned: when you disable
+# serviceAccount.create, you take ownership of creating the SA AND the
+# matching Role + RoleBinding externally — the chart turns SA + RBAC off
+# as a unit on each component.
 ###############################################################################
 workspaceBuilder:
   serviceAccountRoles:
@@ -62,6 +70,52 @@ workspaceBuilder:
         - apiGroups: ["networking.k8s.io"]
           resources: ["ingresses", "networkpolicies"]
           verbs: ["get", "watch", "list"]
+
+  # ---------- OPTIONAL: BYO workspace-builder SA ----------
+  # Uncomment when the SA + namespace-role + binding are pre-created by
+  # an external system. The chart-rendered Deployment will still set
+  # `serviceAccountName: <name>` so the pod runs under your SA.
+  # serviceAccount:
+  #   create: false
+  #   name: byo-workspace-builder
+
+###############################################################################
+# 1b. Disable chart-rendered runner + OTel SAs (BYO RBAC)
+# -----------------------------------------------------------------------------
+# True bring-your-own-RBAC path. Three knobs MUST move together for the
+# runner because the runner ALSO launches spawned CronCodeRun deployments
+# and TaskSet pods, and those references live in the runner ConfigMap
+# (NOT just the chart-rendered Deployment):
+#
+#   runner.serviceAccount.create:    false   ← skip chart-rendered SA + RBAC
+#   runner.serviceAccount.name:      <name>  ← runner pod's serviceAccountName
+#   runner.runEnvironment.deployment.serviceAccount: <name>  ← spawned CronCodeRun deployments
+#   runner.runEnvironment.pod.serviceAccount:        <name>  ← spawned TaskSet pods
+#
+# If you forget the runEnvironment.* block, spawned workloads bind to the
+# stock `runner` SA name baked into legacy values overlays — and on a
+# fresh BYO cluster that SA does not exist, so every CronCodeRun deploy
+# fails admission with "serviceaccount 'runner' not found".
+#
+# (When runEnvironment.* is left empty `""`, the chart helper falls back
+# to runner.serviceAccount.name automatically, so an operator who owns
+# their own values file from scratch only strictly needs the first two
+# knobs. Setting all four explicitly makes the BYO contract self-
+# documenting and immune to stale defaults inherited from older overlays.)
+###############################################################################
+# Uncomment to opt in:
+# runner:
+#   serviceAccount:
+#     create: false
+#     name: byo-runner-sa
+#   runEnvironment:
+#     deployment:
+#       serviceAccount: byo-runner-sa
+#     pod:
+#       serviceAccount: byo-runner-sa
+#   otelCollector:
+#     serviceAccount:
+#       create: false        # NEW knob (chart 0.5.9+) — disables parent OTel SA + Role + RoleBinding
 
 ###############################################################################
 # 2. Mandatory pod label (admission-policy enforcement)
@@ -132,6 +186,16 @@ opentelemetry-collector:
   additionalLabels:
     cost-center: platform-eng
     data-classification: internal
+
+  # If you uncommented the BYO OTel SA block under `runner.otelCollector`
+  # above, also override the SA NAME the subchart Deployment references
+  # so it matches the SA you pre-created out-of-band. The subchart-side
+  # `serviceAccount.create` MUST stay `false` regardless — the parent
+  # chart owns RBAC creation by default, and on the BYO path nobody
+  # should create it twice.
+  # serviceAccount:
+  #   create: false
+  #   name: byo-otel-collector-sa
 
   # CA-trust parity for the collector (mounts the same secret at the
   # path the relay config's prometheusremotewrite exporter expects).

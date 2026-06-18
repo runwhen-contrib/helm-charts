@@ -127,6 +127,72 @@ the chart grows or you hit a customer that needs them:
 When you ship one of these, run the verifier matrix and add a row to the
 table above.
 
+## ServiceAccount create-gate pattern (avoid the `default true` footgun)
+
+When a SA / RBAC template gates on `serviceAccount.create`, NEVER write
+this:
+
+```go
+{{- if (.Values.foo.serviceAccount | default dict).create | default true -}}
+```
+
+In Go templates `false | default true` evaluates to `true` — `default`
+treats `false` as "empty". The chart silently ignores `create: false`
+and renders the SA anyway, which collides on `helm install` for any
+operator pre-creating the SA externally (Crossplane / Terraform / GitOps).
+
+Use the explicit-key-aware ternary form instead:
+
+```go
+{{- $sa := .Values.foo.serviceAccount | default dict -}}
+{{- $create := ternary $sa.create true (hasKey $sa "create") -}}
+{{- if $create -}}
+... SA + Role + RoleBinding ...
+{{- end -}}
+```
+
+Or, for templates whose `values.yaml` always provides the key (the
+established pattern in `workspace-builder-serviceaccount.yaml`), the
+plain form is also correct:
+
+```go
+{{- if .Values.foo.serviceAccount.create -}}
+```
+
+Closed in chart 0.5.9 for `runner-service-account.yaml`. The same
+template also wraps the runner Role + RoleBinding inside the gate, so
+SA + RBAC turn off as a unit — operators on the BYO path are
+responsible for pre-creating all three.
+
+## Subchart parent-side SA / RBAC gate (when the parent owns RBAC)
+
+For subcharts where the bundled helm dependency runs with its own
+`serviceAccount.create: false` (e.g. `opentelemetry-collector` in this
+chart), the PARENT chart owns the SA + RBAC and a parent-side opt-out
+knob is mandatory. Mirror the pattern from chart 0.5.9:
+
+```yaml
+# values.yaml (parent)
+runner:
+  otelCollector:                  # OR <subchart>:
+    serviceAccount:
+      create: true                # default true for back-compat
+```
+
+```go
+# templates/<subchart>-service-account.yaml (parent)
+{{- $overrides := (.Values.runner.otelCollector | default dict).serviceAccount | default dict -}}
+{{- $createSa := ternary $overrides.create true (hasKey $overrides "create") -}}
+{{- if $createSa -}}
+... SA + Role + RoleBinding ...
+{{- end -}}
+```
+
+The subchart Deployment continues to read its SA name from
+`<subchart>.serviceAccount.name` (single source of truth, resolved via
+the chart's `serviceAccountName.<subchart>` helper). Both layers
+must agree on the name; only the create-gate is duplicated.
+
 ## Minimal "good citizen" template (Deployment)
 
 Use this as the starting skeleton. Every helper invocation is mandatory;

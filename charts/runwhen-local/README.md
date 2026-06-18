@@ -205,7 +205,7 @@ its own knobs (`opentelemetry-collector.additionalLabels`,
 
 ### Restricted-cluster overlay (no ClusterRole + mandatory pod label + private CA)
 
-A worked example combining the three most common regulated-environment
+A worked example combining the most common regulated-environment
 constraints lives in
 [`examples/values-restricted-byo.yaml`](./examples/values-restricted-byo.yaml):
 
@@ -216,6 +216,37 @@ constraints lives in
    Gatekeeper policies, plus FinOps `commonLabels` on every resource.
 3. Wires a corporate root-CA bundle on a non-proxy install — including
    the OTel collector subchart parity volume + env wiring.
+4. Documents the optional **BYO ServiceAccount** path — pre-create the
+   SAs + Roles + RoleBindings out-of-band (Crossplane / Terraform /
+   GitOps overlay), then disable the chart-rendered ones. Three knobs
+   matter for the runner because spawned CronCodeRun deployments and
+   TaskSet pods reference the SA name through the runner ConfigMap, NOT
+   just the runner pod itself:
+
+   ```yaml
+   runner:
+     serviceAccount:
+       create: false
+       name: byo-runner-sa
+     runEnvironment:
+       deployment:
+         serviceAccount: byo-runner-sa   # spawned CronCodeRun deployments
+       pod:
+         serviceAccount: byo-runner-sa   # spawned TaskSet pods
+     otelCollector:
+       serviceAccount:
+         create: false                   # NEW knob (chart 0.5.9+) — disables parent OTel SA + Role + RoleBinding
+   workspaceBuilder:
+     serviceAccount:
+       create: false
+       name: byo-workspace-builder
+   ```
+
+   When `runEnvironment.*.serviceAccount` is left empty, the chart helper
+   falls back to `runner.serviceAccount.name` automatically — but stale
+   `"runner"` literals in older overlays will silently override the
+   fallback and leave spawned workloads bound to a non-existent SA. Set
+   all four explicitly on the BYO path.
 
 ```console
 helm template rw charts/runwhen-local \
