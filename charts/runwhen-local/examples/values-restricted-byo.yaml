@@ -109,6 +109,23 @@ workspaceBuilder:
 # their own values file from scratch only strictly needs the first two
 # knobs. Setting all four explicitly makes the BYO contract self-
 # documenting and immune to stale defaults inherited from older overlays.)
+#
+# Pre-apply the matching SA + Role + RoleBinding manifest BEFORE
+# `helm install`:
+#
+#   export RW_NAMESPACE=runwhen-local
+#   sed "s|__NAMESPACE__|$RW_NAMESPACE|g" \
+#     charts/runwhen-local/examples/byo-rbac.yaml | kubectl apply -f -
+#
+# That manifest is rule-aligned with chart 0.5.9 and uses the BYO names
+# below. Verify with:
+#
+#   helm template rw charts/runwhen-local \
+#     -f charts/runwhen-local/examples/values-restricted-byo.yaml \
+#     --show-only templates/runner-service-account.yaml \
+#     --show-only templates/runner-otel-collector-service-account.yaml \
+#     --show-only templates/workspace-builder-serviceaccount.yaml \
+#     --show-only templates/workspace-builder-namespacerole.yaml
 ###############################################################################
 # Uncomment to opt in:
 # runner:

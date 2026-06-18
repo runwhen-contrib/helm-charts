@@ -1,0 +1,260 @@
+# =============================================================================
+# BYO ServiceAccount + RBAC manifest — companion to values-restricted-byo.yaml
+# =============================================================================
+# Pre-apply this BEFORE `helm install` whenever you flip the BYO blocks in
+# values-restricted-byo.yaml (workspaceBuilder.serviceAccount.create=false +
+# runner.serviceAccount.create=false + runner.otelCollector.serviceAccount.create=false).
+# The chart will then skip creating these resources entirely; the chart-rendered
+# Deployments + ConfigMaps still reference them by name so the pods bind
+# correctly.
+#
+# Deploy:
+#
+#   export RW_NAMESPACE=runwhen-local
+#   sed "s|__NAMESPACE__|$RW_NAMESPACE|g" \
+#     charts/runwhen-local/examples/byo-rbac.yaml | \
+#     kubectl apply -f -
+#
+# Verify the chart agrees with this manifest (rules + binding shapes):
+#
+#   helm template rw charts/runwhen-local \
+#     -f charts/runwhen-local/examples/values-restricted-byo.yaml \
+#     --show-only templates/runner-service-account.yaml \
+#     --show-only templates/runner-otel-collector-service-account.yaml \
+#     --show-only templates/workspace-builder-serviceaccount.yaml \
+#     --show-only templates/workspace-builder-namespacerole.yaml
+#
+# If you DON'T pin to the BYO names below (byo-runner-sa /
+# byo-workspace-builder / byo-otel-collector-sa), update both this file
+# AND the matching `name:` keys in values-restricted-byo.yaml. The chart
+# helpers default to "runner" / "workspace-builder" / "otel-collector" if
+# left unset.
+#
+# Rules below are mirrored from chart 0.5.9 templates verbatim. If you
+# upgrade the chart and the rules drift, regenerate with --show-only.
+
+###############################################################################
+# Runner
+###############################################################################
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: byo-runner-sa
+  namespace: __NAMESPACE__
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: byo-runner-sa-role
+  namespace: __NAMESPACE__
+rules:
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/exec"]
+    verbs: ["get", "list", "watch", "create", "update", "delete"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["create", "get", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: byo-runner-sa-rolebinding
+  namespace: __NAMESPACE__
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: byo-runner-sa-role
+subjects:
+  - kind: ServiceAccount
+    name: byo-runner-sa
+    namespace: __NAMESPACE__
+###############################################################################
+# OpenTelemetry collector (parent-side RBAC; subchart Deployment references
+# this SA by name via opentelemetry-collector.serviceAccount.name)
+###############################################################################
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: byo-otel-collector-sa
+  namespace: __NAMESPACE__
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: byo-otel-collector-sa-role
+  namespace: __NAMESPACE__
+rules:
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["replicasets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["extensions"]
+    resources: ["replicasets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: byo-otel-collector-sa-rolebinding
+  namespace: __NAMESPACE__
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: byo-otel-collector-sa-role
+subjects:
+  - kind: ServiceAccount
+    name: byo-otel-collector-sa
+    namespace: __NAMESPACE__
+###############################################################################
+# Workspace builder
+# -----------------------------------------------------------------------------
+# Three Role/RoleBinding pairs:
+#   1. sa-local-view       — read-only inspection of in-namespace resources
+#   2. sa-secret-manage    — manage secrets (codecollection auth tokens etc)
+#   3. namespace-view      — workspace-builder discovery RBAC (the
+#                            namespaceRole opt-in from values-restricted-byo.yaml).
+#                            Tighten/expand `rules` to match what your
+#                            codecollections need.
+#
+# A long-lived service-account-token Secret is also created so the
+# workspace-builder pod can sign requests to the K8s API. K8s 1.24+ does
+# NOT auto-create token Secrets — you MUST pre-create one for legacy
+# clients that expect a static token (and the workspace-builder is one).
+###############################################################################
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: byo-workspace-builder
+  namespace: __NAMESPACE__
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: byo-workspace-builder-token
+  namespace: __NAMESPACE__
+  annotations:
+    kubernetes.io/service-account.name: byo-workspace-builder
+type: kubernetes.io/service-account-token
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: byo-workspace-builder-sa-local-view
+  namespace: __NAMESPACE__
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "events", "configmaps", "services", "replicationcontrollers", "secrets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: byo-workspace-builder-sa-local-view-rb
+  namespace: __NAMESPACE__
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: byo-workspace-builder-sa-local-view
+subjects:
+  - kind: ServiceAccount
+    name: byo-workspace-builder
+    namespace: __NAMESPACE__
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: byo-workspace-builder-sa-secret-manage
+  namespace: __NAMESPACE__
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "update", "delete", "create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: byo-workspace-builder-sa-secret-manage-rb
+  namespace: __NAMESPACE__
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: byo-workspace-builder-sa-secret-manage
+subjects:
+  - kind: ServiceAccount
+    name: byo-workspace-builder
+    namespace: __NAMESPACE__
+---
+# namespace-view Role — discovery RBAC; mirrors values-restricted-byo.yaml
+# `workspaceBuilder.serviceAccountRoles.namespaceRole.rules`. Adjust here
+# if you adjust the values overlay (or vice versa).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: byo-workspace-builder-namespace-view
+  namespace: __NAMESPACE__
+rules:
+  - apiGroups: [""]
+    resources:
+      - pods
+      - services
+      - configmaps
+      - secrets
+      - events
+      - endpoints
+      - persistentvolumeclaims
+      - namespaces
+    verbs: ["get", "watch", "list"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
+    verbs: ["get", "watch", "list"]
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get", "watch", "list"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses", "networkpolicies"]
+    verbs: ["get", "watch", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: byo-workspace-builder-view-rb
+  namespace: __NAMESPACE__
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: byo-workspace-builder-namespace-view
+subjects:
+  - kind: ServiceAccount
+    name: byo-workspace-builder
+    namespace: __NAMESPACE__

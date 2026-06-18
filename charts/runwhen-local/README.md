@@ -248,6 +248,21 @@ constraints lives in
    fallback and leave spawned workloads bound to a non-existent SA. Set
    all four explicitly on the BYO path.
 
+   A turnkey companion manifest with all 14 SA + Role + RoleBinding +
+   token Secret resources lives in
+   [`examples/byo-rbac.yaml`](./examples/byo-rbac.yaml). Pre-apply it
+   before `helm install`:
+
+   ```console
+   export RW_NAMESPACE=runwhen-local
+   sed "s|__NAMESPACE__|$RW_NAMESPACE|g" \
+     charts/runwhen-local/examples/byo-rbac.yaml | kubectl apply -f -
+   ```
+
+   Rules are mirrored verbatim from the chart 0.5.9 templates. If you
+   bump chart versions and rules drift, regenerate using
+   `helm template --show-only` against the four SA / RBAC templates.
+
 ```console
 helm template rw charts/runwhen-local \
   -f charts/runwhen-local/examples/values-restricted-byo.yaml | \
