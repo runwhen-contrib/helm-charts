@@ -523,3 +523,35 @@ When you run the verifier on a default-values render, the
 runner-control rename for the named templates above, **NOT** a
 quality regression. Closing it requires a coordinated runner-control
 update; do not attempt to flip the chart defaults in isolation.
+
+## Worked example — restricted-cluster overlay
+
+`charts/runwhen-local/examples/values-restricted-byo.yaml` exercises the
+three most-commonly-stacked enterprise constraints in one file:
+
+1. **No cluster-scoped RBAC** — `clusterRoleView.enabled: false` +
+   `advancedClusterRole.enabled: false` + `namespaceRole.enabled: true`.
+   Renders 0 ClusterRole / ClusterRoleBinding resources.
+2. **Mandatory pod label** — `commonLabels` (every resource) +
+   `podLabels.policy.runwhen.io/profile: restricted` (every pod
+   template) for cluster-wide Kyverno / Gatekeeper enforcement.
+3. **Corporate root-CA on a non-proxy cluster** — `proxy.enabled: false`
+   + `proxyCA.secretName` set; all five SSL/CA env vars project, and
+   the OTel subchart `extraVolumes` / `extraVolumeMounts` bring the
+   collector pod to parity (its relay's `prometheusremotewrite.tls.ca_file`
+   automatically follows `.Values.proxyCA`).
+
+Render and verify:
+
+```bash
+helm template rw charts/runwhen-local \
+  -f charts/runwhen-local/examples/values-restricted-byo.yaml | \
+  grep -E "^kind: ClusterRole"   # → 0
+```
+
+When you add a new template that emits namespace-scoped RBAC under a
+`.enabled` flag, MIRROR the namespacerole template fix from chart 0.5.8
+— include `runwhen-local.workspaceBuilderLabels` (or `.runnerLabels`)
+on every Role / RoleBinding so `commonLabels` reach them. Without it,
+operators using the restricted overlay will see admission policies
+reject unlabelled RBAC objects.

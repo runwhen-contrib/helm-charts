@@ -1,0 +1,158 @@
+# =============================================================================
+# Restricted-cluster BYO overlay
+# =============================================================================
+# Demonstrates three common enterprise / regulated-environment requirements
+# layered together:
+#
+#   1. NO cluster-scoped RBAC                  (line ~25)
+#   2. Mandatory pod labels enforced by an     (line ~50)
+#      admission policy (e.g. Kyverno
+#      / Gatekeeper / OPA)
+#   3. Corporate root-CA trust on a non-proxy  (line ~80)
+#      cluster (private TLS, internal mTLS)
+#
+# Render to inspect:
+#
+#   helm template rw charts/runwhen-local \
+#     -f charts/runwhen-local/examples/values-restricted-byo.yaml
+#
+# Install / upgrade:
+#
+#   helm upgrade --install rw charts/runwhen-local \
+#     -f charts/runwhen-local/examples/values-restricted-byo.yaml \
+#     -n runwhen-local --create-namespace
+
+###############################################################################
+# 1. Disable cluster-scoped RBAC
+# -----------------------------------------------------------------------------
+# By default workspace-builder gets a ClusterRoleBinding to the built-in
+# `view` ClusterRole so it can discover resources cluster-wide. On regulated
+# clusters where ClusterRoles are forbidden (federal, restricted-v2, locked-
+# down multi-tenant), turn that off and grant a namespace-scoped Role
+# instead. Discovery is then limited to the namespaces you explicitly list.
+###############################################################################
+workspaceBuilder:
+  serviceAccountRoles:
+    clusterRoleView:
+      enabled: false        # NO ClusterRoleBinding → built-in `view`
+    advancedClusterRole:
+      enabled: false        # NO custom ClusterRole + binding
+    namespaceRole:
+      enabled: true
+      # The chart already auto-includes the release namespace. List
+      # ADDITIONAL namespaces here if you want workspace-builder to
+      # discover resources beyond its own. Leave empty for "this
+      # namespace only".
+      namespaces: []
+      # Read-only RBAC — no resource mutation. Tighten or expand as
+      # required by your codecollections; keep verbs to {get, watch,
+      # list} unless you have a documented reason otherwise.
+      rules:
+        - apiGroups: [""]
+          resources:
+            ["pods", "services", "configmaps", "secrets", "events",
+             "endpoints", "persistentvolumeclaims", "namespaces"]
+          verbs: ["get", "watch", "list"]
+        - apiGroups: ["apps"]
+          resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
+          verbs: ["get", "watch", "list"]
+        - apiGroups: ["batch"]
+          resources: ["jobs", "cronjobs"]
+          verbs: ["get", "watch", "list"]
+        - apiGroups: ["networking.k8s.io"]
+          resources: ["ingresses", "networkpolicies"]
+          verbs: ["get", "watch", "list"]
+
+###############################################################################
+# 2. Mandatory pod label (admission-policy enforcement)
+# -----------------------------------------------------------------------------
+# Many enterprises run a cluster-wide Kyverno / Gatekeeper / OPA policy that
+# rejects any Pod missing a specific label. This block stamps two:
+#
+#   commonLabels   → on EVERY chart-rendered resource (Deployments,
+#                    Services, ConfigMaps, ServiceAccounts, RBAC,
+#                    Ingresses, Secrets). Use for FinOps, data-class,
+#                    cost-center.
+#   podLabels      → on EVERY pod template (NOT into the immutable
+#                    spec.selector.matchLabels). Use for admission-policy
+#                    enforcement, service-mesh inject, network-policy
+#                    pod selectors.
+#
+# Per-service overrides (runner.podLabels / workspaceBuilder.podLabels)
+# win over the chart-wide podLabels block on key conflict.
+###############################################################################
+commonLabels:
+  cost-center: platform-eng
+  data-classification: internal
+
+podLabels:
+  policy.runwhen.io/profile: restricted   # Kyverno cluster policy: reject pods missing this
+  app.kubernetes.io/part-of: runwhen-local
+
+###############################################################################
+# 3. Corporate root-CA trust (NOT a proxy)
+# -----------------------------------------------------------------------------
+# Decoupled from `proxy.enabled` (chart 0.5.5+). Setting `proxyCA` alone
+# projects all five standard SSL/CA env vars into the runner +
+# workspace-builder containers and mounts the bundle at
+# /etc/ssl/certs/proxy-ca.crt:
+#
+#   SSL_CERT_FILE      = /etc/ssl/certs/proxy-ca.crt
+#   REQUESTS_CA_BUNDLE = /etc/ssl/certs/proxy-ca.crt
+#   CURL_CA_BUNDLE     = /etc/ssl/certs/proxy-ca.crt
+#   NODE_EXTRA_CA_CERTS= /etc/ssl/certs/proxy-ca.crt
+#   GIT_SSL_CAINFO     = /etc/ssl/certs/proxy-ca.crt
+#
+# This is the right knob whenever the cluster terminates internal TLS with
+# a private root (Vault, internal git, internal codecollection registry,
+# private LLM gateway, etc.) — even on clusters with NO outbound proxy.
+###############################################################################
+proxy:
+  enabled: false             # NOT a proxy install
+
+proxyCA:
+  # Pre-create the secret in the release namespace:
+  #   kubectl -n runwhen-local create secret generic corporate-root-ca \
+  #     --from-file=ca.crt=/path/to/your/corporate-root-ca.pem
+  secretName: corporate-root-ca
+  key: ca.crt
+
+# -----------------------------------------------------------------------------
+# Subchart parity: the opentelemetry-collector subchart does NOT inherit
+# the parent chart's commonLabels / podLabels / proxyCA. If you need the
+# admission policy and CA trust on the collector pod too, drive its own
+# knobs explicitly.
+# -----------------------------------------------------------------------------
+opentelemetry-collector:
+  # Pod label parity (admission-policy enforcement on the collector pod)
+  podLabels:
+    policy.runwhen.io/profile: restricted
+    app.kubernetes.io/part-of: runwhen-local
+  # Resource label parity (FinOps / data classification)
+  additionalLabels:
+    cost-center: platform-eng
+    data-classification: internal
+
+  # CA-trust parity for the collector (mounts the same secret at the
+  # path the relay config's prometheusremotewrite exporter expects).
+  # The runner-otel-collector-configmap.yaml relay automatically
+  # switches its `ca_file` to /etc/ssl/certs/proxy-ca.crt when
+  # .Values.proxyCA is set chart-wide.
+  extraVolumes:
+    - name: tls-secret-volume
+      secret:
+        secretName: runner-metrics-tls
+    - name: proxy-ca-volume
+      secret:
+        secretName: corporate-root-ca       # MUST match .proxyCA.secretName
+        items:
+          - key: ca.crt                      # MUST match .proxyCA.key
+            path: proxy-ca.crt               # DO NOT CHANGE — relay expects this filename
+  extraVolumeMounts:
+    - name: tls-secret-volume
+      mountPath: /tls
+      readOnly: true
+    - name: proxy-ca-volume
+      mountPath: /etc/ssl/certs/proxy-ca.crt
+      readOnly: true
+      subPath: proxy-ca.crt

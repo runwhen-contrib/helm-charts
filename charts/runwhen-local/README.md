@@ -203,6 +203,26 @@ its own knobs (`opentelemetry-collector.additionalLabels`,
 `.podLabels`, `.podAnnotations`, `.podSecurityContext`) explicitly. See
 [`values.yaml`](./values.yaml) for the complete overlay pattern.
 
+### Restricted-cluster overlay (no ClusterRole + mandatory pod label + private CA)
+
+A worked example combining the three most common regulated-environment
+constraints lives in
+[`examples/values-restricted-byo.yaml`](./examples/values-restricted-byo.yaml):
+
+1. Disables every cluster-scoped RBAC resource (`clusterRoleView` and
+   `advancedClusterRole`) and grants a namespace-scoped `Role` instead.
+2. Stamps a mandatory pod-template label
+   (`policy.runwhen.io/profile: restricted`) for cluster-wide Kyverno /
+   Gatekeeper policies, plus FinOps `commonLabels` on every resource.
+3. Wires a corporate root-CA bundle on a non-proxy install — including
+   the OTel collector subchart parity volume + env wiring.
+
+```console
+helm template rw charts/runwhen-local \
+  -f charts/runwhen-local/examples/values-restricted-byo.yaml | \
+  grep -E "^kind: ClusterRole"   # → 0 lines
+```
+
 ### Common issues
 
 | Symptom | Likely cause | Fix |
