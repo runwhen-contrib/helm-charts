@@ -11,6 +11,9 @@
 #       / GitOps overlay)
 #   2.  Mandatory pod labels enforced by an          (active by default)
 #       admission policy (Kyverno / Gatekeeper / OPA)
+#   2b. Propagate those labels to runner-spawned     (active by default,
+#       CronCodeRun Deployments + worker pods         chart 0.5.11+)
+#       (forwarded through the runner config)
 #   3.  Corporate root-CA trust on a non-proxy       (active by default)
 #       cluster (private TLS, internal mTLS)
 #
@@ -166,6 +169,44 @@ commonLabels:
 podLabels:
   policy.runwhen.io/profile: restricted   # Kyverno cluster policy: reject pods missing this
   app.kubernetes.io/part-of: runwhen-local
+
+# -----------------------------------------------------------------------------
+# 2b. Propagate labels to runner-spawned workloads
+# -----------------------------------------------------------------------------
+# `commonLabels` and `podLabels` above only stamp the *chart-rendered* pods
+# (runner, workspace-builder, OTel collector). The runwhen-runner Go binary
+# spawns CronCodeRun Deployments (and worker pods) at runtime — these are
+# created OUTSIDE the chart and therefore do NOT inherit those values.
+#
+# Chart 0.5.11+ propagates them through the runner config so admission
+# policies that select on `policy.runwhen.io/profile` (or FinOps tagging on
+# `cost-center`) also catch the runtime-spawned workers. The block below is
+# the explicit form of the auto-merge — you can leave it commented since
+# the chart already does this for you when commonLabels/podLabels are set.
+#
+# REQUIRES runwhen-runner ≥ v0.10.56. Older runners silently ignore the
+# new `podLabels` field; the Deployment-level `labels` block has been
+# honoured since the runner first shipped.
+#
+# runner:
+#   runEnvironment:
+#     deployment:
+#       # Stamped on Deployment.metadata.labels (FinOps, cost allocation).
+#       # Auto-merges chart-wide `commonLabels` underneath; uncomment ONLY
+#       # to add runEnvironment-specific overrides.
+#       # labels:
+#       #   runtime: cron-code-run
+#       # Stamped on Deployment.spec.template.metadata.labels (i.e. the
+#       # actual worker Pod template — what Kyverno/PSA/OPA match on).
+#       # Auto-merges chart-wide `commonLabels` + `podLabels` underneath.
+#       # podLabels:
+#       #   policy.runwhen.io/profile: restricted
+#     pod:
+#       # Forward-compat: the runner currently spawns Deployments only.
+#       # Wired so the day Pod-direct/Job spawn ships, your admission
+#       # labels are already in the runner config.
+#       labels: {}
+#       podLabels: {}
 
 ###############################################################################
 # 3. Corporate root-CA trust (NOT a proxy)

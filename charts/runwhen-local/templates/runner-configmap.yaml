@@ -110,6 +110,40 @@ data:
             {{- toYaml .Values.runner.runEnvironment.deployment.resources.default | nindent 12 }}
           {{- end }}
 
+          {{- /*
+            ─────────────────────────────────────────────────────────────────
+            Labels propagated to the runwhen-runner Go binary so that every
+            spawned CronCodeRun Deployment + worker Pod inherits the chart-wide
+            commonLabels / podLabels (admission-policy match labels).
+
+            `deployment.labels` → Deployment.metadata.labels  (cost-center, etc.)
+            `deployment.podLabels` → Deployment.spec.template.metadata.labels
+                                      (i.e. the worker pod template — what
+                                       Kyverno/PSA/cost-center policies match)
+
+            Sprig `merge` is FIRST-WINS on conflict, so per-runEnvironment
+            override beats chart-wide commonLabels/podLabels — same precedence
+            we use for chart-rendered pods (see `runwhen-local.podLabels`).
+
+            REQUIRES runwhen-runner ≥ v0.10.56 to honour the new `podLabels`
+            field. Older versions silently ignore it; the Deployment-level
+            `labels` block has been honoured since the runner first shipped.
+          */}}
+          {{- $deployLabels := merge (deepCopy (.Values.runner.runEnvironment.deployment.labels | default dict)) (deepCopy (.Values.commonLabels | default dict)) }}
+          {{- if $deployLabels }}
+          labels:
+            {{- range $k, $v := $deployLabels }}
+            {{ $k }}: {{ $v | quote }}
+            {{- end }}
+          {{- end }}
+          {{- $deployPodLabels := merge (deepCopy (.Values.runner.runEnvironment.deployment.podLabels | default dict)) (deepCopy (.Values.podLabels | default dict)) (deepCopy (.Values.commonLabels | default dict)) }}
+          {{- if $deployPodLabels }}
+          podLabels:
+            {{- range $k, $v := $deployPodLabels }}
+            {{ $k }}: {{ $v | quote }}
+            {{- end }}
+          {{- end }}
+
           # ------------------------
           # Container-level securityContext (Deployment)
           # If runEnvironment.containerSecurityContext is set, use it;
@@ -208,6 +242,28 @@ data:
             {{- toYaml .Values.runner.runEnvironment.pod.resources.EKS_Fargate | nindent 12 }}
           {{- else }}
             {{- toYaml .Values.runner.runEnvironment.pod.resources.default | nindent 12 }}
+          {{- end }}
+
+          {{- /*
+            Labels for the TaskSet (CodeRun) pod-direct spawn path. Today the
+            runwhen-runner only spawns Deployments — the `pod:` block below is
+            consumed as forward-compat configuration so admission-policy
+            labels are already wired the day the Pod-direct/Job spawn path
+            ships. Same precedence as the deployment block.
+          */}}
+          {{- $podLabels := merge (deepCopy (.Values.runner.runEnvironment.pod.labels | default dict)) (deepCopy (.Values.commonLabels | default dict)) }}
+          {{- if $podLabels }}
+          labels:
+            {{- range $k, $v := $podLabels }}
+            {{ $k }}: {{ $v | quote }}
+            {{- end }}
+          {{- end }}
+          {{- $podPodLabels := merge (deepCopy (.Values.runner.runEnvironment.pod.podLabels | default dict)) (deepCopy (.Values.podLabels | default dict)) (deepCopy (.Values.commonLabels | default dict)) }}
+          {{- if $podPodLabels }}
+          podLabels:
+            {{- range $k, $v := $podPodLabels }}
+            {{ $k }}: {{ $v | quote }}
+            {{- end }}
           {{- end }}
 
           # ------------------------

@@ -572,6 +572,23 @@ runner:
       serviceAccount: ""
       annotations: {}
       podAnnotations: {}
+      # Labels stamped on the spawned CronCodeRun *Deployment*'s
+      # `metadata.labels`. The chart auto-merges the chart-wide
+      # `.Values.commonLabels` underneath this map (per-runEnvironment
+      # wins on conflict). Leave `{}` to inherit `commonLabels` only.
+      # Honoured by the runwhen-runner Deployment-spawn path.
+      labels: {}
+      # Labels stamped on the spawned CronCodeRun *pod template*
+      # (`spec.template.metadata.labels`). This is what Kubernetes pod
+      # admission policies (Kyverno, OPA, PodSecurity) match on, and it
+      # is the ONLY surface that lets you stamp e.g. `cost-center` or
+      # `tier=restricted` onto runtime-spawned worker pods. The chart
+      # auto-merges chart-wide `.Values.commonLabels` + `.Values.podLabels`
+      # underneath this map (per-runEnvironment wins on conflict).
+      # Leave `{}` to inherit `commonLabels` + `podLabels`.
+      # REQUIRES runwhen-runner ≥ v0.10.56 (older versions silently
+      # ignore the new `podLabels` field in the runEnvironment config).
+      podLabels: {}
       affinity: {}
       nodeName: ""
       nodeSelector: {}
@@ -601,6 +618,22 @@ runner:
       # a specific SA regardless of the runner override.
       serviceAccount: ""
       annotations: {}
+      # Labels stamped on the spawned TaskSet (CodeRun) Pod's
+      # `metadata.labels`. The chart auto-merges chart-wide
+      # `.Values.commonLabels` underneath this map (per-runEnvironment
+      # wins on conflict).
+      # NOTE: As of runwhen-runner v0.10.55, the runner only spawns
+      # Deployments — TaskSet Pod-direct spawning is not yet wired, so
+      # this knob is reserved for forward-compatibility. The Deployment
+      # path under `runEnvironment.deployment` is the surface that
+      # actually controls runtime worker pod labelling.
+      labels: {}
+      # Labels stamped on the spawned TaskSet pod template (relevant
+      # only when the runner is enhanced to spawn Jobs/Pods directly).
+      # The chart auto-merges chart-wide `.Values.commonLabels` +
+      # `.Values.podLabels` underneath this map. See `labels:` above
+      # for the runner-version caveat.
+      podLabels: {}
       affinity: {}
       nodeName: ""
       nodeSelector: {}

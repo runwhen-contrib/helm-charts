@@ -601,6 +601,16 @@ three most-commonly-stacked enterprise constraints in one file:
 2. **Mandatory pod label** — `commonLabels` (every resource) +
    `podLabels.policy.runwhen.io/profile: restricted` (every pod
    template) for cluster-wide Kyverno / Gatekeeper enforcement.
+   2b. **Runner-spawned propagation (chart 0.5.11+)** — `commonLabels`
+   and `podLabels` are auto-merged into the runner ConfigMap under
+   `environment.kubernetes.{deployment,pod}.{labels,podLabels}` so
+   workloads the runwhen-runner Go binary spawns at runtime
+   (CronCodeRun Deployments and worker Pods, never rendered by the
+   chart) ALSO satisfy admission policies. Per-runEnvironment
+   overrides live under `runner.runEnvironment.deployment.labels`,
+   `.deployment.podLabels`, `.pod.labels`, `.pod.podLabels`. Requires
+   runwhen-runner ≥ v0.10.56 to honour `podLabels`; older versions
+   only stamp the Deployment-level metadata.
 3. **Corporate root-CA on a non-proxy cluster** — `proxy.enabled: false`
    + `proxyCA.secretName` set; all five SSL/CA env vars project, and
    the OTel subchart `extraVolumes` / `extraVolumeMounts` bring the

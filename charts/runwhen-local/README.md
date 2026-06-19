@@ -214,6 +214,14 @@ constraints lives in
 2. Stamps a mandatory pod-template label
    (`policy.runwhen.io/profile: restricted`) for cluster-wide Kyverno /
    Gatekeeper policies, plus FinOps `commonLabels` on every resource.
+   Chart 0.5.11+ propagates `commonLabels` and `podLabels` automatically
+   into the runner ConfigMap so the runtime-spawned CronCodeRun
+   Deployments and worker pods (which the chart never renders directly)
+   ALSO satisfy admission policies. This requires runwhen-runner ≥
+   v0.10.56 to honour the new `podLabels` field; older runners only
+   stamp the Deployment-level metadata. Per-runEnvironment overrides
+   live under `runner.runEnvironment.deployment.{labels,podLabels}` and
+   `runner.runEnvironment.pod.{labels,podLabels}` (forward-compat).
 3. Wires a corporate root-CA bundle on a non-proxy install — including
    the OTel collector subchart parity volume + env wiring.
 4. Documents the optional **BYO ServiceAccount** path — pre-create the
