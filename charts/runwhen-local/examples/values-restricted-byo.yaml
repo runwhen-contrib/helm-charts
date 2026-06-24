@@ -1,0 +1,296 @@
+# =============================================================================
+# Restricted-cluster BYO overlay
+# =============================================================================
+# Demonstrates the most-commonly-stacked enterprise / regulated-environment
+# requirements in one file:
+#
+#   1.  NO cluster-scoped RBAC                       (active by default)
+#   1b. Optional: BYO ServiceAccounts +                 (commented; opt-in)
+#       Roles + RoleBindings (pre-created
+#       out-of-band by Crossplane / Terraform
+#       / GitOps overlay)
+#   2.  Mandatory pod labels enforced by an          (active by default)
+#       admission policy (Kyverno / Gatekeeper / OPA)
+#   2b. Propagate those labels to runner-spawned     (active by default,
+#       CronCodeRun Deployments + worker pods         chart 0.5.11+)
+#       (forwarded through the runner config)
+#   3.  Corporate root-CA trust on a non-proxy       (active by default)
+#       cluster (private TLS, internal mTLS)
+#
+# Sections 1, 2, and 3 take effect as-shipped — render the file and
+# `helm install` immediately. Section 1b is opt-in and stays inert
+# unless you uncomment its blocks.
+#
+# Render to inspect:
+#
+#   helm template rw charts/runwhen-local \
+#     -f charts/runwhen-local/examples/values-restricted-byo.yaml
+#
+# Install / upgrade:
+#
+#   helm upgrade --install rw charts/runwhen-local \
+#     -f charts/runwhen-local/examples/values-restricted-byo.yaml \
+#     -n runwhen-local --create-namespace
+
+###############################################################################
+# 1. Disable cluster-scoped RBAC
+# -----------------------------------------------------------------------------
+# By default workspace-builder gets a ClusterRoleBinding to the built-in
+# `view` ClusterRole so it can discover resources cluster-wide. On regulated
+# clusters where ClusterRoles are forbidden (federal, restricted-v2, locked-
+# down multi-tenant), turn that off and grant a namespace-scoped Role
+# instead. Discovery is then limited to the namespaces you explicitly list.
+#
+# Optional companion: pre-create the SA + RBAC out-of-band (Crossplane,
+# Terraform, GitOps overlay) and disable the chart-rendered SA + RBAC by
+# uncommenting the BYO blocks below. All three layers (workspace-builder,
+# runner, OTel collector) MUST stay aligned: when you disable
+# serviceAccount.create, you take ownership of creating the SA AND the
+# matching Role + RoleBinding externally — the chart turns SA + RBAC off
+# as a unit on each component.
+###############################################################################
+workspaceBuilder:
+  serviceAccountRoles:
+    clusterRoleView:
+      enabled: false        # NO ClusterRoleBinding → built-in `view`
+    advancedClusterRole:
+      enabled: false        # NO custom ClusterRole + binding
+    namespaceRole:
+      enabled: true
+      # The chart already auto-includes the release namespace. List
+      # ADDITIONAL namespaces here if you want workspace-builder to
+      # discover resources beyond its own. Leave empty for "this
+      # namespace only".
+      namespaces: []
+      # Read-only RBAC — no resource mutation. Tighten or expand as
+      # required by your codecollections; keep verbs to {get, watch,
+      # list} unless you have a documented reason otherwise.
+      #
+      # NOTE: the cluster-scoped `namespaces` resource is intentionally
+      # omitted. A namespace-scoped Role granting verbs on a cluster-scoped
+      # resource is silently ignored at evaluation time (RBAC's "no
+      # cross-scope grants" rule), so listing it here grants nothing real
+      # and just misleads operators into thinking workspace-builder can
+      # enumerate the cluster's namespaces. If you need that capability,
+      # bind a separate `view`-style ClusterRole — but doing so reintroduces
+      # the cluster-wide blast radius this overlay is designed to avoid.
+      rules:
+        - apiGroups: [""]
+          resources:
+            ["pods", "services", "configmaps", "secrets", "events",
+             "endpoints", "persistentvolumeclaims"]
+          verbs: ["get", "watch", "list"]
+        - apiGroups: ["apps"]
+          resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
+          verbs: ["get", "watch", "list"]
+        - apiGroups: ["batch"]
+          resources: ["jobs", "cronjobs"]
+          verbs: ["get", "watch", "list"]
+        - apiGroups: ["networking.k8s.io"]
+          resources: ["ingresses", "networkpolicies"]
+          verbs: ["get", "watch", "list"]
+
+  # ---------- OPTIONAL: BYO workspace-builder SA ----------
+  # Uncomment when the SA + namespace-role + binding are pre-created by
+  # an external system. The chart-rendered Deployment will still set
+  # `serviceAccountName: <name>` so the pod runs under your SA.
+  # serviceAccount:
+  #   create: false
+  #   name: byo-workspace-builder
+
+###############################################################################
+# 1b. Disable chart-rendered runner + OTel SAs (BYO RBAC)
+# -----------------------------------------------------------------------------
+# True bring-your-own-RBAC path. Three knobs MUST move together for the
+# runner because the runner ALSO launches spawned CronCodeRun deployments
+# and TaskSet pods, and those references live in the runner ConfigMap
+# (NOT just the chart-rendered Deployment):
+#
+#   runner.serviceAccount.create:    false   ← skip chart-rendered SA + RBAC
+#   runner.serviceAccount.name:      <name>  ← runner pod's serviceAccountName
+#   runner.runEnvironment.deployment.serviceAccount: <name>  ← spawned CronCodeRun deployments
+#   runner.runEnvironment.pod.serviceAccount:        <name>  ← spawned TaskSet pods
+#
+# If you forget the runEnvironment.* block, spawned workloads bind to the
+# stock `runner` SA name baked into legacy values overlays — and on a
+# fresh BYO cluster that SA does not exist, so every CronCodeRun deploy
+# fails admission with "serviceaccount 'runner' not found".
+#
+# (When runEnvironment.* is left empty `""`, the chart helper falls back
+# to runner.serviceAccount.name automatically, so an operator who owns
+# their own values file from scratch only strictly needs the first two
+# knobs. Setting all four explicitly makes the BYO contract self-
+# documenting and immune to stale defaults inherited from older overlays.)
+#
+# Pre-apply the matching SA + Role + RoleBinding manifest BEFORE
+# `helm install`:
+#
+#   export RW_NAMESPACE=runwhen-local
+#   sed "s|__NAMESPACE__|$RW_NAMESPACE|g" \
+#     charts/runwhen-local/examples/byo-rbac.yaml | kubectl apply -f -
+#
+# That manifest is rule-aligned with chart 0.5.9 and uses the BYO names
+# below. Verify with:
+#
+#   helm template rw charts/runwhen-local \
+#     -f charts/runwhen-local/examples/values-restricted-byo.yaml \
+#     --show-only templates/runner-service-account.yaml \
+#     --show-only templates/runner-otel-collector-service-account.yaml \
+#     --show-only templates/workspace-builder-serviceaccount.yaml \
+#     --show-only templates/workspace-builder-namespacerole.yaml
+###############################################################################
+# Uncomment to opt in:
+# runner:
+#   serviceAccount:
+#     create: false
+#     name: byo-runner-sa
+#   runEnvironment:
+#     deployment:
+#       serviceAccount: byo-runner-sa
+#     pod:
+#       serviceAccount: byo-runner-sa
+#   otelCollector:
+#     serviceAccount:
+#       create: false        # NEW knob (chart 0.5.9+) — disables parent OTel SA + Role + RoleBinding
+
+###############################################################################
+# 2. Mandatory pod label (admission-policy enforcement)
+# -----------------------------------------------------------------------------
+# Many enterprises run a cluster-wide Kyverno / Gatekeeper / OPA policy that
+# rejects any Pod missing a specific label. This block stamps two:
+#
+#   commonLabels   → on EVERY chart-rendered resource (Deployments,
+#                    Services, ConfigMaps, ServiceAccounts, RBAC,
+#                    Ingresses, Secrets). Use for FinOps, data-class,
+#                    cost-center.
+#   podLabels      → on EVERY pod template (NOT into the immutable
+#                    spec.selector.matchLabels). Use for admission-policy
+#                    enforcement, service-mesh inject, network-policy
+#                    pod selectors.
+#
+# Per-service overrides (runner.podLabels / workspaceBuilder.podLabels)
+# win over the chart-wide podLabels block on key conflict.
+###############################################################################
+commonLabels:
+  cost-center: platform-eng
+  data-classification: internal
+
+podLabels:
+  policy.runwhen.io/profile: restricted   # Kyverno cluster policy: reject pods missing this
+  app.kubernetes.io/part-of: runwhen-local
+
+# -----------------------------------------------------------------------------
+# 2b. Propagate labels to runner-spawned workloads
+# -----------------------------------------------------------------------------
+# `commonLabels` and `podLabels` above only stamp the *chart-rendered* pods
+# (runner, workspace-builder, OTel collector). The runwhen-runner Go binary
+# spawns CronCodeRun Deployments (and worker pods) at runtime — these are
+# created OUTSIDE the chart and therefore do NOT inherit those values.
+#
+# Chart 0.5.11+ propagates them through the runner config so admission
+# policies that select on `policy.runwhen.io/profile` (or FinOps tagging on
+# `cost-center`) also catch the runtime-spawned workers. The block below is
+# the explicit form of the auto-merge — you can leave it commented since
+# the chart already does this for you when commonLabels/podLabels are set.
+#
+# REQUIRES runwhen-runner ≥ v0.10.56. Older runners silently ignore the
+# new `podLabels` field; the Deployment-level `labels` block has been
+# honoured since the runner first shipped.
+#
+# runner:
+#   runEnvironment:
+#     deployment:
+#       # Stamped on Deployment.metadata.labels (FinOps, cost allocation).
+#       # Auto-merges chart-wide `commonLabels` underneath; uncomment ONLY
+#       # to add runEnvironment-specific overrides.
+#       # labels:
+#       #   runtime: cron-code-run
+#       # Stamped on Deployment.spec.template.metadata.labels (i.e. the
+#       # actual worker Pod template — what Kyverno/PSA/OPA match on).
+#       # Auto-merges chart-wide `commonLabels` + `podLabels` underneath.
+#       # podLabels:
+#       #   policy.runwhen.io/profile: restricted
+#     pod:
+#       # Forward-compat: the runner currently spawns Deployments only.
+#       # Wired so the day Pod-direct/Job spawn ships, your admission
+#       # labels are already in the runner config.
+#       labels: {}
+#       podLabels: {}
+
+###############################################################################
+# 3. Corporate root-CA trust (NOT a proxy)
+# -----------------------------------------------------------------------------
+# Decoupled from `proxy.enabled` (chart 0.5.5+). Setting `proxyCA` alone
+# projects all five standard SSL/CA env vars into the runner +
+# workspace-builder containers and mounts the bundle at
+# /etc/ssl/certs/proxy-ca.crt:
+#
+#   SSL_CERT_FILE      = /etc/ssl/certs/proxy-ca.crt
+#   REQUESTS_CA_BUNDLE = /etc/ssl/certs/proxy-ca.crt
+#   CURL_CA_BUNDLE     = /etc/ssl/certs/proxy-ca.crt
+#   NODE_EXTRA_CA_CERTS= /etc/ssl/certs/proxy-ca.crt
+#   GIT_SSL_CAINFO     = /etc/ssl/certs/proxy-ca.crt
+#
+# This is the right knob whenever the cluster terminates internal TLS with
+# a private root (Vault, internal git, internal codecollection registry,
+# private LLM gateway, etc.) — even on clusters with NO outbound proxy.
+###############################################################################
+proxy:
+  enabled: false             # NOT a proxy install
+
+proxyCA:
+  # Pre-create the secret in the release namespace:
+  #   kubectl -n runwhen-local create secret generic corporate-root-ca \
+  #     --from-file=ca.crt=/path/to/your/corporate-root-ca.pem
+  secretName: corporate-root-ca
+  key: ca.crt
+
+# -----------------------------------------------------------------------------
+# Subchart parity: the opentelemetry-collector subchart does NOT inherit
+# the parent chart's commonLabels / podLabels / proxyCA. If you need the
+# admission policy and CA trust on the collector pod too, drive its own
+# knobs explicitly.
+# -----------------------------------------------------------------------------
+opentelemetry-collector:
+  # Pod label parity (admission-policy enforcement on the collector pod)
+  podLabels:
+    policy.runwhen.io/profile: restricted
+    app.kubernetes.io/part-of: runwhen-local
+  # Resource label parity (FinOps / data classification)
+  additionalLabels:
+    cost-center: platform-eng
+    data-classification: internal
+
+  # If you uncommented the BYO OTel SA block under `runner.otelCollector`
+  # above, also override the SA NAME the subchart Deployment references
+  # so it matches the SA you pre-created out-of-band. The subchart-side
+  # `serviceAccount.create` MUST stay `false` regardless — the parent
+  # chart owns RBAC creation by default, and on the BYO path nobody
+  # should create it twice.
+  # serviceAccount:
+  #   create: false
+  #   name: byo-otel-collector-sa
+
+  # CA-trust parity for the collector (mounts the same secret at the
+  # path the relay config's prometheusremotewrite exporter expects).
+  # The runner-otel-collector-configmap.yaml relay automatically
+  # switches its `ca_file` to /etc/ssl/certs/proxy-ca.crt when
+  # .Values.proxyCA is set chart-wide.
+  extraVolumes:
+    - name: tls-secret-volume
+      secret:
+        secretName: runner-metrics-tls
+    - name: proxy-ca-volume
+      secret:
+        secretName: corporate-root-ca       # MUST match .proxyCA.secretName
+        items:
+          - key: ca.crt                      # MUST match .proxyCA.key
+            path: proxy-ca.crt               # DO NOT CHANGE — relay expects this filename
+  extraVolumeMounts:
+    - name: tls-secret-volume
+      mountPath: /tls
+      readOnly: true
+    - name: proxy-ca-volume
+      mountPath: /etc/ssl/certs/proxy-ca.crt
+      readOnly: true
+      subPath: proxy-ca.crt

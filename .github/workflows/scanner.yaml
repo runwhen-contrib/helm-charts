@@ -101,29 +101,67 @@ jobs:
           cat registries.txt
           echo "Total registries found: $(wc -l < registries.txt)"
 
-      - name: Download codecollections.yaml and parse images
+      - name: Add codecollection images from RunWhen registry
         run: |
-          registry_prefix="us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images"
-          branch="main"
-          # 1) Download codecollections.yaml
-          curl -L https://raw.githubusercontent.com/runwhen-contrib/codecollection-registry/main/codecollections.yaml -o codecollections.yaml
+          # Authoritative source: the RunWhen catalog API. It already
+          # tracks per-codecollection `image_registry` (ghcr.io paths)
+          # and `stable_image_tag` (the tag the platform actually ships
+          # to runners). Filter to public codecollections so the README
+          # summary doesn't expose private/hidden orgs.
+          #
+          # Fail loudly on API/JSON errors rather than silently scanning
+          # zero codecollections — a partially-empty scan would report
+          # "no CRITICAL/HIGH vulns" and lull reviewers into a false
+          # sense of safety.
+          set -euo pipefail
+          api_url="https://registry.runwhen.com/api/v1/catalog/codecollections"
 
-          # 2) Extract 'org' and 'codecollection' from each 'git_url'
-          grep -E 'git_url:' codecollections.yaml \
-            | sed -E 's|.*github.com/([^/]+)/([^/[:space:]]+)(\.git)?|\1 \2|' \
-            > codecollections_raw.txt
+          echo "Fetching codecollection catalog from ${api_url}..."
+          if ! curl -fsSL "${api_url}" -o catalog.json; then
+            echo "::error::Failed to fetch codecollection catalog from ${api_url}"
+            exit 1
+          fi
 
-          echo "Extracted org and codecollection from codecollections.yaml:"
-          cat codecollections_raw.txt
+          # Validate JSON and that we got at least one entry.
+          count=$(jq 'length' catalog.json)
+          if [[ -z "${count}" || "${count}" -lt 1 ]]; then
+            echo "::error::Codecollection catalog is empty or invalid: $(cat catalog.json)"
+            exit 1
+          fi
+          echo "Catalog returned ${count} codecollection(s)."
 
-          # 3) Construct the image pattern: us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/${org}-${codecollection}-${branch}:latest
-          while read -r org codecollection; do
-            # Trim possible trailing .git if it wasn't removed by sed
-            codecollection="${codecollection%.git}"
-            echo "${registry_prefix}/${org}-${codecollection}-${branch}:latest"
-          done < codecollections_raw.txt >> registries.txt
+          # Project to `<image_registry>:<stable_image_tag>`, public only.
+          # `stable_image_tag` is what the platform pins to in production
+          # — scanning that tag matches what users actually run.
+          jq -r '
+            map(select(.visibility == "public"
+                       and (.image_registry // "") != ""
+                       and (.stable_image_tag // "") != ""))
+            | .[]
+            | "\(.image_registry):\(.stable_image_tag)"
+          ' catalog.json > codecollection_images.txt
 
-          # 4) Sort & ensure uniqueness
+          # Validate the FILTERED count, not just the raw catalog count.
+          # The raw catalog check above guards against empty/invalid API
+          # responses, but it doesn't catch the case where every entry is
+          # filtered out — e.g. upstream renames `image_registry` to
+          # `imageRegistry`, flips all entries to `visibility: private`,
+          # or drops `stable_image_tag`. Without this check, the scanner
+          # would happily append zero codecollection images to registries.txt
+          # and report "no CRITICAL/HIGH vulns" with reviewers none the wiser.
+          filtered_count=$(wc -l < codecollection_images.txt)
+          if [[ "${filtered_count}" -lt 1 ]]; then
+            echo "::error::Codecollection catalog returned ${count} entries but ZERO matched the public + image_registry + stable_image_tag filter. Check the API schema (likely a field rename or visibility flip): ${api_url}"
+            echo "::error::Sample of catalog (first entry):"
+            jq '.[0]' catalog.json
+            exit 1
+          fi
+          echo "Catalog filter retained ${filtered_count}/${count} codecollection(s)."
+
+          cat codecollection_images.txt >> registries.txt
+
+          # Sort & ensure uniqueness across helm-rendered + workflow-input
+          # + codecollection sources.
           sort -u registries.txt -o registries.txt
 
           echo "Updated list of registries after adding codecollections:"

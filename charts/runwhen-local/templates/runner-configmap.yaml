@@ -8,6 +8,7 @@ kind: ConfigMap
 metadata:
   name: {{ .Values.runner.configMap.name }}
   labels:
+    {{- include "runwhen-local.runnerLabels" . | nindent 4 }}
     app: runner
 data:
   config.yaml: |
@@ -52,7 +53,21 @@ data:
           httpsProxy: "{{ or .Values.runner.runEnvironment.proxy.httpsProxy .Values.proxy.httpsProxy }}"
           noProxy: "{{ or .Values.runner.runEnvironment.proxy.noProxy .Values.proxy.noProxy }}"
           proxyCA: "{{ or .Values.runner.runEnvironment.proxy.proxyCA .Values.proxy.proxyCA }}"
-        {{- if or .Values.proxy.enabled .Values.runner.runEnvironment.proxy.enabled }}
+        {{- /*
+          The `kubernetes.proxyCA` block below tells the runwhen-runner to
+          mount a CA bundle into every spawned CronCodeRun/TaskSet pod.
+
+          Previous gating required `proxy.enabled` (or runEnvironment.proxy.enabled)
+          to be true, but enterprise operators routinely need to inject a
+          custom CA chain into worker pods on non-proxy clusters:
+            * private container/artifact registries with internal CAs
+            * cluster-internal MITM TLS termination (service mesh, ingress)
+            * BYO trust bundles served via configMap/secret
+          In all those cases `proxy.enabled` is `false`, yet a CA mount is
+          still required, so we now gate ONLY on the CA reference being set.
+          `with` short-circuits when both proxyCA values are nil/empty, so
+          this remains opt-in: render the block only if a CA is configured.
+        */}}
         {{- with or .Values.proxyCA .Values.runner.runEnvironment.proxy.proxyCA }}
         proxyCA:
           {{- if .secretName }}
@@ -64,11 +79,13 @@ data:
           {{- end }}
             key: {{ .key | default "ca.crt" }}
         {{- end }}
-        {{- end }}
         deployment:
-          {{- with .Values.runner.runEnvironment.deployment.serviceAccount }}
-          serviceAccount: {{ . }}
-          {{- end }}
+          {{- /*
+            Default to the chart-rendered runner SA so spawned CronCodeRun
+            workloads bind to the same SA the chart created. Operators may
+            still override via runEnvironment.deployment.serviceAccount.
+          */}}
+          serviceAccount: {{ .Values.runner.runEnvironment.deployment.serviceAccount | default (include "runwhen-local.serviceAccountName.runner" .) }}
           {{- with .Values.runner.runEnvironment.deployment.annotations }}
           annotations:
             {{- toYaml . | nindent 12 }}
@@ -104,6 +121,40 @@ data:
             {{- toYaml .Values.runner.runEnvironment.deployment.resources.EKS_Fargate | nindent 12 }}
           {{- else }}
             {{- toYaml .Values.runner.runEnvironment.deployment.resources.default | nindent 12 }}
+          {{- end }}
+
+          {{- /*
+            ─────────────────────────────────────────────────────────────────
+            Labels propagated to the runwhen-runner Go binary so that every
+            spawned CronCodeRun Deployment + worker Pod inherits the chart-wide
+            commonLabels / podLabels (admission-policy match labels).
+
+            `deployment.labels` → Deployment.metadata.labels  (cost-center, etc.)
+            `deployment.podLabels` → Deployment.spec.template.metadata.labels
+                                      (i.e. the worker pod template — what
+                                       Kyverno/PSA/cost-center policies match)
+
+            Sprig `merge` is FIRST-WINS on conflict, so per-runEnvironment
+            override beats chart-wide commonLabels/podLabels — same precedence
+            we use for chart-rendered pods (see `runwhen-local.podLabels`).
+
+            REQUIRES runwhen-runner ≥ v0.10.56 to honour the new `podLabels`
+            field. Older versions silently ignore it; the Deployment-level
+            `labels` block has been honoured since the runner first shipped.
+          */}}
+          {{- $deployLabels := merge (deepCopy (.Values.runner.runEnvironment.deployment.labels | default dict)) (deepCopy (.Values.commonLabels | default dict)) }}
+          {{- if $deployLabels }}
+          labels:
+            {{- range $k, $v := $deployLabels }}
+            {{ $k }}: {{ $v | quote }}
+            {{- end }}
+          {{- end }}
+          {{- $deployPodLabels := merge (deepCopy (.Values.runner.runEnvironment.deployment.podLabels | default dict)) (deepCopy (.Values.podLabels | default dict)) (deepCopy (.Values.commonLabels | default dict)) }}
+          {{- if $deployPodLabels }}
+          podLabels:
+            {{- range $k, $v := $deployPodLabels }}
+            {{ $k }}: {{ $v | quote }}
+            {{- end }}
           {{- end }}
 
           # ------------------------
@@ -169,9 +220,12 @@ data:
 
         pod:
           runAsJob: {{ .Values.runner.runEnvironment.pod.runAsJob }}
-          {{- with .Values.runner.runEnvironment.pod.serviceAccount }}
-          serviceAccount: {{ . }}
-          {{- end }}
+          {{- /*
+            Default the spawned TaskSet pod SA to the chart-rendered runner
+            SA so the two stay in sync. Operators may override via
+            runEnvironment.pod.serviceAccount.
+          */}}
+          serviceAccount: {{ .Values.runner.runEnvironment.pod.serviceAccount | default (include "runwhen-local.serviceAccountName.runner" .) }}
           {{- with .Values.runner.runEnvironment.pod.annotations }}
           annotations:
             {{- toYaml . | nindent 12 }}
@@ -201,6 +255,28 @@ data:
             {{- toYaml .Values.runner.runEnvironment.pod.resources.EKS_Fargate | nindent 12 }}
           {{- else }}
             {{- toYaml .Values.runner.runEnvironment.pod.resources.default | nindent 12 }}
+          {{- end }}
+
+          {{- /*
+            Labels for the TaskSet (CodeRun) pod-direct spawn path. Today the
+            runwhen-runner only spawns Deployments — the `pod:` block below is
+            consumed as forward-compat configuration so admission-policy
+            labels are already wired the day the Pod-direct/Job spawn path
+            ships. Same precedence as the deployment block.
+          */}}
+          {{- $podLabels := merge (deepCopy (.Values.runner.runEnvironment.pod.labels | default dict)) (deepCopy (.Values.commonLabels | default dict)) }}
+          {{- if $podLabels }}
+          labels:
+            {{- range $k, $v := $podLabels }}
+            {{ $k }}: {{ $v | quote }}
+            {{- end }}
+          {{- end }}
+          {{- $podPodLabels := merge (deepCopy (.Values.runner.runEnvironment.pod.podLabels | default dict)) (deepCopy (.Values.podLabels | default dict)) (deepCopy (.Values.commonLabels | default dict)) }}
+          {{- if $podPodLabels }}
+          podLabels:
+            {{- range $k, $v := $podPodLabels }}
+            {{ $k }}: {{ $v | quote }}
+            {{- end }}
           {{- end }}
 
           # ------------------------
