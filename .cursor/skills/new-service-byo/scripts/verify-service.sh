@@ -111,18 +111,6 @@ fi
 
 # -----------------------------------------------------------------------------
 
-render_to_tmp() {
-  local label="$1"; shift
-  local out
-  out=$(mktemp)
-  if ! helm template rw "$CHART_DIR" "$@" --show-only "$SHOW_ONLY" >"$out" 2>/dev/null; then
-    echo "  ⚠️  Template did not render under matrix '$label' (likely gated; check .enabled flag and re-run with --set <foo>.enabled=true)" >&2
-    rm -f "$out"
-    return 1
-  fi
-  echo "$out"
-}
-
 # Track failures
 FAIL=0
 mark() {
@@ -133,6 +121,42 @@ mark() {
     printf "  \033[31m✗\033[0m %s\n" "$label"
     FAIL=$((FAIL+1))
   fi
+}
+
+# render_to_tmp <matrix-label> <helm-args...>
+#
+# Renders the target template under the given matrix. On success, sets the
+# global RENDERED_PATH to the tmp-file path and returns 0. On failure, surfaces
+# helm's stderr, increments FAIL, sets RENDERED_PATH="", and returns 1 so the
+# script ALWAYS exits non-zero — the previous version swallowed `helm template`
+# errors via `2>/dev/null` and `|| HARD_OUT=""`, which let a failed render
+# render a green "OK" exit.
+#
+# WHY A GLOBAL VAR INSTEAD OF STDOUT: callers used to do
+# `OUT=$(render_to_tmp …)`, which spawns a SUBSHELL for command substitution.
+# Any FAIL increment inside the subshell is lost when it exits, so even a
+# non-zero return from the helper produced exit-code 0 for the script overall.
+# Writing to a global variable keeps the helper running in the parent shell
+# where FAIL increments persist. All call sites that intentionally skip a
+# matrix gate BEFORE this helper, so by the time we get here a render error
+# is always a real bug.
+RENDERED_PATH=""
+render_to_tmp() {
+  local label="$1"; shift
+  local out err
+  out=$(mktemp)
+  err=$(mktemp)
+  RENDERED_PATH=""
+  if helm template rw "$CHART_DIR" "$@" --show-only "$SHOW_ONLY" >"$out" 2>"$err"; then
+    rm -f "$err"
+    RENDERED_PATH="$out"
+    return 0
+  fi
+  printf "  \033[31m✗\033[0m Matrix '%s': helm template failed to render — full error below:\n" "$label" >&2
+  sed 's/^/      /' "$err" >&2
+  rm -f "$out" "$err"
+  FAIL=$((FAIL+1))
+  return 1
 }
 
 # Look for a literal pattern in a file.
@@ -160,7 +184,8 @@ echo "Matrix 1: defaults"
 echo "============================================================"
 if [[ -n "$SUBCHART" ]]; then
   echo "  (subchart mode — Matrix 1 limited to subchart sanity checks)"
-  DEFAULT_OUT=$(render_to_tmp defaults "${HELM_DEFAULTS[@]}") || DEFAULT_OUT=""
+  render_to_tmp defaults "${HELM_DEFAULTS[@]}" || true
+  DEFAULT_OUT="$RENDERED_PATH"
   if [[ -n "$DEFAULT_OUT" ]]; then
     WORKLOAD_KIND=$(awk '/^kind: / {print $2; exit}' "$DEFAULT_OUT" 2>/dev/null || echo "")
     echo "  Detected kind: ${WORKLOAD_KIND:-<unknown>}"
@@ -188,10 +213,11 @@ else
 fi
 
 if [[ "$goto_matrix5" -eq 0 ]]; then
-DEFAULT_OUT=$(render_to_tmp defaults "${HELM_DEFAULTS[@]}") || {
-  echo "  (skipping default-render assertions)"
-  DEFAULT_OUT=""
-}
+render_to_tmp defaults "${HELM_DEFAULTS[@]}" || true
+DEFAULT_OUT="$RENDERED_PATH"
+if [[ -z "$DEFAULT_OUT" ]]; then
+  echo "  (skipping default-render assertions — render_to_tmp marked Matrix 1 failed)"
+fi
 
 WORKLOAD_KIND=""
 if [[ -n "$DEFAULT_OUT" ]]; then
@@ -266,7 +292,8 @@ if ! is_pod_bearing "$WORKLOAD_KIND"; then
   mark ok "Matrix 2 skipped — kind=${WORKLOAD_KIND:-unknown}"
   HARD_OUT=""
 else
-  HARD_OUT=$(render_to_tmp hardened "${HELM_HARDENED[@]}") || HARD_OUT=""
+  render_to_tmp hardened "${HELM_HARDENED[@]}" || true
+  HARD_OUT="$RENDERED_PATH"
 fi
 
 if [[ -n "$HARD_OUT" ]]; then
@@ -310,7 +337,8 @@ if ! is_pod_bearing "$WORKLOAD_KIND"; then
   mark ok "Matrix 3 skipped — kind=${WORKLOAD_KIND:-unknown}"
   PROXY_OUT=""
 else
-  PROXY_OUT=$(render_to_tmp proxy "${HELM_PROXY[@]}") || PROXY_OUT=""
+  render_to_tmp proxy "${HELM_PROXY[@]}" || true
+  PROXY_OUT="$RENDERED_PATH"
 fi
 
 if [[ -n "$PROXY_OUT" ]]; then
@@ -333,7 +361,8 @@ echo ""
 echo "============================================================"
 echo "Matrix 4: registryOverride=artifactory.example.com"
 echo "============================================================"
-REG_OUT=$(render_to_tmp registry "${HELM_REGISTRY[@]}") || REG_OUT=""
+render_to_tmp registry "${HELM_REGISTRY[@]}" || true
+REG_OUT="$RENDERED_PATH"
 
 if [[ -n "$REG_OUT" ]]; then
   if grep -E -e "image: \"?artifactory\.example\.com/" -- "$REG_OUT" >/dev/null 2>&1; then
@@ -358,7 +387,8 @@ if [[ -n "$SUBCHART" ]]; then
   echo "============================================================"
   echo "Matrix 5: subchart overlay propagation (${SUBCHART}.*)"
   echo "============================================================"
-  SUB_OUT=$(render_to_tmp subchart-overlay "${HELM_SUBCHART_OVERLAY[@]}") || SUB_OUT=""
+  render_to_tmp subchart-overlay "${HELM_SUBCHART_OVERLAY[@]}" || true
+  SUB_OUT="$RENDERED_PATH"
 
   if [[ -n "$SUB_OUT" ]]; then
     needs "$SUB_OUT" "cost-center: platform-eng" "${SUBCHART}.additionalLabels reach metadata.labels"

@@ -65,11 +65,20 @@ workspaceBuilder:
       # Read-only RBAC — no resource mutation. Tighten or expand as
       # required by your codecollections; keep verbs to {get, watch,
       # list} unless you have a documented reason otherwise.
+      #
+      # NOTE: the cluster-scoped `namespaces` resource is intentionally
+      # omitted. A namespace-scoped Role granting verbs on a cluster-scoped
+      # resource is silently ignored at evaluation time (RBAC's "no
+      # cross-scope grants" rule), so listing it here grants nothing real
+      # and just misleads operators into thinking workspace-builder can
+      # enumerate the cluster's namespaces. If you need that capability,
+      # bind a separate `view`-style ClusterRole — but doing so reintroduces
+      # the cluster-wide blast radius this overlay is designed to avoid.
       rules:
         - apiGroups: [""]
           resources:
             ["pods", "services", "configmaps", "secrets", "events",
-             "endpoints", "persistentvolumeclaims", "namespaces"]
+             "endpoints", "persistentvolumeclaims"]
           verbs: ["get", "watch", "list"]
         - apiGroups: ["apps"]
           resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]

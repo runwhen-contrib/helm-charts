@@ -53,7 +53,21 @@ data:
           httpsProxy: "{{ or .Values.runner.runEnvironment.proxy.httpsProxy .Values.proxy.httpsProxy }}"
           noProxy: "{{ or .Values.runner.runEnvironment.proxy.noProxy .Values.proxy.noProxy }}"
           proxyCA: "{{ or .Values.runner.runEnvironment.proxy.proxyCA .Values.proxy.proxyCA }}"
-        {{- if or .Values.proxy.enabled .Values.runner.runEnvironment.proxy.enabled }}
+        {{- /*
+          The `kubernetes.proxyCA` block below tells the runwhen-runner to
+          mount a CA bundle into every spawned CronCodeRun/TaskSet pod.
+
+          Previous gating required `proxy.enabled` (or runEnvironment.proxy.enabled)
+          to be true, but enterprise operators routinely need to inject a
+          custom CA chain into worker pods on non-proxy clusters:
+            * private container/artifact registries with internal CAs
+            * cluster-internal MITM TLS termination (service mesh, ingress)
+            * BYO trust bundles served via configMap/secret
+          In all those cases `proxy.enabled` is `false`, yet a CA mount is
+          still required, so we now gate ONLY on the CA reference being set.
+          `with` short-circuits when both proxyCA values are nil/empty, so
+          this remains opt-in: render the block only if a CA is configured.
+        */}}
         {{- with or .Values.proxyCA .Values.runner.runEnvironment.proxy.proxyCA }}
         proxyCA:
           {{- if .secretName }}
@@ -64,7 +78,6 @@ data:
             name: {{.configMapName }}
           {{- end }}
             key: {{ .key | default "ca.crt" }}
-        {{- end }}
         {{- end }}
         deployment:
           {{- /*

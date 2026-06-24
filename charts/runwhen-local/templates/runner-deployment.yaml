@@ -51,7 +51,16 @@ spec:
 
       serviceAccount: {{ include "runwhen-local.serviceAccountName.runner" . }}
       serviceAccountName: {{ include "runwhen-local.serviceAccountName.runner" . }}
-      automountServiceAccountToken: {{ .Values.runner.automountServiceAccountToken | default true }}
+      {{- /*
+        Same `default true` footgun as runner-service-account.yaml's create gate
+        (commit c0034e2): in Go templates `false | default true` evaluates to
+        `true` because `default` treats `false` as "empty". The ternary form
+        below preserves the implicit `automountServiceAccountToken: true`
+        default for values files that omit the key entirely, while honouring
+        an explicit `false` — needed for OpenShift restricted-v2 / federal
+        clusters that bind tokens via projected volumes only.
+      */}}
+      automountServiceAccountToken: {{ ternary .Values.runner.automountServiceAccountToken true (hasKey .Values.runner "automountServiceAccountToken") }}
 
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:

@@ -52,7 +52,16 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ $wb.serviceAccount.name }}
-      automountServiceAccountToken: {{ $wb.automountServiceAccountToken | default true }}
+      {{- /*
+        Same `default true` footgun as runner-service-account.yaml's create gate
+        (commit c0034e2): `false | default true` always renders `true`. The
+        ternary form below preserves the implicit `true` default while honouring
+        an explicit `false` (OpenShift restricted-v2 / federal clusters).
+        `$wb` comes from runwhen-local.resolveWorkspaceBuilder which deep-merges
+        defaults, so the key is present whenever values.yaml defines it — but
+        we still gate on hasKey to mirror the runner-deployment idiom.
+      */}}
+      automountServiceAccountToken: {{ ternary $wb.automountServiceAccountToken true (hasKey $wb "automountServiceAccountToken") }}
       containers:
         - name: workspace-builder
           {{- include "runwhen-local.containerSecurityContext" . | nindent 10 }}

@@ -139,7 +139,26 @@ jobs:
                        and (.stable_image_tag // "") != ""))
             | .[]
             | "\(.image_registry):\(.stable_image_tag)"
-          ' catalog.json >> registries.txt
+          ' catalog.json > codecollection_images.txt
+
+          # Validate the FILTERED count, not just the raw catalog count.
+          # The raw catalog check above guards against empty/invalid API
+          # responses, but it doesn't catch the case where every entry is
+          # filtered out — e.g. upstream renames `image_registry` to
+          # `imageRegistry`, flips all entries to `visibility: private`,
+          # or drops `stable_image_tag`. Without this check, the scanner
+          # would happily append zero codecollection images to registries.txt
+          # and report "no CRITICAL/HIGH vulns" with reviewers none the wiser.
+          filtered_count=$(wc -l < codecollection_images.txt)
+          if [[ "${filtered_count}" -lt 1 ]]; then
+            echo "::error::Codecollection catalog returned ${count} entries but ZERO matched the public + image_registry + stable_image_tag filter. Check the API schema (likely a field rename or visibility flip): ${api_url}"
+            echo "::error::Sample of catalog (first entry):"
+            jq '.[0]' catalog.json
+            exit 1
+          fi
+          echo "Catalog filter retained ${filtered_count}/${count} codecollection(s)."
+
+          cat codecollection_images.txt >> registries.txt
 
           # Sort & ensure uniqueness across helm-rendered + workflow-input
           # + codecollection sources.
