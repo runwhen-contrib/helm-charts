@@ -10,6 +10,8 @@ kind: Role
 metadata:
   namespace: {{ $ns }}
   name: {{ include "runwhen-local.serviceAccountName" $ }}-namespace-view
+  labels:
+    {{- include "runwhen-local.workspaceBuilderLabels" $ | nindent 4 }}
 rules:
 {{ toYaml $wb.serviceAccountRoles.namespaceRole.rules | indent 2 }}
 ---
@@ -18,6 +20,8 @@ kind: RoleBinding
 metadata:
   name: {{ include "runwhen-local.serviceAccountName" $ }}-view-rb
   namespace: {{ $ns }}
+  labels:
+    {{- include "runwhen-local.workspaceBuilderLabels" $ | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role

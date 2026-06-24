@@ -1,34 +1,54 @@
-#!/bin/bash
+#!/usr/bin/env bash
+###############################################################################
+# codecollection-images.sh
+#
+# Append the canonical set of RunWhen CodeCollection container images to
+# `registries.txt`. The authoritative source is the RunWhen platform
+# catalog API:
+#
+#   https://registry.runwhen.com/api/v1/catalog/codecollections
+#
+# Each catalog entry exposes `image_registry` (the ghcr.io path the
+# codecollection actually publishes to) and `stable_image_tag` (the tag
+# pinned in production). Earlier revisions of this script fabricated a
+# `us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/...`
+# mirror path which (a) doesn't host every codecollection and (b)
+# silently skipped images Trivy couldn't pull, masking real CVEs.
+#
+# Output: `<image_registry>:<stable_image_tag>` per line, public-only,
+# de-duped, sorted, appended to `registries.txt` in the working dir.
+#
+# Dependencies: curl, jq.
+###############################################################################
+set -euo pipefail
 
-registry_prefix="us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images"
-branch="main"
+api_url="https://registry.runwhen.com/api/v1/catalog/codecollections"
+catalog_file="$(mktemp -t catalog.XXXXXX.json)"
+trap 'rm -f "${catalog_file}"' EXIT
 
-curl -L https://raw.githubusercontent.com/runwhen-contrib/codecollection-registry/main/codecollections.yaml -o codecollections.yaml
-rm registries.txt || true
-# 2) Determine the branch name to use (default to 'main' if empty)
-branch="${{ steps.determine-branch.outputs.BRANCH_NAME }}"
-if [ -z "$branch" ]; then
-branch="main"
+echo "Fetching codecollection catalog from ${api_url}..."
+if ! curl -fsSL "${api_url}" -o "${catalog_file}"; then
+  echo "ERROR: Failed to fetch codecollection catalog from ${api_url}" >&2
+  exit 1
 fi
 
-# 3) Extract 'org' and 'codecollection' from each 'git_url'
-# Example line:  git_url: https://github.com/runwhen-solution-samples/tanzu-advanced
-# This yields org=runwhen-solution-samples, codecollection=tanzu-advanced
-grep -E 'git_url:' codecollections.yaml \
-| sed -E 's|.*github.com/([^/]+)/([^/[:space:]]+)(\.git)?|\1 \2|' \
-> codecollections_raw.txt
+count=$(jq 'length' "${catalog_file}")
+if [[ -z "${count}" || "${count}" -lt 1 ]]; then
+  echo "ERROR: Codecollection catalog is empty or invalid:" >&2
+  cat "${catalog_file}" >&2
+  exit 1
+fi
+echo "Catalog returned ${count} codecollection(s)."
 
-echo "Extracted org and codecollection from codecollections.yaml:"
-cat codecollections_raw.txt
+# Public visibility filter keeps hidden/personal orgs out of CI summaries.
+jq -r '
+  map(select(.visibility == "public"
+             and (.image_registry // "") != ""
+             and (.stable_image_tag // "") != ""))
+  | .[]
+  | "\(.image_registry):\(.stable_image_tag)"
+' "${catalog_file}" >> registries.txt
 
-# 4) Construct the image pattern: us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/${org}-${codecollection}-${branch}:latest
-while read -r org codecollection; do
-# Trim possible trailing .git if it wasn't removed by sed
-codecollection="${codecollection%.git}"
-echo "us-west1-docker.pkg.dev/runwhen-nonprod-beta/public-images/${org}-${codecollection}-${branch}:latest"
-done < codecollections_raw.txt >> registries.txt
-
-# 5) Sort & ensure uniqueness
 sort -u registries.txt -o registries.txt
 
 echo "Updated list of registries after adding codecollections:"

@@ -127,7 +127,7 @@ If the workspace builder UI is unreachable or the runner relay is not responding
 # Workspace builder service endpoints
 kubectl get endpoints <release-name>-workspace-builder -n <namespace>
 
-# Runner relay service endpoints
+# Runner relay service endpoints (default name; override via runner.serviceAccount.name)
 kubectl get endpoints runner-relay -n <namespace>
 ```
 
@@ -136,7 +136,145 @@ kubectl get endpoints runner-relay -n <namespace>
 The runner reads its configuration from a ConfigMap. To verify the rendered config:
 
 ```console
+# Default ConfigMap name (override via runner.configMap.name)
 kubectl get configmap runner-config -n <namespace> -o yaml
+```
+
+### Multi-release deployments in one namespace
+
+The chart's default resource names (`runner`, `runner-relay`,
+`runner-config`, `otel-collector`, `workspace-builder`) are kept for
+back-compat with runner-control's wire contract. If you need to deploy
+two releases of this chart into the same namespace, override the
+collision-class names in the second release's values file:
+
+```yaml
+runner:
+  configMap:
+    name: <release>-runner-config
+  serviceAccount:
+    create: true
+    name: <release>-runner
+  runEnvironment:
+    deployment:
+      serviceAccount: <release>-runner
+    pod:
+      serviceAccount: <release>-runner
+
+workspaceBuilder:
+  serviceAccount:
+    name: <release>-workspace-builder
+  workspaceInfo:
+    configMap:
+      name: <release>-workspace-builder
+
+opentelemetry-collector:
+  fullnameOverride: <release>-otel-collector
+  serviceAccount:
+    name: <release>-otel-collector
+  configMap:
+    existingName: <release>-otel-collector
+```
+
+### Customer overlays (commonLabels, podLabels, podAnnotations)
+
+All chart-rendered resources (Deployments, Services, ConfigMaps, RBAC,
+Ingresses) honour three top-level extension points so admission
+policies, FinOps tagging, and service-mesh sidecar injection work
+without a kustomize post-render layer:
+
+```yaml
+# Stamped on every chart-rendered resource's metadata.labels
+commonLabels:
+  cost-center: platform-eng
+  compliance: pci
+
+# Stamped on every chart-rendered pod template's spec.template.metadata.labels
+podLabels:
+  policy/enforce: baseline
+
+# Stamped on every chart-rendered pod template's spec.template.metadata.annotations
+podAnnotations:
+  linkerd.io/inject: enabled
+```
+
+The `opentelemetry-collector` subchart does NOT inherit these — drive
+its own knobs (`opentelemetry-collector.additionalLabels`,
+`.podLabels`, `.podAnnotations`, `.podSecurityContext`) explicitly. See
+[`values.yaml`](./values.yaml) for the complete overlay pattern.
+
+### Restricted-cluster overlay (no ClusterRole + mandatory pod label + private CA)
+
+A worked example combining the most common regulated-environment
+constraints lives in
+[`examples/values-restricted-byo.yaml`](./examples/values-restricted-byo.yaml):
+
+1. Disables every cluster-scoped RBAC resource (`clusterRoleView` and
+   `advancedClusterRole`) and grants a namespace-scoped `Role` instead.
+2. Stamps a mandatory pod-template label
+   (`policy.runwhen.io/profile: restricted`) for cluster-wide Kyverno /
+   Gatekeeper policies, plus FinOps `commonLabels` on every resource.
+   Chart 0.5.11+ propagates `commonLabels` and `podLabels` automatically
+   into the runner ConfigMap so the runtime-spawned CronCodeRun
+   Deployments and worker pods (which the chart never renders directly)
+   ALSO satisfy admission policies. This requires runwhen-runner ≥
+   v0.10.56 to honour the new `podLabels` field; older runners only
+   stamp the Deployment-level metadata. Per-runEnvironment overrides
+   live under `runner.runEnvironment.deployment.{labels,podLabels}` and
+   `runner.runEnvironment.pod.{labels,podLabels}` (forward-compat).
+3. Wires a corporate root-CA bundle on a non-proxy install — including
+   the OTel collector subchart parity volume + env wiring.
+4. Documents the optional **BYO ServiceAccount** path — pre-create the
+   SAs + Roles + RoleBindings out-of-band (Crossplane / Terraform /
+   GitOps overlay), then disable the chart-rendered ones. Three knobs
+   matter for the runner because spawned CronCodeRun deployments and
+   TaskSet pods reference the SA name through the runner ConfigMap, NOT
+   just the runner pod itself:
+
+   ```yaml
+   runner:
+     serviceAccount:
+       create: false
+       name: byo-runner-sa
+     runEnvironment:
+       deployment:
+         serviceAccount: byo-runner-sa   # spawned CronCodeRun deployments
+       pod:
+         serviceAccount: byo-runner-sa   # spawned TaskSet pods
+     otelCollector:
+       serviceAccount:
+         create: false                   # NEW knob (chart 0.5.9+) — disables parent OTel SA + Role + RoleBinding
+   workspaceBuilder:
+     serviceAccount:
+       create: false
+       name: byo-workspace-builder
+   ```
+
+   When `runEnvironment.*.serviceAccount` is left empty, the chart helper
+   falls back to `runner.serviceAccount.name` automatically — but stale
+   `"runner"` literals in older overlays will silently override the
+   fallback and leave spawned workloads bound to a non-existent SA. Set
+   all four explicitly on the BYO path.
+
+   A turnkey companion manifest with all 14 SA + Role + RoleBinding +
+   token Secret resources lives in
+   [`examples/byo-rbac.yaml`](./examples/byo-rbac.yaml). Pre-apply it
+   before `helm install`:
+
+   ```console
+   export RW_NAMESPACE=runwhen-local
+   sed "s|__NAMESPACE__|$RW_NAMESPACE|g" \
+     charts/runwhen-local/examples/byo-rbac.yaml | kubectl apply -f -
+   ```
+
+   Rules are mirrored verbatim from the chart 0.5.9 templates. If you
+   bump chart versions and rules drift, regenerate using
+   `helm template --show-only` against the four SA / RBAC templates.
+
+```console
+helm template rw charts/runwhen-local \
+  -f charts/runwhen-local/examples/values-restricted-byo.yaml | \
+  grep -E "^kind: ClusterRole"   # → 0 lines
 ```
 
 ### Common issues
@@ -144,9 +282,11 @@ kubectl get configmap runner-config -n <namespace> -o yaml
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | Workspace builder pod in `CrashLoopBackOff` | Missing or invalid `workspaceInfo` configmap | Check `workspaceBuilder.workspaceInfo` values |
-| Runner pod stuck in `Pending` | Insufficient resources or missing service account | Check `runner.resources` and verify the `runner` SA exists |
+| Runner pod stuck in `Pending` | Insufficient resources or missing service account | Check `runner.resources` and verify the runner SA exists (default `runner`, override via `runner.serviceAccount.name`) |
 | Service returns no endpoints | Label mismatch after upgrade | Verify pod labels with `kubectl get pods --show-labels` |
-| Runner workloads fail to start | Service account mismatch in runner config | Check `runner.runEnvironment.deployment.serviceAccount` in values |
+| Runner workloads fail to start | Service account mismatch in runner config | Check `runner.runEnvironment.deployment.serviceAccount` matches the rendered SA name |
+| Two releases collide on RBAC / SAs / ConfigMaps | Default resource names are bare for runner-control back-compat | Use the override block above (Multi-release deployments) |
+| Outbound TLS to private CA fails | `proxyCA` not configured | Set `proxyCA.secretName` (or `configMapName` + `key`); SSL_CERT_FILE / REQUESTS_CA_BUNDLE / CURL_CA_BUNDLE / NODE_EXTRA_CA_CERTS / GIT_SSL_CAINFO env vars are then automatically projected — independent of `proxy.enabled` |
 
 ### Upgrading from pre-0.5.0
 

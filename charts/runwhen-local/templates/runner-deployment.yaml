@@ -4,9 +4,9 @@ kind: Deployment
 metadata:
   name: {{ include "runwhen-local.runnerFullname" . }}
   labels:
-    {{ include "runwhen-local.runnerLabels" . | nindent 4 }}
+    {{- include "runwhen-local.runnerLabels" . | nindent 4 }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.runner.replicas | default 1 }}
   selector:
     matchLabels:
       {{- include "runwhen-local.runnerSelectorLabels" . | nindent 6 }}
@@ -19,19 +19,48 @@ spec:
   template:
     metadata:
       labels:
-        {{ include "runwhen-local.runnerSelectorLabels" . | nindent 8 }}
+        {{- include "runwhen-local.runnerSelectorLabels" . | nindent 8 }}
         app: runner
-      {{- with .Values.runner.podAnnotations }}
+        {{- include "runwhen-local.podLabels" (list . .Values.runner.podLabels) | nindent 8 }}
+      {{- /*
+        Annotation precedence: per-service .Values.runner.podAnnotations
+        wins over chart-wide .Values.podAnnotations on conflict. Sprig
+        `merge dst src` keeps `dst` values (first arg wins), so passing
+        runner.podAnnotations as the first arg is correct. Render under
+        a single `annotations:` keyword (strict parsers reject dupes).
+      */}}
+      {{- $podAnnotations := merge (deepCopy (.Values.runner.podAnnotations | default dict)) (deepCopy (.Values.podAnnotations | default dict)) }}
+      {{- if $podAnnotations }}
       annotations:
-        {{- toYaml . | nindent 8 }}
+        {{- range $k, $v := $podAnnotations }}
+        {{ $k }}: {{ $v | quote }}
+        {{- end }}
       {{- end }}
     spec:
-      # Pod-level securityContext (if any)
+      {{- /*
+        Pod-level securityContext: prefer runner.podSecurityContext; fall
+        back to the chart-wide helper. Render only ONE block (multiple
+        keys with the same name produce invalid YAML on strict parsers).
+      */}}
+      {{- if .Values.runner.podSecurityContext }}
+      securityContext:
+        {{- toYaml .Values.runner.podSecurityContext | nindent 8 }}
+      {{- else }}
       {{- include "runwhen-local.podSecurityContext" . | nindent 6 }}
+      {{- end }}
 
-      serviceAccount: runner
-      serviceAccountName: runner
-      automountServiceAccountToken: true
+      serviceAccount: {{ include "runwhen-local.serviceAccountName.runner" . }}
+      serviceAccountName: {{ include "runwhen-local.serviceAccountName.runner" . }}
+      {{- /*
+        Same `default true` footgun as runner-service-account.yaml's create gate
+        (commit c0034e2): in Go templates `false | default true` evaluates to
+        `true` because `default` treats `false` as "empty". The ternary form
+        below preserves the implicit `automountServiceAccountToken: true`
+        default for values files that omit the key entirely, while honouring
+        an explicit `false` — needed for OpenShift restricted-v2 / federal
+        clusters that bind tokens via projected volumes only.
+      */}}
+      automountServiceAccountToken: {{ ternary .Values.runner.automountServiceAccountToken true (hasKey .Values.runner "automountServiceAccountToken") }}
 
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -40,9 +69,8 @@ spec:
 
       containers:
         - name: runner
-          image: "{{ (.Values.runner.image.registry | default .Values.registryOverride ) | default "us-docker.pkg.dev" }}/{{ .Values.runner.image.repository | default "runwhen-nonprod-shared/public-images/runner" }}:{{ .Values.runner.image.tag | default "latest" }}"
+          image: {{ include "runwhen-local.image" (list . .Values.runner.image "us-docker.pkg.dev" "runwhen-nonprod-shared/public-images/runner" "latest") | quote }}
           imagePullPolicy: {{ .Values.runner.imagePullPolicy | default "Always" }}
-          # Container-level securityContext (if you want to share the same helper as local):
           {{- include "runwhen-local.containerSecurityContext" . | nindent 10 }}
 
           ports:
@@ -52,6 +80,19 @@ spec:
             - name: relay
               containerPort: 8000
               protocol: TCP
+
+          {{- with .Values.runner.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
 
           resources:
             {{- if eq .Values.platformType "EKS_Fargate" }}
@@ -72,7 +113,6 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
 
-            {{- /* If global proxy is enabled, set the usual variables. */}}
             {{- if .Values.proxy.enabled }}
             {{- with .Values.proxy.httpProxy }}
             - name: HTTP_PROXY
@@ -88,7 +128,13 @@ spec:
             {{- end }}
             {{- end }}
 
-            {{- /* Additional environment variables for runner */}}
+            {{- /*
+              Trust-bundle env vars are decoupled from proxy.enabled —
+              corporate root CAs are independently useful (private TLS,
+              internal mTLS) on non-proxied clusters.
+            */}}
+            {{- include "runwhen-local.trustBundleEnv" . | nindent 12 }}
+
             {{- with .Values.runner.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -101,12 +147,10 @@ spec:
               mountPath: "/data"
               subPath: "data"
 
-            {{- if .Values.proxy.enabled }}
-            {{- with .Values.proxyCA }}
+            {{- if .Values.proxyCA }}
             - name: proxy-ca
-              mountPath: /etc/ssl/certs/proxy-ca.pem
-              subPath: proxy-ca.pem
-            {{- end }}
+              mountPath: /etc/ssl/certs/ca-certificates.crt
+              subPath: ca-certificates.crt
             {{- end }}
 
             {{- with .Values.runner.volumeMounts }}
@@ -120,7 +164,7 @@ spec:
         - name: bolt-data
           emptyDir: {}
 
-        {{- if .Values.proxy.enabled }}
+        {{- if .Values.proxyCA }}
         {{- with .Values.proxyCA }}
         - name: proxy-ca
           {{- if .secretName }}
@@ -128,11 +172,11 @@ spec:
             secretName: {{ .secretName }}
           {{- else if .configMapName }}
           configMap:
-            name: {{.configMapName }}
+            name: {{ .configMapName }}
           {{- end }}
             items:
               - key: {{ .key | default "ca.crt" }}
-                path: proxy-ca.pem
+                path: ca-certificates.crt
             defaultMode: 420
         {{- end }}
         {{- end }}
@@ -167,9 +211,4 @@ spec:
         {{- end }}
       {{- end }}
 
-      {{- /* If using a runner-level .Values.runner.podSecurityContext: */}}
-      {{- if .Values.runner.podSecurityContext }}
-      securityContext:
-        {{- toYaml .Values.runner.podSecurityContext | nindent 8 }}
-      {{- end }}
 {{- end }}

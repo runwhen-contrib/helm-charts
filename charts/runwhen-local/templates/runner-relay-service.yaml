@@ -1,11 +1,15 @@
-{{/* TODO: prefix relay service name with runnerFullname once
-     runner-control is updated to override this properly. */}}
+{{/*
+TODO: prefix relay service name with runnerFullname once runner-control
+is updated to override this properly. The pod-side selector still keys
+on `app: runner` (legacy label) so back-compat is preserved.
+*/}}
 {{- if .Values.runner.enabled -}}
 apiVersion: v1
 kind: Service
 metadata:
   name: runner-relay
   labels:
+    {{- include "runwhen-local.labels" . | nindent 4 }}
     app: runner
     app.kubernetes.io/component: runner-relay
 spec:
@@ -17,4 +21,4 @@ spec:
       targetPort: 8000
   selector:
     app: runner
-{{- end }} 
+{{- end }}
