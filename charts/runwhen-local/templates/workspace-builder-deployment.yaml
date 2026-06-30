@@ -119,19 +119,21 @@ spec:
           {{- toYaml . | nindent 10 }}
           {{- end }}
           ports:
-            - name: mkdocs
-              containerPort: 8081
-              protocol: TCP
-            - name: django
+            - name: api
               containerPort: 8000
               protocol: TCP
+          {{- if $wb.startupProbe }}
+          startupProbe:
+            {{- toYaml $wb.startupProbe | nindent 12 }}
+          {{- end }}
           {{- if $wb.livenessProbe }}
           livenessProbe:
             {{- toYaml $wb.livenessProbe | nindent 12 }}
           {{- else }}
           livenessProbe:
-            tcpSocket:
-              port: django
+            httpGet:
+              path: /health/
+              port: api
             initialDelaySeconds: 10
             periodSeconds: 20
             failureThreshold: 20
@@ -141,8 +143,9 @@ spec:
             {{- toYaml $wb.readinessProbe | nindent 12 }}
           {{- else }}
           readinessProbe:
-            tcpSocket:
-              port: django
+            httpGet:
+              path: /health/
+              port: api
             initialDelaySeconds: 10
             periodSeconds: 5
             failureThreshold: 5
