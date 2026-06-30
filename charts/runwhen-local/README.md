@@ -24,7 +24,7 @@ Workers are long-running pods managed by the runner, each dedicated to a specifi
 The default values in this helm chart will:
 - Create a service account with **view** permissions at the **cluster scope**, enabling the workspace builder to discover resources in all namespaces
 - Use in-cluster authentication for discovery (single-cluster only)
-- Use the `latest` [workspace builder image](https://github.com/runwhen-contrib/runwhen-local/pkgs/container/runwhen-local)
+- Pin the [workspace builder image](https://github.com/runwhen-contrib/runwhen-local/pkgs/container/runwhen-local) to the chart `appVersion` (not `latest`; see `.cursor/skills/sync-rwl-image-version/SKILL.md` when bumping)
 - Enable the runner with the [rw-cli-codecollection](https://github.com/runwhen-contrib/rw-cli-codecollection)
 - Not create an ingress object
 - Rediscover resources every 14400 seconds (4 hours)
@@ -308,6 +308,24 @@ If Helm reports that the workspace-builder Deployment `spec.selector` is immutab
 ```console
 kubectl delete deployment <release-name>-workspace-builder -n <namespace>
 ```
+
+### Upgrading to 0.6.0 (runwhen-local FastAPI)
+
+Chart **0.6.0** targets [runwhen-local](https://github.com/runwhen-contrib/runwhen-local) **0.11.0+**, which replaces the legacy Django/MkDocs sidecar with a single **FastAPI** server on port **8000**:
+
+| Surface | Pre-0.6.0 | 0.6.0+ |
+|---|---|---|
+| UI / cheat sheet | MkDocs on service port **8081** | FastAPI landing page + `/explorer/` on port **8000** |
+| API / health | Django on port **8000** (`tcpSocket` probes) | FastAPI on port **8000** (`GET /health/` HTTP probes) |
+| Default `workspaceBuilder.service.port` | `8081` | `8000` |
+| Named container/service port | `django`, `mkdocs` | `api` |
+
+When upgrading:
+
+1. Bump the workspace-builder image to `0.11.0` or later (chart `appVersion` default).
+2. If you set `workspaceBuilder.service.port: 8081` or `ingress` backends targeting port 8081, change them to **8000**.
+3. If you override probes with `port: django` or `port: mkdocs`, switch to `port: api` and `httpGet.path: /health/`.
+4. Update any NetworkPolicies or ingress rules that allow port **8081** to the workspace-builder Service to use **8000** instead.
 
 ## CodeCollections Runner Configuration
 
