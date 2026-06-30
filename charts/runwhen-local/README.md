@@ -309,6 +309,24 @@ If Helm reports that the workspace-builder Deployment `spec.selector` is immutab
 kubectl delete deployment <release-name>-workspace-builder -n <namespace>
 ```
 
+### Upgrading to 0.6.0 (runwhen-local FastAPI)
+
+Chart **0.6.0** targets [runwhen-local](https://github.com/runwhen-contrib/runwhen-local) **0.11.0+**, which replaces the legacy Django/MkDocs sidecar with a single **FastAPI** server on port **8000**:
+
+| Surface | Pre-0.6.0 | 0.6.0+ |
+|---|---|---|
+| UI / cheat sheet | MkDocs on service port **8081** | FastAPI landing page + `/explorer/` on port **8000** |
+| API / health | Django on port **8000** (`tcpSocket` probes) | FastAPI on port **8000** (`GET /health/` HTTP probes) |
+| Default `workspaceBuilder.service.port` | `8081` | `8000` |
+| Named container/service port | `django`, `mkdocs` | `api` |
+
+When upgrading:
+
+1. Bump the workspace-builder image to `0.11.0` or later (chart `appVersion` default).
+2. If you set `workspaceBuilder.service.port: 8081` or `ingress` backends targeting port 8081, change them to **8000**.
+3. If you override probes with `port: django` or `port: mkdocs`, switch to `port: api` and `httpGet.path: /health/`.
+4. Update any NetworkPolicies or ingress rules that allow port **8081** to the workspace-builder Service to use **8000** instead.
+
 ## CodeCollections Runner Configuration
 
 The runner component supports configuring multiple code collections with specific repositories, tags/branches/refs, and worker replicas. This allows you to deploy and manage different versions of code collections based on your requirements.
