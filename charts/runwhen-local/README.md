@@ -24,7 +24,7 @@ Workers are long-running pods managed by the runner, each dedicated to a specifi
 The default values in this helm chart will:
 - Create a service account with **view** permissions at the **cluster scope**, enabling the workspace builder to discover resources in all namespaces
 - Use in-cluster authentication for discovery (single-cluster only)
-- Use the `latest` [workspace builder image](https://github.com/runwhen-contrib/runwhen-local/pkgs/container/runwhen-local)
+- Pin the [workspace builder image](https://github.com/runwhen-contrib/runwhen-local/pkgs/container/runwhen-local) to the chart `appVersion` (not `latest`; see `.cursor/skills/sync-rwl-image-version/SKILL.md` when bumping)
 - Enable the runner with the [rw-cli-codecollection](https://github.com/runwhen-contrib/rw-cli-codecollection)
 - Not create an ingress object
 - Rediscover resources every 14400 seconds (4 hours)

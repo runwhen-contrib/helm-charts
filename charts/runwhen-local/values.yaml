@@ -112,8 +112,10 @@ workspaceBuilder:
     registry: ""
     repository: ""
     pullPolicy: Always
-    # Overrides the image tag whose default is the chart appVersion.
-    tag: "latest"
+    # Leave empty to use the chart appVersion (pinned to the latest runwhen-local
+    # release — see .cursor/skills/sync-rwl-image-version/SKILL.md). Do not use
+    # "latest"; bump appVersion when cutting a chart release instead.
+    tag: ""
 
   # Override the pod template's automountServiceAccountToken. Default true
   # for back-compat; set to false on OpenShift restricted-v2 / federal
