@@ -171,7 +171,8 @@ workspaceBuilder:
 
   service:
     type: ClusterIP
-    port: 8081
+    # FastAPI workspace-builder REST/UI (landing page, /explorer/, /health/, /mcp/).
+    port: 8000
 
   ingress:
     enabled: false
@@ -189,19 +190,20 @@ workspaceBuilder:
     #    hosts:
     #      - chart-example.local
 
-  # Health probes configuration
-  # Customize liveness and readiness probes for the workspace-builder container
-  # Uncomment and modify to override the defaults defined in the deployment template
+  # Health probes for the workspace-builder FastAPI server (port 8000).
+  # Defaults use GET /health/ on the named port `api`. Uncomment to override.
+  startupProbe: {}
   # livenessProbe:
-  #   tcpSocket:
-  #     port: django
+  #   httpGet:
+  #     path: /health/
+  #     port: api
   #   initialDelaySeconds: 10
   #   periodSeconds: 20
   #   failureThreshold: 20
-
   # readinessProbe:
-  #   tcpSocket:
-  #     port: django
+  #   httpGet:
+  #     path: /health/
+  #     port: api
   #   initialDelaySeconds: 10
   #   periodSeconds: 5
   #   failureThreshold: 5
