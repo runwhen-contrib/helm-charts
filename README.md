@@ -127,14 +127,6 @@ ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    golang.or
 ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    golang.org/x/net                  CVE-2026-39821       v0.49.0                                   0.55.0                             HIGH
 ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    golang.org/x/net                  CVE-2026-39821       v0.52.0                                   0.55.0                             HIGH
 ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    golang.org/x/net                  CVE-2026-39821       v0.53.0                                   0.55.0                             HIGH
-ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    stdlib                            CVE-2026-39823       v1.17.1                                   1.25.10, 1.26.3                    HIGH
-ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    stdlib                            CVE-2026-39823       v1.24.13                                  1.25.10, 1.26.3                    HIGH
-ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    stdlib                            CVE-2026-39823       v1.25.9                                   1.25.10, 1.26.3                    HIGH
-ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    stdlib                            CVE-2026-39823       v1.26.2                                   1.25.10, 1.26.3                    HIGH
-ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    stdlib                            CVE-2026-39825       v1.17.1                                   1.25.10, 1.26.3                    HIGH
-ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    stdlib                            CVE-2026-39825       v1.24.13                                  1.25.10, 1.26.3                    HIGH
-ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    stdlib                            CVE-2026-39825       v1.25.9                                   1.25.10, 1.26.3                    HIGH
-ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    stdlib                            CVE-2026-39825       v1.26.2                                   1.25.10, 1.26.3                    HIGH
 ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    golang.org/x/crypto               CVE-2026-39827       v0.45.0                                   0.52.0                             HIGH
 ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    golang.org/x/crypto               CVE-2026-39827       v0.47.0                                   0.52.0                             HIGH
 ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    golang.org/x/crypto               CVE-2026-39827       v0.49.0                                   0.52.0                             HIGH
@@ -151,6 +143,10 @@ ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    golang.or
 ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    golang.org/x/crypto               CVE-2026-39830       v0.47.0                                   0.52.0                             HIGH
 ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    golang.org/x/crypto               CVE-2026-39830       v0.49.0                                   0.52.0                             HIGH
 ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    golang.org/x/crypto               CVE-2026-39830       v0.50.0                                   0.52.0                             HIGH
+ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    golang.org/x/crypto               CVE-2026-39832       v0.45.0                                   0.52.0                             HIGH
+ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    golang.org/x/crypto               CVE-2026-39832       v0.47.0                                   0.52.0                             HIGH
+ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    golang.org/x/crypto               CVE-2026-39832       v0.49.0                                   0.52.0                             HIGH
+ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    golang.org/x/crypto               CVE-2026-39832       v0.50.0                                   0.52.0                             HIGH
 ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    golang.org/x/crypto               CVE-2026-39835       v0.45.0                                   0.52.0                             HIGH
 ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    golang.org/x/crypto               CVE-2026-39835       v0.47.0                                   0.52.0                             HIGH
 ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    golang.org/x/crypto               CVE-2026-39835       v0.49.0                                   0.52.0                             HIGH
@@ -198,6 +194,7 @@ ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    golang.or
 ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    github.com/cli/cli/v2             CVE-2026-48501       v2.92.0                                   2.93.0                             HIGH
 ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    PyJWT                             CVE-2026-48526       2.12.0                                    2.13.0                             HIGH
 ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    PyJWT                             CVE-2026-48526       2.12.1                                    2.13.0                             HIGH
+ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    github.com/sigstore/rekor         CVE-2026-48702       v1.5.0                                    1.5.2                              HIGH
 ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    cryptography                      GHSA-537c-gmf6-5ccf  43.0.1                                    48.0.1                             HIGH
 ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    cryptography                      GHSA-537c-gmf6-5ccf  46.0.5                                    48.0.1                             HIGH
 ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81    cryptography                      GHSA-537c-gmf6-5ccf  46.0.7                                    48.0.1                             HIGH
@@ -228,13 +225,14 @@ ghcr.io/runwhen-contrib/runwhen-local:latest                           stdlib   
 ghcr.io/runwhen-contrib/runwhen-local:latest                           stdlib                            CVE-2025-61729       v1.21.1                                   1.24.11, 1.25.5                    HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest                           stdlib                            CVE-2025-61729       v1.22.12                                  1.24.11, 1.25.5                    HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest                           stdlib                            CVE-2025-61729       v1.24.1                                   1.24.11, 1.25.5                    HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest                           starlette                         CVE-2025-62727       0.46.2                                    0.49.1                             HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest                           urllib3                           CVE-2025-66418       2.3.0                                     2.6.0                              HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest                           urllib3                           CVE-2025-66471       2.3.0                                     2.6.0                              HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest                           stdlib                            CVE-2025-68121       v1.21.1                                   1.24.13, 1.25.7, 1.26.0-rc.3       CRITICAL
 ghcr.io/runwhen-contrib/runwhen-local:latest                           stdlib                            CVE-2025-68121       v1.22.12                                  1.24.13, 1.25.7, 1.26.0-rc.3       CRITICAL
 ghcr.io/runwhen-contrib/runwhen-local:latest                           stdlib                            CVE-2025-68121       v1.24.1                                   1.24.13, 1.25.7, 1.26.0-rc.3       CRITICAL
 ghcr.io/runwhen-contrib/runwhen-local:latest                           stdlib                            CVE-2025-68121       v1.25.5                                   1.24.13, 1.25.7, 1.26.0-rc.3       CRITICAL
-ghcr.io/runwhen-contrib/runwhen-local:latest                           undici                            CVE-2026-12151       6.25.0                                    6.27.0, 7.28.0, 8.5.0              HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest                           undici                            CVE-2026-12151       6.26.0                                    6.27.0, 7.28.0, 8.5.0              HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest                           urllib3                           CVE-2026-21441       2.3.0                                     2.6.3                              HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest                           stdlib                            CVE-2026-25679       v1.21.1                                   1.25.8, 1.26.1                     HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest                           stdlib                            CVE-2026-25679       v1.22.12                                  1.25.8, 1.26.1                     HIGH
@@ -290,14 +288,6 @@ ghcr.io/runwhen-contrib/runwhen-local:latest                           stdlib   
 ghcr.io/runwhen-contrib/runwhen-local:latest                           golang.org/x/net                  CVE-2026-39821       v0.17.0                                   0.55.0                             HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest                           golang.org/x/net                  CVE-2026-39821       v0.19.0                                   0.55.0                             HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest                           golang.org/x/net                  CVE-2026-39821       v0.37.0                                   0.55.0                             HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest                           stdlib                            CVE-2026-39823       v1.21.1                                   1.25.10, 1.26.3                    HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest                           stdlib                            CVE-2026-39823       v1.22.12                                  1.25.10, 1.26.3                    HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest                           stdlib                            CVE-2026-39823       v1.24.1                                   1.25.10, 1.26.3                    HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest                           stdlib                            CVE-2026-39823       v1.25.5                                   1.25.10, 1.26.3                    HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest                           stdlib                            CVE-2026-39825       v1.21.1                                   1.25.10, 1.26.3                    HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest                           stdlib                            CVE-2026-39825       v1.22.12                                  1.25.10, 1.26.3                    HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest                           stdlib                            CVE-2026-39825       v1.24.1                                   1.25.10, 1.26.3                    HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest                           stdlib                            CVE-2026-39825       v1.25.5                                   1.25.10, 1.26.3                    HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest                           golang.org/x/crypto               CVE-2026-39827       v0.14.0                                   0.52.0                             HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest                           golang.org/x/crypto               CVE-2026-39827       v0.17.0                                   0.52.0                             HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest                           golang.org/x/crypto               CVE-2026-39828       v0.14.0                                   0.52.0                             HIGH
@@ -306,6 +296,8 @@ ghcr.io/runwhen-contrib/runwhen-local:latest                           golang.or
 ghcr.io/runwhen-contrib/runwhen-local:latest                           golang.org/x/crypto               CVE-2026-39829       v0.17.0                                   0.52.0                             HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest                           golang.org/x/crypto               CVE-2026-39830       v0.14.0                                   0.52.0                             HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest                           golang.org/x/crypto               CVE-2026-39830       v0.17.0                                   0.52.0                             HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest                           golang.org/x/crypto               CVE-2026-39832       v0.14.0                                   0.52.0                             HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest                           golang.org/x/crypto               CVE-2026-39832       v0.17.0                                   0.52.0                             HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest                           golang.org/x/crypto               CVE-2026-39835       v0.14.0                                   0.52.0                             HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest                           golang.org/x/crypto               CVE-2026-39835       v0.17.0                                   0.52.0                             HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest                           stdlib                            CVE-2026-39836       v1.21.1                                   1.25.10, 1.26.3                    HIGH
@@ -335,15 +327,14 @@ ghcr.io/runwhen-contrib/runwhen-local:latest                           golang.or
 ghcr.io/runwhen-contrib/runwhen-local:latest                           golang.org/x/crypto               CVE-2026-42508       v0.17.0                                   0.52.0                             HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest                           dulwich                           CVE-2026-42563       0.24.10                                   1.2.5                              HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest                           urllib3                           CVE-2026-44431       2.3.0                                     2.7.0                              HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest                           libssl3t64                        CVE-2026-45447       3.5.6-1~deb13u1                           3.5.6-1~deb13u2                    HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest                           openssl                           CVE-2026-45447       3.5.6-1~deb13u1                           3.5.6-1~deb13u2                    HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest                           openssl-provider-legacy           CVE-2026-45447       3.5.6-1~deb13u1                           3.5.6-1~deb13u2                    HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest                           golang.org/x/crypto               CVE-2026-46595       v0.14.0                                   0.52.0                             HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest                           golang.org/x/crypto               CVE-2026-46595       v0.17.0                                   0.52.0                             HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest                           golang.org/x/crypto               CVE-2026-46597       v0.14.0                                   0.52.0                             HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest                           golang.org/x/crypto               CVE-2026-46597       v0.17.0                                   0.52.0                             HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest                           starlette                         CVE-2026-48818       0.46.2                                    1.1.0                              HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest                           python-multipart                  CVE-2026-53539       0.0.29                                    0.0.30                             HIGH
+ghcr.io/runwhen-contrib/runwhen-local:latest                           starlette                         CVE-2026-54283       0.46.2                                    1.3.1                              HIGH
 ghcr.io/runwhen-contrib/runwhen-local:latest                           cryptography                      GHSA-537c-gmf6-5ccf  48.0.0                                    48.0.1                             HIGH
-ghcr.io/runwhen-contrib/runwhen-local:latest                           msgpack                           GHSA-6v7p-g79w-8964  1.1.2                                     1.2.1                              HIGH
 otel/opentelemetry-collector:0.153.0                                   stdlib                            CVE-2026-27145       v1.26.3                                   1.25.11, 1.26.4                    HIGH
 otel/opentelemetry-collector:0.153.0                                   stdlib                            CVE-2026-42504       v1.26.3                                   1.25.11, 1.26.4                    HIGH
 us-docker.pkg.dev/runwhen-nonprod-shared/public-images/runner:latest   github.com/docker/docker          CVE-2026-34040       v28.5.2+incompatible                      29.3.1                             HIGH
@@ -357,7 +348,7 @@ us-docker.pkg.dev/runwhen-nonprod-shared/public-images/runner:latest   github.co
 ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-ee371fd-6e4bc81
 ghcr.io/runwhen-contrib/azure-c7n-codecollection:main-96b0ee5-6e4bc81
 ghcr.io/runwhen-contrib/runwhen-local:latest
-ghcr.io/runwhen-contrib/rw-cli-codecollection:main-b967857-6e4bc81
+ghcr.io/runwhen-contrib/rw-cli-codecollection:main-61e5493-6e4bc81
 ghcr.io/runwhen-contrib/rw-generic-codecollection:main-cda4be5-6e4bc81
 ghcr.io/runwhen-contrib/rw-public-codecollection:main-705d3d6-6e4bc81
 ghcr.io/runwhen-contrib/rw-workspace-utils:main-fe33f4b-6e4bc81
