@@ -128,6 +128,7 @@ data:
         # cortex valid across the 0.127 → 0.153 image bump.
         add_metric_suffixes: false
         tls:
+          {{- if .Values.runner.metrics.mtls.enabled }}
           {{- if .Values.proxyCA }}
           ca_file: "/etc/ssl/certs/proxy-ca.crt"
           {{- else }}
@@ -135,6 +136,9 @@ data:
           {{- end }}
           cert_file: "/tls/tls.crt"
           key_file: "/tls/tls.key"
+          {{- else if .Values.proxyCA }}
+          ca_file: "/etc/ssl/certs/proxy-ca.crt"
+          {{- end }}
           insecure_skip_verify: true
         external_labels:
           workspace: {{ include "runwhen-local.workspaceName" . }}
