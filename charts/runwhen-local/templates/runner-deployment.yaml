@@ -69,7 +69,7 @@ spec:
 
       containers:
         - name: runner
-          image: {{ include "runwhen-local.image" (list . .Values.runner.image "us-docker.pkg.dev" "runwhen-nonprod-shared/public-images/runner" "latest") | quote }}
+          image: {{ include "runwhen-local.image" (list . .Values.runner.image "" "" "") | quote }}
           imagePullPolicy: {{ .Values.runner.imagePullPolicy | default "Always" }}
           {{- include "runwhen-local.containerSecurityContext" . | nindent 10 }}
 
