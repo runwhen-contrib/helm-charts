@@ -470,16 +470,16 @@ runner:
   metrics:
     url: "https://runner-cortex-tenant.beta.runwhen.com/push"
     # -- Client certificate (mTLS) for the OTel collector's
-    # prometheusremotewrite exporter. When enabled, the collector mounts
-    # the `runner-metrics-tls` Secret and presents a client cert to the
-    # metrics endpoint. Disabled by default — enable alongside the
-    # platform chart's runner.mtls.enabled=true.
+    # prometheusremotewrite exporter. Enabled by default — matches the
+    # SaaS service (most users). When enabled, the collector mounts the
+    # `runner-metrics-tls` Secret and presents a client cert to the
+    # metrics endpoint.
     #
-    # When enabling, also set opentelemetry-collector.extraVolumes and
-    # extraVolumeMounts to mount runner-metrics-tls at /tls (see the
-    # platform chart's values.yaml for the full overlay example).
+    # Set to false when the platform chart has runner.mtls.enabled=false
+    # and also clear opentelemetry-collector.extraVolumes and
+    # extraVolumeMounts in your overlay.
     mtls:
-      enabled: false
+      enabled: true
 
   # securityContext (container) is used to set the security context for the runner container
   # securityContext: {}
@@ -773,14 +773,13 @@ opentelemetry-collector:
   #   # NO_PROXY environment variable
   #   - name: NO_PROXY
   #     value: "127.0.0.1,localhost,$(KUBERNETES_SERVICE_HOST)"
-  # -- Empty by default (runner.metrics.mtls.enabled=false). When
-  #    enabling mTLS, uncomment the tls-secret-volume below and match
-  #    it in extraVolumeMounts. The runner-metrics-tls Secret only
-  #    exists when the platform chart has runner.mtls.enabled=true.
-  extraVolumes: []
-    # - name: tls-secret-volume
-    #   secret:
-    #     secretName: runner-metrics-tls
+  # -- TLS volume for the OTel collector's mTLS client cert. Clear
+  #    when runner.metrics.mtls.enabled=false — the runner-metrics-tls
+  #    Secret does not exist in that mode.
+  extraVolumes:
+    - name: tls-secret-volume
+      secret:
+        secretName: runner-metrics-tls
     # # Note: must be configured when using .Values.ProxyCA -- can also be transitioned to
     # # a configMap if needed -- just match the values from .Values.ProxyCA.ConfigMapName and .Values.ProxyCA.Key
     # - name: proxy-ca-volume # DO NOT CHANGE
@@ -789,10 +788,10 @@ opentelemetry-collector:
     #     items:
     #       - key: ca.crt # Value from .Values.proxyCA.key
     #         path: proxy-ca.crt # DO NOT CHANGE
-  extraVolumeMounts: []
-    # - name: tls-secret-volume
-    #   mountPath: /tls
-    #   readOnly: true
+  extraVolumeMounts:
+    - name: tls-secret-volume
+      mountPath: /tls
+      readOnly: true
     # # Note: must be used when using .Values.ProxyCA
     # - name: proxy-ca-volume
     #   mountPath: /etc/ssl/certs/proxy-ca.crt
