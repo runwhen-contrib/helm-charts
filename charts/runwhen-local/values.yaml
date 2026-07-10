@@ -469,6 +469,17 @@ runner:
   controlAddr: "https://runner.beta.runwhen.com"
   metrics:
     url: "https://runner-cortex-tenant.beta.runwhen.com/push"
+    # -- Client certificate (mTLS) for the OTel collector's
+    # prometheusremotewrite exporter. Enabled by default — matches the
+    # SaaS service (most users). When enabled, the collector mounts the
+    # `runner-metrics-tls` Secret and presents a client cert to the
+    # metrics endpoint.
+    #
+    # Set to false when the platform chart has runner.mtls.enabled=false
+    # and also clear opentelemetry-collector.extraVolumes and
+    # extraVolumeMounts in your overlay.
+    mtls:
+      enabled: true
 
   # securityContext (container) is used to set the security context for the runner container
   # securityContext: {}
@@ -762,6 +773,9 @@ opentelemetry-collector:
   #   # NO_PROXY environment variable
   #   - name: NO_PROXY
   #     value: "127.0.0.1,localhost,$(KUBERNETES_SERVICE_HOST)"
+  # -- TLS volume for the OTel collector's mTLS client cert. Clear
+  #    when runner.metrics.mtls.enabled=false — the runner-metrics-tls
+  #    Secret does not exist in that mode.
   extraVolumes:
     - name: tls-secret-volume
       secret:
