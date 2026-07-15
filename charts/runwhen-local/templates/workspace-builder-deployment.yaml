@@ -125,17 +125,34 @@ spec:
           {{- if $wb.startupProbe }}
           startupProbe:
             {{- toYaml $wb.startupProbe | nindent 12 }}
+          {{- else }}
+          # Startup probe: give the first run up to 30 minutes to complete
+          # before the liveness probe takes over. This protects long initial
+          # discovery runs (multi-cluster, multi-project) from being killed
+          # before the workspace builder has even finished its first cycle.
+          startupProbe:
+            httpGet:
+              path: /health/
+              port: api
+            periodSeconds: 10
+            failureThreshold: 180
           {{- end }}
           {{- if $wb.livenessProbe }}
           livenessProbe:
             {{- toYaml $wb.livenessProbe | nindent 12 }}
           {{- else }}
+          # Liveness: the /health/ endpoint checks that the uvicorn process is
+          # alive and making progress (stage updates). A run is only considered
+          # stuck if no stage advancement has occurred in the stuck-run timeout
+          # (default 1h, configurable via RW_STUCK_RUN_TIMEOUT_SECONDS). The
+          # probe tolerance (periodSeconds × failureThreshold ≈ 10 min) gives
+          # plenty of margin for transient slow API calls.
           livenessProbe:
             httpGet:
               path: /health/
               port: api
             initialDelaySeconds: 10
-            periodSeconds: 20
+            periodSeconds: 30
             failureThreshold: 20
           {{- end }}
           {{- if $wb.readinessProbe }}
