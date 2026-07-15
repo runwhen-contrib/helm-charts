@@ -193,14 +193,24 @@ workspaceBuilder:
     #      - chart-example.local
 
   # Health probes for the workspace-builder FastAPI server (port 8000).
-  # Defaults use GET /health/ on the named port `api`. Uncomment to override.
+  # Defaults use GET /health/ on the named port `api`.
+  #
+  # startupProbe: defaults to GET /health/ every 10s, 180 failures (30 min)
+  # before the liveness probe takes over. This protects long initial discovery
+  # runs from being killed before the first cycle completes.
+  # Uncomment to override.
   startupProbe: {}
+  # livenessProbe: defaults to GET /health/ every 30s, 20 failures (~10 min).
+  # The /health/ endpoint checks process aliveness + stage progress, NOT run
+  # duration. A run is only considered stuck if no stage advancement has
+  # occurred in RW_STUCK_RUN_TIMEOUT_SECONDS (default 3600 = 1 hour).
+  # Uncomment to override.
   # livenessProbe:
   #   httpGet:
   #     path: /health/
   #     port: api
   #   initialDelaySeconds: 10
-  #   periodSeconds: 20
+  #   periodSeconds: 30
   #   failureThreshold: 20
   # readinessProbe:
   #   httpGet:
@@ -214,17 +224,17 @@ workspaceBuilder:
     default:
       requests:
         cpu: "100m"
-        memory: "128Mi"
+        memory: "256Mi"
       limits:
-        cpu: "1"
-        memory: "1024Mi"
+        cpu: "2"
+        memory: "2048Mi"
     EKS_Fargate:
       requests:
         cpu: "2"
         memory: "1024Mi"
       limits:
         cpu: "2"
-        memory: "1024Mi"
+        memory: "2048Mi"
 
 
   # RunWhen Local requires a kubeconfig to discover resouces from 1 or more
