@@ -174,7 +174,7 @@ data:
             allowPrivilegeEscalation: false
             capabilities:
               drop:
-                - all
+                - ALL
             readOnlyRootFilesystem: true
             seccompProfile:
               type: "RuntimeDefault"
@@ -296,7 +296,7 @@ data:
             allowPrivilegeEscalation: false
             capabilities:
               drop:
-                - all
+                - ALL
             readOnlyRootFilesystem: true
             seccompProfile:
               type: "RuntimeDefault"
