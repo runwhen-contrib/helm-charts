@@ -747,13 +747,12 @@ opentelemetry-collector:
     # the chart dependency in Chart.yaml and this tag together.
     tag: "0.153.0"
   imagePullSecrets: []
-  # Pod-level securityContext defaults — hardened to match the chart's
-  # other workloads. The subchart's container `securityContext` block
-  # (below) keeps the existing hardened defaults.
+  # Pod-level securityContext — runAsNonRoot + seccomp only. Do NOT pin
+  # runAsUser/fsGroup: OpenShift restricted-v2 assigns a per-project UID
+  # range and rejects fixed values (e.g. 10001). Vanilla clusters inherit
+  # the image USER when runAsUser is omitted.
   podSecurityContext:
     runAsNonRoot: true
-    runAsUser: 10001
-    fsGroup: 10001
     seccompProfile:
       type: "RuntimeDefault"
   command:
