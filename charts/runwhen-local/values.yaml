@@ -475,7 +475,7 @@ runner:
   image:
     registry: "us-docker.pkg.dev"
     repository: "runwhen-nonprod-shared/public-images/runner"
-    tag: "r-2026-07-10.1"
+    tag: "2026-07-23.1"
   controlAddr: "https://runner.beta.runwhen.com"
   metrics:
     url: "https://runner-cortex-tenant.beta.runwhen.com/push"
