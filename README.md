@@ -1,22 +1,14 @@
 [![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/runwhen-contrib)](https://artifacthub.io/packages/search?repo=runwhen-contrib)
 
 # helm-charts
-All Public RunWhen Helm Charts 
 
-## RunWhen Local
-The `runwhen-local` helm chart is responsible for installing all client-side components into a Kuberetes cluster. These components perform: 
-- automatic resource discovery
-- automatic configuration (tailoring open source automation tasks for all discovered resources)
-- frequent sync/upload of resources and configurations to the RunWhen Platform
-- private execution of health and troubleshooting tasks (via. alerts, Engineering Assistatents, or on-demand)
+Public Helm charts for RunWhen platform components.
 
-## Latest Security Scan Results
-Security scans regularly run against all images used by this helm chart using [trivy](https://trivy.dev/latest/), scanning for CRITICAL and HIGH vulnerabilities that are fixable. 
+## Charts
 
-```
-trivy image --severity CRITICAL,HIGH --ignore-unfixed --scanners vuln --format json "$registry" > trivy_result.json
-```
+### runwhen-local
 
+<<<<<<< Updated upstream
 <!-- START_TRIVY_SUMMARY -->
 ```
 Registry                                                               Package                                  Vulnerability ID     Installed Version                         Fixed Version                 Severity
@@ -63,11 +55,16 @@ otel/opentelemetry-collector:0.153.0                                   stdlib   
 otel/opentelemetry-collector:0.153.0                                   stdlib                                   CVE-2026-42504       v1.26.3                                   1.25.11, 1.26.4               HIGH
 ```
 <!-- END_TRIVY_SUMMARY -->
+=======
+The `runwhen-local` Helm chart installs all client-side components into a Kubernetes cluster:
+>>>>>>> Stashed changes
 
-**Below, you can find the list of images that were scanned and may be utilized while executing Tasks securely in your infrastructure.**  
-<!-- START_SCANNED_IMAGES -->
-```
+- **Automatic resource discovery** — detects and catalogs infrastructure resources
+- **Automatic configuration** — tailors open source automation tasks to discovered resources
+- **Frequent sync/upload** — pushes resources and configurations to the RunWhen Platform
+- **Private task execution** — runs health checks and troubleshooting tasks (via alerts, Engineering Assistants, or on-demand)
 
+<<<<<<< Updated upstream
 ghcr.io/runwhen-contrib/aws-c7n-codecollection:main-4348a20-431db26
 ghcr.io/runwhen-contrib/azure-c7n-codecollection:main-8c898ba-431db26
 ghcr.io/runwhen-contrib/runwhen-local:0.11.8
@@ -79,3 +76,10 @@ otel/opentelemetry-collector:0.153.0
 us-docker.pkg.dev/runwhen-nonprod-shared/public-images/runner:2026-07-29.1
 ```
 <!-- END_SCANNED_IMAGES -->
+=======
+See [charts/runwhen-local](charts/runwhen-local/) for installation instructions and configuration options.
+
+## Security Scanning
+
+Container images referenced by this chart are regularly scanned for CRITICAL and HIGH vulnerabilities using [Trivy](https://trivy.dev/latest/). Scan results are uploaded as workflow artifacts and can be reviewed in the [Trivy Scan for Critical Vulnerabilities](https://github.com/runwhen-contrib/helm-charts/actions/workflows/scanner.yaml) workflow runs.
+>>>>>>> Stashed changes

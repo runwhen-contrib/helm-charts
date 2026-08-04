@@ -751,6 +751,16 @@ opentelemetry-collector:
   # runAsUser/fsGroup: OpenShift restricted-v2 assigns a per-project UID
   # range and rejects fixed values (e.g. 10001). Vanilla clusters inherit
   # the image USER when runAsUser is omitted.
+  #
+  # Prior to 0.6.6 this block included:
+  #   runAsUser: 10001
+  #   fsGroup: 10001
+  # Clusters with OPA/Gatekeeper policies that mandate `runAsUser` (e.g.
+  # PCI, fedramp) should restore the pinned UID in their overlay:
+  #   opentelemetry-collector:
+  #     podSecurityContext:
+  #       runAsUser: 10001
+  #       fsGroup: 10001
   podSecurityContext:
     runAsNonRoot: true
     seccompProfile:
