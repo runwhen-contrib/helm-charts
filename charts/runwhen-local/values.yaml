@@ -491,6 +491,34 @@ runner:
     mtls:
       enabled: true
 
+  # MCP hosted-server capability: lets the runner stand up an MCP server
+  # in-cluster on demand ("hosted" / kind=bundled servers), rendering a
+  # ConfigMap, Secret, Deployment and Service per server.
+  mcp:
+    hosted:
+      # Whether this runner may stand up MCP servers in-cluster on demand.
+      # Default off: a hosted server runs third-party npm/PyPI code inside
+      # your cluster, so upgrading the chart must never grant that on its
+      # own. When false, the runner advertises no hosting capability and
+      # the platform refuses to register a hosted server against it.
+      enabled: false
+
+      # Image that hosts the third-party MCP server process. Required
+      # when hosted.enabled is true — there is no safe default tag, and
+      # `latest` is specifically wrong because CI does not publish it.
+      image:
+        registry: ""
+        repository: "runner-mcp-host"
+        tag: ""
+
+      # ServiceAccount assigned to hosted MCP server pods. Empty resolves
+      # to the runner's own SA (see runwhen-local.serviceAccountName.runner).
+      # Hosted pods never mount a token
+      # (automountServiceAccountToken: false), so sharing the SA grants
+      # them nothing — it only avoids needing a `serviceaccounts: create`
+      # RBAC grant.
+      serviceAccountName: ""
+
   # securityContext (container) is used to set the security context for the runner container
   # securityContext: {}
 

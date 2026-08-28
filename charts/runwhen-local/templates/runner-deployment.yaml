@@ -1,4 +1,16 @@
 {{- if .Values.runner.enabled -}}
+{{- /*
+  Hosted MCP servers run third-party code in-cluster; a config that
+  claims to support hosting but omits the image tag would leave every
+  hosted server silently unable to start. Fail the render instead —
+  there is no safe default tag, and `latest` is specifically wrong
+  because CI does not publish it.
+*/}}
+{{- if .Values.runner.mcp.hosted.enabled }}
+{{- if not .Values.runner.mcp.hosted.image.tag }}
+{{- fail "runner.mcp.hosted.enabled is true but runner.mcp.hosted.image.tag is empty. Set runner.mcp.hosted.image.tag to the runner-mcp-host image tag to use." }}
+{{- end }}
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -112,6 +124,15 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+
+            {{- if .Values.runner.mcp.hosted.enabled }}
+            - name: MCP_HOSTED_ENABLED
+              value: "true"
+            - name: RUNNER_MCP_HOST_IMAGE
+              value: {{ include "runwhen-local.image" (list . .Values.runner.mcp.hosted.image "" "" "") | quote }}
+            - name: MCP_HOSTED_SERVICE_ACCOUNT
+              value: {{ .Values.runner.mcp.hosted.serviceAccountName | default (include "runwhen-local.serviceAccountName.runner" .) | quote }}
+            {{- end }}
 
             {{- if .Values.proxy.enabled }}
             {{- with .Values.proxy.httpProxy }}
