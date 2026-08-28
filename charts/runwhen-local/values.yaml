@@ -506,9 +506,13 @@ runner:
       # Image that hosts the third-party MCP server process. Required
       # when hosted.enabled is true — there is no safe default tag, and
       # `latest` is specifically wrong because CI does not publish it.
+      # Registry and repository default alongside the runner image; only
+      # the tag needs setting. An empty registry renders "/repo:tag",
+      # which is not a pullable reference — runwhen-local.image always
+      # joins the three with a slash.
       image:
-        registry: ""
-        repository: "runner-mcp-host"
+        registry: "us-docker.pkg.dev"
+        repository: "runwhen-nonprod-shared/public-images/runner-mcp-host"
         tag: ""
 
       # ServiceAccount assigned to hosted MCP server pods. Empty resolves
