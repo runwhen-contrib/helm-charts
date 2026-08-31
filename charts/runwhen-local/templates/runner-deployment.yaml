@@ -81,7 +81,7 @@ spec:
 
       containers:
         - name: runner
-          image: {{ include "runwhen-local.image" (list . .Values.runner.image "" "" "") | quote }}
+          image: {{ include "runwhen-local.image" (list . .Values.runner.image "us-docker.pkg.dev" "runwhen-nonprod-shared/public-images/runner" "") | quote }}
           imagePullPolicy: {{ .Values.runner.imagePullPolicy | default "Always" }}
           {{- include "runwhen-local.containerSecurityContext" . | nindent 10 }}
 
@@ -129,9 +129,38 @@ spec:
             - name: MCP_HOSTED_ENABLED
               value: "true"
             - name: RUNNER_MCP_HOST_IMAGE
-              value: {{ include "runwhen-local.image" (list . .Values.runner.mcp.hosted.image "" "" "") | quote }}
+              value: {{ include "runwhen-local.image" (list . .Values.runner.mcp.hosted.image "us-docker.pkg.dev" "runwhen-nonprod-shared/public-images/runner-mcp-host" "") | quote }}
             - name: MCP_HOSTED_SERVICE_ACCOUNT
-              value: {{ .Values.runner.mcp.hosted.serviceAccountName | default (include "runwhen-local.serviceAccountName.runner" .) | quote }}
+              value: {{ include "runwhen-local.serviceAccountName.mcpHosted" . | quote }}
+            {{- /*
+              Resource requests/limits and the emptyDir ephemeral-storage
+              size limit applied to every hosted pod -- see
+              runner.mcp.hosted.resources in values.yaml for what each
+              bounds and why. Each is independently optional: `with` omits
+              the env var entirely when its value is blank, which the
+              runner (MCPHostedResourceLimits) treats as "unset", not as
+              some Kubernetes-side default.
+            */}}
+            {{- with .Values.runner.mcp.hosted.resources.requests.cpu }}
+            - name: MCP_HOSTED_CPU_REQUEST
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.runner.mcp.hosted.resources.limits.cpu }}
+            - name: MCP_HOSTED_CPU_LIMIT
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.runner.mcp.hosted.resources.requests.memory }}
+            - name: MCP_HOSTED_MEMORY_REQUEST
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.runner.mcp.hosted.resources.limits.memory }}
+            - name: MCP_HOSTED_MEMORY_LIMIT
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.runner.mcp.hosted.resources.ephemeralStorageSizeLimit }}
+            - name: MCP_HOSTED_EPHEMERAL_SIZE_LIMIT
+              value: {{ . | quote }}
+            {{- end }}
             {{- end }}
 
             {{- if .Values.proxy.enabled }}

@@ -294,6 +294,47 @@ Usage:
 {{- end }}
 
 {{/*
+Resolve the name of the dedicated hosted-MCP ServiceAccount, as IF it
+were created — this does not check `.create`. Callers gate creation
+themselves (see runner-service-account.yaml) and both that template and
+`runwhen-local.serviceAccountName.mcpHosted` below call this so the
+rendered object and any reference to it always agree on the name.
+
+Usage:
+  name: {{ include "runwhen-local.serviceAccountName.mcpHostedCreated" . }}
+*/}}
+{{- define "runwhen-local.serviceAccountName.mcpHostedCreated" -}}
+{{- $sa := .Values.runner.mcp.hosted.serviceAccount | default dict -}}
+{{- default (printf "%s-mcp-hosted" (include "runwhen-local.serviceAccountName.runner" .)) $sa.name -}}
+{{- end }}
+
+{{/*
+Resolve the ServiceAccount hosted MCP server pods run as. Precedence:
+  1. runner.mcp.hosted.serviceAccountName — explicit BYO override.
+  2. the chart-rendered, unannotated, dedicated SA (see
+     runner-service-account.yaml), when
+     runner.mcp.hosted.serviceAccount.create is true (the default).
+  3. the runner's own ServiceAccount, when serviceAccount.create is
+     explicitly false and no override is given — pre-dedicated-SA
+     back-compat.
+
+Usage:
+  value: {{ include "runwhen-local.serviceAccountName.mcpHosted" . | quote }}
+*/}}
+{{- define "runwhen-local.serviceAccountName.mcpHosted" -}}
+{{- if .Values.runner.mcp.hosted.serviceAccountName -}}
+{{- .Values.runner.mcp.hosted.serviceAccountName -}}
+{{- else -}}
+{{- $sa := .Values.runner.mcp.hosted.serviceAccount | default dict -}}
+{{- if ternary $sa.create true (hasKey $sa "create") -}}
+{{- include "runwhen-local.serviceAccountName.mcpHostedCreated" . -}}
+{{- else -}}
+{{- include "runwhen-local.serviceAccountName.runner" . -}}
+{{- end -}}
+{{- end -}}
+{{- end }}
+
+{{/*
 Resolve the OpenTelemetry collector ServiceAccount name. The subchart
 runs with `serviceAccount.create: false` and binds its Deployment to
 `.Values."opentelemetry-collector".serviceAccount.name` — i.e. the
