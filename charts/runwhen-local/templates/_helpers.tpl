@@ -309,14 +309,30 @@ Usage:
 {{- end }}
 
 {{/*
-Resolve the ServiceAccount hosted MCP server pods run as. Precedence:
-  1. runner.mcp.hosted.serviceAccountName — explicit BYO override.
-  2. the chart-rendered, unannotated, dedicated SA (see
-     runner-service-account.yaml), when
-     runner.mcp.hosted.serviceAccount.create is true (the default).
-  3. the runner's own ServiceAccount, when serviceAccount.create is
-     explicitly false and no override is given — pre-dedicated-SA
-     back-compat.
+Resolve the ServiceAccount hosted MCP server pods run as. Mirrors
+`runwhen-local.serviceAccountName.runner` (the runner's own SA
+resolution) on purpose: `create: true` means the chart creates it
+(named `name`, or a sensible default); `create: false` means the
+operator supplies it and `name` IS USED, not ignored.
+
+Precedence:
+  1. runner.mcp.hosted.serviceAccountName — DEPRECATED top-level BYO
+     override, kept only for back-compat with values files written
+     before the `serviceAccount.{create,name}` block below existed.
+     Prefer `serviceAccount.create: false` + `serviceAccount.name`,
+     which covers the same use case and matches the runner's own SA
+     knob (`runner.serviceAccount.{create,name}`).
+  2. runner.mcp.hosted.serviceAccount.create true (the default): the
+     chart-rendered, unannotated, dedicated SA (see
+     runner-service-account.yaml), named `serviceAccount.name` or the
+     computed default from `serviceAccountName.mcpHostedCreated`.
+  3. runner.mcp.hosted.serviceAccount.create false: the
+     operator-supplied SA named `serviceAccount.name`. If `name` is
+     ALSO empty, this resolves to the namespace's implicit "default"
+     ServiceAccount — NEVER the runner's own SA. (Earlier chart
+     versions fell back to the runner's SA here, silently
+     reintroducing the exact cloud-identity inheritance the dedicated
+     SA exists to prevent; that fallback has been removed.)
 
 Usage:
   value: {{ include "runwhen-local.serviceAccountName.mcpHosted" . | quote }}
@@ -329,7 +345,7 @@ Usage:
 {{- if ternary $sa.create true (hasKey $sa "create") -}}
 {{- include "runwhen-local.serviceAccountName.mcpHostedCreated" . -}}
 {{- else -}}
-{{- include "runwhen-local.serviceAccountName.runner" . -}}
+{{- default "default" $sa.name -}}
 {{- end -}}
 {{- end -}}
 {{- end }}

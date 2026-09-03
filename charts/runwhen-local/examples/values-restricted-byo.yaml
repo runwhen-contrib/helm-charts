@@ -138,12 +138,21 @@ workspaceBuilder:
 #     --show-only templates/runner-otel-collector-service-account.yaml \
 #     --show-only templates/workspace-builder-serviceaccount.yaml \
 #     --show-only templates/workspace-builder-namespacerole.yaml
+#
+# ALSO USING HOSTED MCP (runner.mcp.hosted.enabled: true)? BYO RBAC skips
+# the chart-rendered runner Role entirely — including the `services` rule
+# hosted MCP needs — so you must additionally: (1) uncomment the
+# `services` rule in byo-runner-sa-role in byo-rbac.yaml, and (2) set
+# runner.rbac.hostedProvided: true below to acknowledge it. Otherwise the
+# chart fails the render rather than install a half-working runner.
 ###############################################################################
 # Uncomment to opt in:
 # runner:
 #   serviceAccount:
 #     create: false
 #     name: byo-runner-sa
+#   rbac:
+#     hostedProvided: false  # true only after adding the `services` rule to byo-rbac.yaml's Role AND enabling runner.mcp.hosted
 #   runEnvironment:
 #     deployment:
 #       serviceAccount: byo-runner-sa

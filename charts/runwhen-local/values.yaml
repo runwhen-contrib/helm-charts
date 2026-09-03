@@ -395,6 +395,26 @@ runner:
     name: "runner"
     annotations: {}
 
+  # Runner RBAC acknowledgement for configurations the chart cannot fully
+  # provision itself. Today this gates ONE case: with
+  # `serviceAccount.create: false` above, the chart renders NO Role or
+  # RoleBinding for the runner at all — RBAC is turned off as a unit
+  # alongside the SA (see the BYO ServiceAccount guidance above and
+  # examples/byo-rbac.yaml) — and that includes the `services` rule
+  # `runner.mcp.hosted.enabled` needs so the runner can create hosted-
+  # server Services. A chart that "supports" that combination without
+  # this check would install cleanly and then fail at runtime with
+  # Forbidden the first time a hosted server is requested.
+  #
+  # If you own the runner's RBAC externally (Crossplane / Terraform /
+  # GitOps) and have already granted the `services` rule alongside the
+  # rest of examples/byo-rbac.yaml, set hostedProvided: true to
+  # acknowledge that and let the render proceed. Left false (the
+  # default), the chart FAILS the render — loudly, at install/upgrade
+  # time — instead of shipping a half-working runner.
+  rbac:
+    hostedProvided: false
+
   # Parent-side OTel collector ServiceAccount + Role + RoleBinding gate.
   # The bundled opentelemetry-collector subchart runs with
   # serviceAccount.create=false and the parent chart owns the RBAC by
@@ -529,8 +549,12 @@ runner:
         repository: ""
         tag: ""
 
-      # ServiceAccount assigned to hosted MCP server pods. Empty defers to
-      # `serviceAccount` below.
+      # DEPRECATED — top-level BYO override. Prefer `serviceAccount.create:
+      # false` + `serviceAccount.name` below instead: same effect, and it
+      # mirrors `runner.serviceAccount.{create,name}` (the runner's own SA
+      # knob) instead of being a one-off. Kept working, unchanged, for
+      # values files written before the block below existed. Empty defers
+      # to `serviceAccount` below.
       #
       # automountServiceAccountToken only withholds the Kubernetes
       # ServiceAccount token from the pod — it does NOT stop cloud
@@ -544,16 +568,21 @@ runner:
       # annotation — never the runner's own SA.
       serviceAccountName: ""
 
-      # Dedicated ServiceAccount for hosted MCP server pods. Resolution
+      # Dedicated ServiceAccount for hosted MCP server pods. Same shape as
+      # `runner.serviceAccount` above — `create: true` means the chart
+      # creates it (named `name`, or a sensible default); `create: false`
+      # means YOU supply it and `name` is used, not ignored. Resolution
       # order for the pods' actual SA (see MCP_HOSTED_SERVICE_ACCOUNT in
       # runner-deployment.yaml):
-      #   1. serviceAccountName above, if set — bring your own,
-      #      fully operator-managed SA.
-      #   2. this chart-created SA, when create is true (the default),
-      #      named `name` below or "<runner SA name>-mcp-hosted".
-      #   3. the runner's own SA, when create is explicitly false and no
-      #      override is given — the pre-dedicated-SA behaviour, kept for
-      #      back-compat.
+      #   1. serviceAccountName above, if set — deprecated BYO override.
+      #   2. create true (the default): this chart-created SA, named
+      #      `name` below or "<runner SA name>-mcp-hosted".
+      #   3. create false: the SA named `name` below. If `name` is ALSO
+      #      empty, this resolves to the namespace's implicit "default"
+      #      ServiceAccount — never the runner's own SA. Confirm the SA
+      #      you name here already exists (and has whatever access the
+      #      hosted server needs) before setting create: false, or hosted
+      #      pods will fail to schedule.
       serviceAccount:
         create: true
         name: ""
