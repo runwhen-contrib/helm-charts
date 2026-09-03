@@ -1,4 +1,5 @@
 {{- if .Values.runner.enabled -}}
+{{- $mcp := .Values.runner.mcp.hosted -}}
 {{- /*
   Hosted MCP servers run third-party code in-cluster; a config that
   claims to support hosting but omits the image tag would leave every
@@ -6,10 +7,8 @@
   there is no safe default tag, and `latest` is specifically wrong
   because CI does not publish it.
 */}}
-{{- if .Values.runner.mcp.hosted.enabled }}
-{{- if not .Values.runner.mcp.hosted.image.tag }}
+{{- if and $mcp.enabled (not $mcp.image.tag) }}
 {{- fail "runner.mcp.hosted.enabled is true but runner.mcp.hosted.image.tag is empty. Set runner.mcp.hosted.image.tag to the runner-mcp-host image tag to use." }}
-{{- end }}
 {{- end }}
 apiVersion: apps/v1
 kind: Deployment
@@ -125,11 +124,11 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
 
-            {{- if .Values.runner.mcp.hosted.enabled }}
+            {{- if $mcp.enabled }}
             - name: MCP_HOSTED_ENABLED
               value: "true"
             - name: RUNNER_MCP_HOST_IMAGE
-              value: {{ include "runwhen-local.image" (list . .Values.runner.mcp.hosted.image "us-docker.pkg.dev" "runwhen-nonprod-shared/public-images/runner-mcp-host" "") | quote }}
+              value: {{ include "runwhen-local.image" (list . $mcp.image "us-docker.pkg.dev" "runwhen-nonprod-shared/public-images/runner-mcp-host" "") | quote }}
             - name: MCP_HOSTED_SERVICE_ACCOUNT
               value: {{ include "runwhen-local.serviceAccountName.mcpHosted" . | quote }}
             {{- /*
@@ -141,23 +140,23 @@ spec:
               runner (MCPHostedResourceLimits) treats as "unset", not as
               some Kubernetes-side default.
             */}}
-            {{- with .Values.runner.mcp.hosted.resources.requests.cpu }}
+            {{- with $mcp.resources.requests.cpu }}
             - name: MCP_HOSTED_CPU_REQUEST
               value: {{ . | quote }}
             {{- end }}
-            {{- with .Values.runner.mcp.hosted.resources.limits.cpu }}
+            {{- with $mcp.resources.limits.cpu }}
             - name: MCP_HOSTED_CPU_LIMIT
               value: {{ . | quote }}
             {{- end }}
-            {{- with .Values.runner.mcp.hosted.resources.requests.memory }}
+            {{- with $mcp.resources.requests.memory }}
             - name: MCP_HOSTED_MEMORY_REQUEST
               value: {{ . | quote }}
             {{- end }}
-            {{- with .Values.runner.mcp.hosted.resources.limits.memory }}
+            {{- with $mcp.resources.limits.memory }}
             - name: MCP_HOSTED_MEMORY_LIMIT
               value: {{ . | quote }}
             {{- end }}
-            {{- with .Values.runner.mcp.hosted.resources.ephemeralStorageSizeLimit }}
+            {{- with $mcp.resources.ephemeralStorageSizeLimit }}
             - name: MCP_HOSTED_EPHEMERAL_SIZE_LIMIT
               value: {{ . | quote }}
             {{- end }}
