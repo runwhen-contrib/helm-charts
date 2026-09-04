@@ -156,6 +156,13 @@ from your mirror instead of the vendor registry. **Confirm both images are
 present in your mirror before upgrading**, or these pods will
 `ImagePullBackOff`.
 
+`deploy/image-scripts/fetch-chart-images.sh` builds this mirror list for
+you — pass it the same values (including `runner.mcp.hosted.enabled` and
+`registryOverride`) you plan to install with, and it emits `runner-mcp-host`
+alongside the rest of the chart's images, already resolved through
+`registryOverride`, whenever the hosted tier is enabled in those values.
+Prefer running it over enumerating images by hand.
+
 ## Configuring
 
 See [Customizing the Chart Before Installing](https://helm.sh/docs/intro/using_helm/#customizing-the-chart-before-installing). To see all configurable options with detailed comments, visit the chart's [values.yaml](./values.yaml), or run these configuration commands:

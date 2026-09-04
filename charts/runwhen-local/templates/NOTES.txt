@@ -74,5 +74,8 @@ third-party npm/PyPI code inside this namespace. Before relying on this
    was set). Air-gapped / mirrored-registry operators: confirm your
    mirror already has the runner and runner-mcp-host images before
    relying on this release, or these pods will ImagePullBackOff.
+   deploy/image-scripts/fetch-chart-images.sh (run with these same
+   values) will list runner-mcp-host for you, already resolved through
+   registryOverride.
 ################################################################################
 {{- end }}
