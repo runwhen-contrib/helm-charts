@@ -72,6 +72,97 @@ helm upgrade [RELEASE_NAME] [CHART] --install
 
 _See [helm upgrade](https://helm.sh/docs/helm/helm_upgrade/) for command documentation._
 
+### Upgrading with hosted MCP servers enabled
+
+If your release has `runner.mcp.hosted.enabled: true`, two behaviours changed
+that are worth checking before you upgrade a production install. `helm
+upgrade` also prints these as part of `NOTES.txt` — re-read the output.
+
+**1. Hosted MCP pods now run under a dedicated ServiceAccount, not the
+runner's own SA — and that is an intentional, non-reversible-by-default
+breaking change.**
+
+Earlier hosted-MCP defaults ran the hosted pod under the runner's own
+ServiceAccount. On GKE (and any cluster using metadata-server-based cloud
+identity — Workload Identity, IRSA, etc.), that hands third-party npm/PyPI
+code running in the hosted pod the runner's cloud identity, regardless of
+whether a Kubernetes token is mounted. `runner.mcp.hosted.serviceAccount.create`
+now defaults to `true` and the chart renders a dedicated, deliberately
+UNANNOTATED ServiceAccount for hosted pods instead.
+
+**On upgrade, if a hosted server was inadvertently relying on the runner's
+cloud identity (e.g. reading a cloud secret, calling a cloud API), it LOSES
+that access the moment this default takes effect.** There is deliberately
+**no** backward-compatible default that keeps the old sharing behaviour —
+that behaviour is the exact security gap this change closes, so silently
+preserving it on upgrade would silently preserve the gap. If you need a
+transition window while you re-provision cloud identity for the dedicated
+SA (or decide it doesn't need one), opt back into the old behaviour
+**explicitly**:
+
+```yaml
+runner:
+  mcp:
+    hosted:
+      serviceAccount:
+        create: false
+        name: "runner"   # or whatever runner.serviceAccount.name is set to
+```
+
+This must be set explicitly — a bare `serviceAccount.create: false` with no
+`name` does **not** fall back to the runner's SA; it resolves to the
+namespace's implicit `default` ServiceAccount instead (see `values.yaml`
+for the full resolution order). That is also a deliberate change from
+earlier chart behaviour, for the same reason.
+
+**2. Hosted pods get CPU/memory requests+limits and an ephemeral-storage
+cap for the first time.**
+
+A hosted pod runs arbitrary third-party npm/PyPI code fetched at startup;
+without limits, one hosted server could consume unbounded CPU/memory or
+fill a node's ephemeral storage. `runner.mcp.hosted.resources` now ships
+non-empty defaults (100m/1 CPU, 256Mi/512Mi memory, 2Gi ephemeral-storage
+per volume — sized for a lightweight CLI-wrapper server). **A hosted server
+with a heavier dependency tree (native compilation, large wheels) can start
+being OOMKilled or CPU-throttled on upgrade where it previously was not.**
+Watch for `OOMKilled` hosted pods after upgrading. To keep the old
+(unbounded) behaviour for a transition window, blank the value you need —
+this omits that setting entirely rather than falling back to a Kubernetes
+default:
+
+```yaml
+runner:
+  mcp:
+    hosted:
+      resources:
+        limits:
+          memory: ""   # or cpu: "", or ephemeralStorageSizeLimit: ""
+```
+
+Prefer raising the limit over blanking it once you know the real
+requirement — blanking removes the protection this change adds.
+
+**3. `registryOverride` implication for mirrored / air-gapped registries.**
+
+`runner.image` and `runner.mcp.hosted.image` now default their
+`registry`/`repository` to `""` instead of a hardcoded vendor registry, so
+that `runwhen-local.image` actually honours `registryOverride` for these
+two images (previously, their non-empty defaults meant `registryOverride`
+was silently ignored for the runner and hosted-MCP images specifically,
+even when set — see `values.yaml`). If you mirror images into a private
+registry and already set `.Values.registryOverride`, this upgrade will,
+for the first time, actually pull the runner and `runner-mcp-host` images
+from your mirror instead of the vendor registry. **Confirm both images are
+present in your mirror before upgrading**, or these pods will
+`ImagePullBackOff`.
+
+`deploy/image-scripts/fetch-chart-images.sh` builds this mirror list for
+you — pass it the same values (including `runner.mcp.hosted.enabled` and
+`registryOverride`) you plan to install with, and it emits `runner-mcp-host`
+alongside the rest of the chart's images, already resolved through
+`registryOverride`, whenever the hosted tier is enabled in those values.
+Prefer running it over enumerating images by hand.
+
 ## Configuring
 
 See [Customizing the Chart Before Installing](https://helm.sh/docs/intro/using_helm/#customizing-the-chart-before-installing). To see all configurable options with detailed comments, visit the chart's [values.yaml](./values.yaml), or run these configuration commands:
@@ -271,6 +362,24 @@ constraints lives in
    bump chart versions and rules drift, regenerate using
    `helm template --show-only` against the four SA / RBAC templates.
 
+   **Combining BYO RBAC with hosted MCP** (`runner.mcp.hosted.enabled:
+   true`): `runner.serviceAccount.create: false` disables the
+   chart-rendered runner Role/RoleBinding entirely, including the
+   `services` rule hosted MCP needs to create a hosted server's Service.
+   The chart FAILS the render on this combination unless you acknowledge
+   you've granted that rule yourself:
+
+   ```yaml
+   runner:
+     rbac:
+       hostedProvided: true   # only after adding the `services` rule from byo-rbac.yaml to your Role
+   ```
+
+   Leaving `hostedProvided: false` (the default) is deliberate: a runner
+   with `serviceAccount.create: false` and no acknowledgement has no way
+   to create hosted-server Services, so installing it anyway would only
+   fail later, at runtime, with `Forbidden`.
+
 ```console
 helm template rw charts/runwhen-local \
   -f charts/runwhen-local/examples/values-restricted-byo.yaml | \
@@ -287,6 +396,9 @@ helm template rw charts/runwhen-local \
 | Runner workloads fail to start | Service account mismatch in runner config | Check `runner.runEnvironment.deployment.serviceAccount` matches the rendered SA name |
 | Two releases collide on RBAC / SAs / ConfigMaps | Default resource names are bare for runner-control back-compat | Use the override block above (Multi-release deployments) |
 | Outbound TLS to private CA fails | `proxyCA` not configured | Set `proxyCA.secretName` (or `configMapName` + `key`); SSL_CERT_FILE / REQUESTS_CA_BUNDLE / CURL_CA_BUNDLE / NODE_EXTRA_CA_CERTS / GIT_SSL_CAINFO env vars are then automatically projected — independent of `proxy.enabled` |
+| `helm install`/`upgrade` fails with "runner.mcp.hosted.enabled is true and runner.serviceAccount.create is false..." | BYO runner RBAC (`runner.serviceAccount.create: false`) skips the chart-rendered Role, which normally carries the `services` rule hosted MCP needs | Grant that rule on your externally-managed Role (see `examples/byo-rbac.yaml`) and set `runner.rbac.hostedProvided: true` |
+| Hosted MCP server `Forbidden` creating a Service at runtime | Runner's SA lacks the `services` RBAC rule (installed anyway, e.g. on an older chart before the render-time check existed) | Same fix as above |
+| Hosted MCP pod `OOMKilled` after upgrading | `runner.mcp.hosted.resources` limits now apply by default | Raise (or temporarily blank) the relevant `runner.mcp.hosted.resources.*` value — see "Upgrading with hosted MCP servers enabled" |
 
 ### Upgrading from pre-0.5.0
 

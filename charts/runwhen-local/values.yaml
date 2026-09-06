@@ -395,6 +395,26 @@ runner:
     name: "runner"
     annotations: {}
 
+  # Runner RBAC acknowledgement for configurations the chart cannot fully
+  # provision itself. Today this gates ONE case: with
+  # `serviceAccount.create: false` above, the chart renders NO Role or
+  # RoleBinding for the runner at all — RBAC is turned off as a unit
+  # alongside the SA (see the BYO ServiceAccount guidance above and
+  # examples/byo-rbac.yaml) — and that includes the `services` rule
+  # `runner.mcp.hosted.enabled` needs so the runner can create hosted-
+  # server Services. A chart that "supports" that combination without
+  # this check would install cleanly and then fail at runtime with
+  # Forbidden the first time a hosted server is requested.
+  #
+  # If you own the runner's RBAC externally (Crossplane / Terraform /
+  # GitOps) and have already granted the `services` rule alongside the
+  # rest of examples/byo-rbac.yaml, set hostedProvided: true to
+  # acknowledge that and let the render proceed. Left false (the
+  # default), the chart FAILS the render — loudly, at install/upgrade
+  # time — instead of shipping a half-working runner.
+  rbac:
+    hostedProvided: false
+
   # Parent-side OTel collector ServiceAccount + Role + RoleBinding gate.
   # The bundled opentelemetry-collector subchart runs with
   # serviceAccount.create=false and the parent chart owns the RBAC by
@@ -472,9 +492,18 @@ runner:
     kind: RunnerConfig
     raw: {}
 
+  # Registry and repository are deliberately left empty here rather than
+  # defaulted to "us-docker.pkg.dev/...": runwhen-local.image only falls
+  # back to registryOverride when the per-image registry is empty, so a
+  # non-empty default here silently bypassed an air-gapped operator's
+  # mirror. The vendor defaults are instead supplied as the
+  # runwhen-local.image helper's fallback arguments in
+  # runner-deployment.yaml, same as every other image in this chart.
+  # Pin the tag here, not as a helper fallback — unlike registry/repository
+  # it isn't part of the registryOverride mechanism.
   image:
-    registry: "us-docker.pkg.dev"
-    repository: "runwhen-nonprod-shared/public-images/runner"
+    registry: ""
+    repository: ""
     tag: "2026-07-29.1"
   controlAddr: "https://runner.beta.runwhen.com"
   metrics:
@@ -490,6 +519,118 @@ runner:
     # extraVolumeMounts in your overlay.
     mtls:
       enabled: true
+
+  # MCP hosted-server capability: lets the runner stand up an MCP server
+  # in-cluster on demand ("hosted" / kind=bundled servers), rendering a
+  # ConfigMap, Secret, Deployment and Service per server.
+  mcp:
+    hosted:
+      # Whether this runner may stand up MCP servers in-cluster on demand.
+      # Default off: a hosted server runs third-party npm/PyPI code inside
+      # your cluster, so upgrading the chart must never grant that on its
+      # own. When false, the runner advertises no hosting capability and
+      # the platform refuses to register a hosted server against it.
+      enabled: false
+
+      # Image that hosts the third-party MCP server process. Required
+      # when hosted.enabled is true — there is no safe default tag, and
+      # `latest` is specifically wrong because CI does not publish it.
+      # Registry and repository are deliberately left empty here rather
+      # than defaulted to "us-docker.pkg.dev/...": runwhen-local.image
+      # only falls back to registryOverride when the per-image registry
+      # is empty, so a non-empty default here would silently bypass an
+      # air-gapped operator's mirror (and their values file predates this
+      # key, so they'd have no reason to blank it). The vendor defaults
+      # are instead supplied as the runwhen-local.image helper's fallback
+      # arguments in runner-deployment.yaml, same as every other image in
+      # this chart. Only the tag needs setting.
+      image:
+        registry: ""
+        repository: ""
+        tag: ""
+
+      # DEPRECATED — top-level BYO override. Prefer `serviceAccount.create:
+      # false` + `serviceAccount.name` below instead: same effect, and it
+      # mirrors `runner.serviceAccount.{create,name}` (the runner's own SA
+      # knob) instead of being a one-off. Kept working, unchanged, for
+      # values files written before the block below existed. Empty defers
+      # to `serviceAccount` below.
+      #
+      # automountServiceAccountToken only withholds the Kubernetes
+      # ServiceAccount token from the pod — it does NOT stop cloud
+      # metadata-server auth. On GKE, Workload Identity resolves the
+      # mapped GCP identity from `spec.serviceAccountName` regardless of
+      # whether a token is mounted, so sharing the runner's own SA with
+      # hosted pods (which run arbitrary third-party npm/PyPI code) hands
+      # them the runner's GCP identity via the metadata server. That is
+      # why `serviceAccount.create` below defaults to true: a dedicated,
+      # deliberately unannotated SA is what should carry any cloud-identity
+      # annotation — never the runner's own SA.
+      serviceAccountName: ""
+
+      # Dedicated ServiceAccount for hosted MCP server pods. Same shape as
+      # `runner.serviceAccount` above — `create: true` means the chart
+      # creates it (named `name`, or a sensible default); `create: false`
+      # means YOU supply it and `name` is used, not ignored. Resolution
+      # order for the pods' actual SA (see MCP_HOSTED_SERVICE_ACCOUNT in
+      # runner-deployment.yaml):
+      #   1. serviceAccountName above, if set — deprecated BYO override.
+      #   2. create true (the default): this chart-created SA, named
+      #      `name` below or "<runner SA name>-mcp-hosted".
+      #   3. create false: the SA named `name` below. If `name` is ALSO
+      #      empty, this resolves to the namespace's implicit "default"
+      #      ServiceAccount — never the runner's own SA. Confirm the SA
+      #      you name here already exists (and has whatever access the
+      #      hosted server needs) before setting create: false, or hosted
+      #      pods will fail to schedule.
+      serviceAccount:
+        create: true
+        name: ""
+
+      # Resource requests/limits and an ephemeral-storage size limit for
+      # every hosted MCP pod (rendered as MCP_HOSTED_CPU_REQUEST/
+      # MCP_HOSTED_CPU_LIMIT/MCP_HOSTED_MEMORY_REQUEST/
+      # MCP_HOSTED_MEMORY_LIMIT/MCP_HOSTED_EPHEMERAL_SIZE_LIMIT — see
+      # runner-deployment.yaml and MCPHostedResourceLimits in the runner).
+      # A hosted pod runs arbitrary third-party npm/PyPI code fetched at
+      # startup, so without these one hosted server can consume unbounded
+      # CPU/memory or fill the node's ephemeral storage, degrading every
+      # other pod on that node — not just this one.
+      #
+      # Defaults are sized for a lightweight CLI-wrapper MCP server (npx or
+      # uvx fetching one small-to-medium package on start), with headroom
+      # rather than a tight ceiling — the priority is not OOM-killing or
+      # throttling a legitimate server, not minimizing footprint. A server
+      # with heavier runtime dependencies (large Python wheels, native
+      # compilation) may need these raised.
+      #
+      # Blank any value to omit that setting entirely (same effect as never
+      # having set it) rather than falling back to a Kubernetes default.
+      resources:
+        requests:
+          # Steady-state CPU for mcp-proxy plus a small server process is
+          # well under one core; 100m reserves scheduling capacity without
+          # over-committing the node.
+          cpu: "100m"
+          # Covers the Node/Python runtime, npm/uv's own overhead, and the
+          # server process itself at idle.
+          memory: "256Mi"
+        limits:
+          # A full core covers a bursty npm install step (e.g. native
+          # module compilation via node-gyp) without letting one hosted
+          # server starve everything else on the node.
+          cpu: "1"
+          # Generous relative to the request: dependency resolution (uv)
+          # and larger npm dependency trees can spike well above idle
+          # without being a runaway process.
+          memory: "512Mi"
+        # Applied to BOTH of the pod's writable emptyDir volumes -- "cache"
+        # (/home/mcp, where npm/uv's package cache lives) and "tmp" (/tmp,
+        # where uv stages a download before moving it into the cache). 2Gi
+        # per volume is enough for a real npm/PyPI install, including a
+        # moderately large dependency tree, while still bounding how much
+        # of the node's ephemeral storage one hosted server can claim.
+        ephemeralStorageSizeLimit: "2Gi"
 
   # securityContext (container) is used to set the security context for the runner container
   # securityContext: {}

@@ -32,6 +32,15 @@
 #
 # Rules below are mirrored from chart 0.5.9 templates verbatim. If you
 # upgrade the chart and the rules drift, regenerate with --show-only.
+#
+# Hosted MCP servers (runner.mcp.hosted.enabled: true): the chart-rendered
+# runner Role normally adds a `services` rule so the runner can create the
+# Service each hosted MCP server needs. On the BYO path (this file) the
+# chart never renders that Role at all, so if you also enable hosted MCP
+# you MUST add the commented `services` rule below to byo-runner-sa-role
+# yourself, THEN set runner.rbac.hostedProvided: true in your values file
+# to acknowledge you've done so — the chart FAILS the render otherwise
+# rather than install a runner that will get Forbidden errors at runtime.
 
 ###############################################################################
 # Runner
@@ -69,6 +78,10 @@ rules:
   - apiGroups: ["coordination.k8s.io"]
     resources: ["leases"]
     verbs: ["create", "get", "update"]
+  # Uncomment if runner.mcp.hosted.enabled: true — see the note above.
+  # - apiGroups: [""]
+  #   resources: ["services"]
+  #   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

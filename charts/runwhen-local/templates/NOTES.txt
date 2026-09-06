@@ -1,0 +1,81 @@
+RunWhen Local has been {{ if .Release.IsUpgrade }}upgraded{{ else }}installed{{ end }} in namespace {{ .Release.Namespace }} (release {{ .Release.Name }}).
+
+{{- if .Values.workspaceBuilder.enabled }}
+Workspace Builder: {{ include "runwhen-local.workspaceBuilderFullname" . }}
+{{- end }}
+{{- if .Values.runner.enabled }}
+Runner:            {{ include "runwhen-local.runnerFullname" . }}
+{{- end }}
+
+{{- if (and .Values.runner.enabled .Values.runner.mcp.hosted.enabled) }}
+
+################################################################################
+# Hosted MCP servers are ENABLED (runner.mcp.hosted.enabled: true)
+################################################################################
+This runner may stand up MCP servers in-cluster on demand, running
+third-party npm/PyPI code inside this namespace. Before relying on this
+{{ if .Release.IsUpgrade }}upgrade{{ else }}install{{ end }}, check the following.
+
+1. ServiceAccount — hosted MCP pods run as:
+
+     {{ include "runwhen-local.serviceAccountName.mcpHosted" . }}
+
+   {{- $mcpSa := .Values.runner.mcp.hosted.serviceAccount | default dict }}
+   {{- if .Values.runner.mcp.hosted.serviceAccountName }}
+
+   This is an explicit BYO override (runner.mcp.hosted.serviceAccountName).
+   {{- else if ternary $mcpSa.create true (hasKey $mcpSa "create") }}
+
+   This is a dedicated, chart-created, UNANNOTATED ServiceAccount — hosted
+   pods do NOT inherit the runner's own cloud identity (GCP Workload
+   Identity, IRSA, etc). If a hosted server needs its own cloud identity,
+   annotate this ServiceAccount yourself after install.
+   {{- else }}
+
+   This ServiceAccount is NOT created by the chart
+   (runner.mcp.hosted.serviceAccount.create: false). Confirm it already
+   exists and carries whatever access your hosted server(s) need — hosted
+   pods will fail to schedule otherwise.
+   {{- end }}
+
+   UPGRADING from a release where hosted MCP pods ran under the RUNNER'S
+   OWN ServiceAccount? That default changed for security — a hosted pod
+   previously inherited the runner's cloud identity via the metadata
+   server. If a hosted server was relying on that identity, it has now
+   LOST that access. See the chart README's "Upgrading with hosted MCP
+   servers enabled" section for how to opt back into the old behaviour
+   deliberately, and why that is a breaking change on purpose.
+
+2. Resource limits — hosted pods now get CPU/memory requests+limits and
+   an ephemeral-storage cap by default:
+
+     cpu:               {{ .Values.runner.mcp.hosted.resources.requests.cpu }} / {{ .Values.runner.mcp.hosted.resources.limits.cpu }} (request/limit)
+     memory:            {{ .Values.runner.mcp.hosted.resources.requests.memory }} / {{ .Values.runner.mcp.hosted.resources.limits.memory }} (request/limit)
+     ephemeral-storage:  {{ .Values.runner.mcp.hosted.resources.ephemeralStorageSizeLimit }} per volume (cache + tmp)
+
+   A heavy npm/pip install at hosted-server startup can now be OOMKilled
+   or throttled where it previously was not. Watch for OOMKilled hosted
+   pods after upgrade; raise (or blank, to remove the ceiling entirely)
+   the relevant runner.mcp.hosted.resources.* value if a legitimate
+   server needs more room.
+
+3. RBAC — if runner.serviceAccount.create is false (BYO runner
+   ServiceAccount), the chart renders NO Role/RoleBinding for the runner
+   AT ALL, hosted MCP included. Confirm your externally-managed Role
+   grants create/get/list/watch/update/patch/delete on "services" (see
+   examples/byo-rbac.yaml), then set runner.rbac.hostedProvided: true.
+   Without both, hosted-server creation fails at runtime with a
+   Forbidden error even though this install/upgrade succeeded.
+
+4. registryOverride — runner.image and runner.mcp.hosted.image now
+   default their registry/repository to "" so that registryOverride
+   actually applies to them (earlier chart versions silently pulled
+   these two images from the vendor registry even when registryOverride
+   was set). Air-gapped / mirrored-registry operators: confirm your
+   mirror already has the runner and runner-mcp-host images before
+   relying on this release, or these pods will ImagePullBackOff.
+   deploy/image-scripts/fetch-chart-images.sh (run with these same
+   values) will list runner-mcp-host for you, already resolved through
+   registryOverride.
+################################################################################
+{{- end }}

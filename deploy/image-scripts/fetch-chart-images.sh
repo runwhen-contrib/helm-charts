@@ -67,6 +67,18 @@ yq -r '..|.image? | select(.)' "$RENDERED_YAML" > "$IMAGES_LIST" 2>/dev/null || 
 #     | sed -E 's/.*image:\s*"?([^"]+)"?/\1/' \
 #     >> "$IMAGES_LIST"
 
+# The runwhen-local chart's hosted-MCP feature (runner.mcp.hosted.enabled)
+# doesn't fit the pattern above: the runner reads its image reference from
+# an env var (RUNNER_MCP_HOST_IMAGE), not an `image:` key, and the hosted
+# MCP server pods themselves are created imperatively by the runner at
+# runtime, so they never appear in `helm template` output at all. Pull the
+# image straight out of that rendered env var instead of reconstructing
+# registry/repository/tag by hand, so registryOverride and per-image
+# registry/tag overrides are already baked in. When the hosted tier is
+# disabled (the default), the env var isn't rendered and this is a no-op.
+yq -r '..|select(has("env")) | .env[] | select(.name == "RUNNER_MCP_HOST_IMAGE") | .value' \
+  "$RENDERED_YAML" 2>/dev/null >> "$IMAGES_LIST" || true
+
 # --- 5. (Optional) Add extra images from user-specified file ---
 if [[ -n "$EXTRA_IMAGES_FILE" && -f "$EXTRA_IMAGES_FILE" ]]; then
   echo "Merging extra images from: $EXTRA_IMAGES_FILE"
