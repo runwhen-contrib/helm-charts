@@ -1,10 +1,16 @@
 {{- $wb := include "runwhen-local.resolveWorkspaceBuilder" . | fromYaml -}}
 {{- if $wb.enabled -}}
 {{- if not $wb.workspaceInfo.useExistingConfigMap }}
+{{- /*
+  Empty/unset `.workspaceInfo.configMap.name` falls back to the
+  release-derived {prefix}workspace-builder so the CM name and the
+  volume mount in workspace-builder-deployment.yaml always agree.
+*/}}
+{{- $workspaceInfoCMName := $wb.workspaceInfo.configMap.name | default (printf "%sworkspace-builder" (include "runwhen-local.resourcePrefix" .)) -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ $wb.workspaceInfo.configMap.name }}
+  name: {{ $workspaceInfoCMName }}
   labels:
     {{- include "runwhen-local.workspaceBuilderLabels" . | nindent 4 }}
 data:

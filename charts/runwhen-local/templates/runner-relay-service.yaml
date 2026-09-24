@@ -1,13 +1,16 @@
 {{/*
-TODO: prefix relay service name with runnerFullname once runner-control
-is updated to override this properly. The pod-side selector still keys
-on `app: runner` (legacy label) so back-compat is preserved.
+Runner relay Service. Named `{prefix}runner-relay` so multiple releases
+in one namespace never collide. The runner receives the same prefix
+via `RUNNER_RESOURCE_PREFIX` and composes its outbound RELAY_URL against
+this name (see runner_k8s_client.go / executor_dispatch.go). The pod-side
+selector still keys on `app: runner` (legacy label) so back-compat is
+preserved.
 */}}
 {{- if .Values.runner.enabled -}}
 apiVersion: v1
 kind: Service
 metadata:
-  name: runner-relay
+  name: {{ include "runwhen-local.resourcePrefix" . }}runner-relay
   labels:
     {{- include "runwhen-local.labels" . | nindent 4 }}
     app: runner

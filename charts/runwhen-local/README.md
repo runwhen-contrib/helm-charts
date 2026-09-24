@@ -127,8 +127,8 @@ If the workspace builder UI is unreachable or the runner relay is not responding
 # Workspace builder service endpoints
 kubectl get endpoints <release-name>-workspace-builder -n <namespace>
 
-# Runner relay service endpoints (default name; override via runner.serviceAccount.name)
-kubectl get endpoints runner-relay -n <namespace>
+# Runner relay service endpoints (default name is release-derived, e.g. <release>-runwhen-local-runner-relay)
+kubectl get endpoints -l app.kubernetes.io/component=runner-relay -n <namespace>
 ```
 
 ### Inspecting the runner config
@@ -136,45 +136,96 @@ kubectl get endpoints runner-relay -n <namespace>
 The runner reads its configuration from a ConfigMap. To verify the rendered config:
 
 ```console
-# Default ConfigMap name (override via runner.configMap.name)
-kubectl get configmap runner-config -n <namespace> -o yaml
+# Default ConfigMap name is release-derived, e.g. <release>-runwhen-local-runner-config
+kubectl get configmap -l app.kubernetes.io/component=runner -n <namespace> -o yaml
 ```
 
 ### Multi-release deployments in one namespace
 
-The chart's default resource names (`runner`, `runner-relay`,
-`runner-config`, `otel-collector`, `workspace-builder`) are kept for
-back-compat with runner-control's wire contract. If you need to deploy
-two releases of this chart into the same namespace, override the
-collision-class names in the second release's values file:
+Chart **0.7.0+** derives every collision-class resource name from the
+release name (via the `runwhen-local.resourcePrefix` helper — the
+release-derived fullname truncated to 32 chars plus a `-`), so multiple
+releases can safely coexist in the same namespace with no manual
+override. The chart also stamps the same prefix onto the runner via
+the `RUNNER_RESOURCE_PREFIX` environment variable so the runtime
+resources the runner creates (worker Deployments, cert-bundle
+secrets, uploadinfo, exec-* pools, mcp-* Deployments, and the
+outbound `RELAY_URL`) line up with the chart-side names.
+
+Renamed resources (bare → release-derived):
+
+| Old bare name | New default |
+|---|---|
+| `runner` (ServiceAccount / Role / RoleBinding) | `{prefix}runner*` |
+| `runner-config` (ConfigMap) | `{prefix}runner-config` |
+| `runner-relay` (Service) | `{prefix}runner-relay` |
+| `otel-collector` (parent-rendered SA / Role / RoleBinding / ConfigMap) | `{prefix}otel-collector*` |
+| `workspace-builder` (SA / ConfigMap / Roles / RoleBindings) | `{prefix}workspace-builder*` |
+| `{namespace}-workspace-builder-view-crb` (cluster-scoped) | `{prefix}workspace-builder-view-crb` |
+| `uploadinfo` (Secret, runner-written) | `{prefix}uploadinfo` |
+| `runner-metrics-tls` (Secret, runner-written) | `{prefix}runner-metrics-tls` |
+
+The trunc-32 budget on the prefix keeps every composed name within
+Kubernetes' 63-char DNS label limit. Deployment names
+(`{release}-runwhen-local-runner` and
+`{release}-runwhen-local-workspace-builder`) keep their existing
+trunc-44 behavior — they were already release-derived and unique.
+
+**Explicit-name escape hatch.** Every helper still honours an
+explicit `.Values...name` override. Set the name to anything you want
+(e.g. an admission-policy-approved literal, a pre-created BYO SA):
 
 ```yaml
 runner:
-  configMap:
-    name: <release>-runner-config
   serviceAccount:
     create: true
-    name: <release>-runner
-  runEnvironment:
-    deployment:
-      serviceAccount: <release>-runner
-    pod:
-      serviceAccount: <release>-runner
+    name: my-runner-sa   # overrides {prefix}runner
+  configMap:
+    name: my-runner-config
 
 workspaceBuilder:
   serviceAccount:
-    name: <release>-workspace-builder
+    name: my-workspace-builder
   workspaceInfo:
     configMap:
-      name: <release>-workspace-builder
-
-opentelemetry-collector:
-  fullnameOverride: <release>-otel-collector
-  serviceAccount:
-    name: <release>-otel-collector
-  configMap:
-    existingName: <release>-otel-collector
+      name: my-workspace-info
 ```
+
+Explicit overrides work identically in single-release and multi-release
+setups.
+
+**Multi-release OTel subchart (auto-prefixed, chart 0.7.0+).** The
+bundled `opentelemetry-collector` subchart is now auto-prefixed: the
+parent chart shadows the subchart's `fullname` and `serviceAccountName`
+templates (which the subchart renders in its own context) so its
+Deployment / Service / ServiceAccount default to the same
+release-derived `{prefix}` as every parent-rendered resource, and the
+subchart's `configMap.existingName` and `extraVolumes[].secret.secretName`
+are set to templates that resolve via the
+`runwhen-local.otelSubchartPrefix` / `runwhen-local.runnerMetricsTls`
+helpers. No override is needed for a standard multi-release install.
+
+Every knob still honours an explicit override — set any of them to a
+literal to pin the name (e.g. an admission-policy-approved value):
+
+```yaml
+opentelemetry-collector:
+  fullnameOverride: my-release-runwhen-local-otel-collector
+  serviceAccount:
+    name: my-release-runwhen-local-otel-collector
+  configMap:
+    existingName: my-release-runwhen-local-otel-collector
+  extraVolumes:
+    - name: tls-secret-volume
+      secret:
+        secretName: my-release-runwhen-local-runner-metrics-tls
+    # preserve any additional volumes (e.g. proxy-ca) here
+```
+
+The default prefix is `{prefix}` = `runwhen-local.fullname | trunc 32 |
+trimSuffix "-"` followed by a `-` — for a chart with the default
+`nameOverride`, `<release-name>-runwhen-local-` (truncated to 32
+chars).
 
 ### Customer overlays (commonLabels, podLabels, podAnnotations)
 
@@ -282,11 +333,105 @@ helm template rw charts/runwhen-local \
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | Workspace builder pod in `CrashLoopBackOff` | Missing or invalid `workspaceInfo` configmap | Check `workspaceBuilder.workspaceInfo` values |
-| Runner pod stuck in `Pending` | Insufficient resources or missing service account | Check `runner.resources` and verify the runner SA exists (default `runner`, override via `runner.serviceAccount.name`) |
+| Runner pod stuck in `Pending` | Insufficient resources or missing service account | Check `runner.resources` and verify the release-derived runner SA exists (default `{prefix}runner`, override via `runner.serviceAccount.name`) |
 | Service returns no endpoints | Label mismatch after upgrade | Verify pod labels with `kubectl get pods --show-labels` |
-| Runner workloads fail to start | Service account mismatch in runner config | Check `runner.runEnvironment.deployment.serviceAccount` matches the rendered SA name |
-| Two releases collide on RBAC / SAs / ConfigMaps | Default resource names are bare for runner-control back-compat | Use the override block above (Multi-release deployments) |
+| Runner workloads fail to start | Service account mismatch in runner config | Check `runner.runEnvironment.deployment.serviceAccount` resolves to the rendered SA name (leave empty to inherit the release-derived default; stale `"runner"` literals in older overlays silently override this) |
+| Two releases collide on RBAC / SAs / ConfigMaps | Legacy chart pre-0.7.0 default names were bare (`runner`, `runner-config`, `workspace-builder`, …) | Upgrade to chart 0.7.0+ — every collision-class resource, including the bundled OTel subchart, is now automatically release-derived (see "Multi-release deployments" above) |
+| Runner Deployment env missing `RUNNER_RESOURCE_PREFIX` | Chart pre-0.7.0 or runner image without prefix support | Bump chart to 0.7.0+ AND update the runwhen-runner image to a version that reads `RUNNER_RESOURCE_PREFIX` |
+| OTel collector `CreateContainerConfigError` mounting `runner-metrics-tls` | Runner image supports `RUNNER_RESOURCE_PREFIX` and writes `{prefix}runner-metrics-tls`, but the chart is pre-0.7.0 (OTel secretName not yet auto-prefixed) | Upgrade the chart to 0.7.0+ — the default OTel mount resolves to `{prefix}runner-metrics-tls` automatically (or pin the 4 subchart keys explicitly per the "Multi-release OTel subchart" block) |
 | Outbound TLS to private CA fails | `proxyCA` not configured | Set `proxyCA.secretName` (or `configMapName` + `key`); SSL_CERT_FILE / REQUESTS_CA_BUNDLE / CURL_CA_BUNDLE / NODE_EXTRA_CA_CERTS / GIT_SSL_CAINFO env vars are then automatically projected — independent of `proxy.enabled` |
+
+### Upgrading to 0.7.0 (release-name prefixing)
+
+Chart **0.7.0** is a deliberate breaking change: every collision-class
+resource that used to be bare (`runner`, `runner-config`,
+`runner-relay`, `otel-collector`, `workspace-builder`, `uploadinfo`,
+`runner-metrics-tls`, and the namespace-derived
+`{namespace}-workspace-builder-view-crb`) is now release-derived
+through the new `runwhen-local.resourcePrefix` helper. Multiple
+releases can safely coexist in one namespace with **no manual
+override** for chart-rendered resources.
+
+Wire contract with runwhen-runner:
+
+- The chart always sets `RUNNER_RESOURCE_PREFIX={prefix}` on the
+  runner container (see `templates/runner-deployment.yaml`).
+- **The runner image MUST be a version that reads
+  `RUNNER_RESOURCE_PREFIX`** — otherwise the runner will write bare
+  names (`runner-metrics-tls`, `uploadinfo`, worker deployments, SA
+  refs) that no longer match the chart-side names, and the collector /
+  spawned workloads / cert-mount references will fail.
+- Empty prefix reproduces today's names byte-identical on the runner
+  side, so docker installs and non-chart runners are unaffected.
+
+Coordinate the runner image bump with the chart bump (or override the
+chart's `RUNNER_RESOURCE_PREFIX` env to empty via
+`runner.extraEnv` on the runner-first upgrade path).
+
+Renamed resources (bare → release-derived default; every helper still
+honours an explicit `.name` override):
+
+| Old bare name | New default |
+|---|---|
+| `runner` (ServiceAccount) | `{prefix}runner` |
+| `runner-role` / `runner-rolebinding` | `{prefix}runner-role` / `{prefix}runner-rolebinding` |
+| `runner-config` (ConfigMap) | `{prefix}runner-config` |
+| `runner-relay` (Service) | `{prefix}runner-relay` |
+| `otel-collector` (parent-rendered SA) | `{prefix}otel-collector` |
+| `otel-collector-role` / `otel-collector-rolebinding` | `{prefix}otel-collector-role` / `{prefix}otel-collector-rolebinding` |
+| `otel-collector` (parent-rendered ConfigMap) | `{prefix}otel-collector` |
+| `workspace-builder` (ServiceAccount) | `{prefix}workspace-builder` |
+| `workspace-builder-token` (SA token Secret) | `{prefix}workspace-builder-token` |
+| `workspace-builder-sa-local-view` / `-rb` (Role/RoleBinding) | `{prefix}workspace-builder-sa-local-view` / `-rb` |
+| `workspace-builder-sa-secret-manage` / `-rb` (Role/RoleBinding) | `{prefix}workspace-builder-sa-secret-manage` / `-rb` |
+| `workspace-builder-advanced-view` / `workspace-builder-advanced-crb` (ClusterRole/ClusterRoleBinding, only when `advancedClusterRole.enabled=true`) | `{prefix}workspace-builder-advanced-view` / `{prefix}workspace-builder-advanced-crb` |
+| `{namespace}-workspace-builder-view-crb` (ClusterRoleBinding) | `{prefix}workspace-builder-view-crb` |
+| `workspace-builder` (workspaceInfo ConfigMap) | `{prefix}workspace-builder` |
+| `uploadinfo` (runner-written Secret; workspaceBuilder mount reference) | `{prefix}uploadinfo` |
+| `runner-metrics-tls` (runner-written Secret; OTel mount reference) | `{prefix}runner-metrics-tls` |
+
+Input Secret **operators must create / rename**:
+
+| Old name | New name | Notes |
+|---|---|---|
+| `runner-registration-token` | `{prefix}runner-registration-token` | The runner reads this Secret at boot to register with the platform. It is NOT chart-rendered; you (or your GitOps overlay) create it out-of-band. Rename it before restarting the runner Deployment after the upgrade |
+
+Upgrade steps:
+
+1. Bump the chart to 0.7.0 and the runwhen-runner image to a version
+   that reads `RUNNER_RESOURCE_PREFIX` in the same operation (or use
+   the compatibility escape hatch above).
+2. Pre-create / rename the `{prefix}runner-registration-token` Secret
+   in the release namespace.
+3. The bundled OTel subchart is auto-prefixed via parent-side shadows
+   of its `fullname` / `serviceAccountName` templates, and its
+   `configMap.existingName` / `extraVolumes[].secret.secretName`
+   default to release-derived templates — no override needed for the
+   default mTLS metrics setup (`runner.metrics.mtls.enabled=true`).
+   Pin any of those keys explicitly if your environment requires
+   literal names (see "Multi-release OTel subchart" above).
+4. `helm upgrade [RELEASE_NAME] runwhen-contrib/runwhen-local --install`.
+5. Helm will create the new release-derived resources and stop
+   managing the old bare-named ones. Delete the old resources by
+   label / by name:
+
+   ```console
+   kubectl -n <namespace> delete sa,role,rolebinding,configmap,service \
+     runner runner-role runner-rolebinding runner-config runner-relay \
+     otel-collector otel-collector-role otel-collector-rolebinding \
+     workspace-builder \
+     --ignore-not-found
+   kubectl -n <namespace> delete secret \
+     workspace-builder-token uploadinfo runner-metrics-tls \
+     --ignore-not-found
+   kubectl delete clusterrolebinding <namespace>-workspace-builder-view-crb --ignore-not-found
+   ```
+
+If Helm reports that the workspace-builder or runner Deployment's
+`spec.selector` is immutable, delete the Deployment once before
+retrying the upgrade — pod selectors carry `app.kubernetes.io/instance`
+which is release-safe, so this only bites operators whose overlays
+pinned selectors manually.
 
 ### Upgrading from pre-0.5.0
 

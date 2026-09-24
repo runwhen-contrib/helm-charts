@@ -1,10 +1,17 @@
 {{- $wb := include "runwhen-local.resolveWorkspaceBuilder" . | fromYaml -}}
 {{- if $wb.enabled -}}
 {{- if $wb.serviceAccountRoles.clusterRoleView.enabled -}}
+{{- /*
+  ClusterRoleBinding name must be unique cluster-wide. It was previously
+  {namespace}-{sa-name}-view-crb — that collides across two releases in
+  the same namespace. Switch to the release-derived resource prefix so
+  every release owns a distinct CRB.
+*/}}
+{{- $saName := include "runwhen-local.serviceAccountName" . -}}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ .Release.Namespace }}-{{ $wb.serviceAccount.name }}-view-crb
+  name: {{ include "runwhen-local.resourcePrefix" . }}workspace-builder-view-crb
   namespace: {{ .Release.Namespace }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -12,7 +19,7 @@ roleRef:
   name: view
 subjects:
   - kind: ServiceAccount
-    name: {{ $wb.serviceAccount.name }}
+    name: {{ $saName }}
     namespace: {{ .Release.Namespace }}
 {{- end }}
 {{- end }}

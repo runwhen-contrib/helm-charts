@@ -112,6 +112,19 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+            {{- /*
+              Release-name-derived prefix passed to runwhen-runner so
+              every resource the runner reads/writes at runtime
+              (cert-bundle secrets, uploadinfo, runner-worker Deployments,
+              exec-* pools, mcp-* Deployments, RELAY_URL, worker
+              ConfigMap/SA refs) matches the chart-side names.
+              Always-on: empty prefix is legal on the runner side and
+              reproduces today's names byte-identical for non-chart /
+              docker installs. Requires runwhen-runner ≥ the release
+              that added RUNNER_RESOURCE_PREFIX handling.
+            */}}
+            - name: RUNNER_RESOURCE_PREFIX
+              value: {{ include "runwhen-local.resourcePrefix" . | quote }}
 
             {{- if .Values.proxy.enabled }}
             {{- with .Values.proxy.httpProxy }}
@@ -160,7 +173,7 @@ spec:
       volumes:
         - name: runner-config-volume
           configMap:
-            name: {{ .Values.runner.configMap.name }}
+            name: {{ .Values.runner.configMap.name | default (printf "%srunner-config" (include "runwhen-local.resourcePrefix" .)) }}
         - name: bolt-data
           emptyDir: {}
 

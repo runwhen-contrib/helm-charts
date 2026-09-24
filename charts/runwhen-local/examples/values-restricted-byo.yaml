@@ -276,10 +276,18 @@ opentelemetry-collector:
   # The runner-otel-collector-configmap.yaml relay automatically
   # switches its `ca_file` to /etc/ssl/certs/proxy-ca.crt when
   # .Values.proxyCA is set chart-wide.
+  #
+  # Multi-release / new-runner override (chart 0.7.0+):
+  # A prefix-aware runner writes the metrics cert bundle as
+  # `{prefix}runner-metrics-tls`. The include below resolves to that
+  # release-derived name automatically, matching what the collector mounts.
+  # The runner-otel-collector-configmap.yaml relay automatically
+  # switches its `ca_file` to /etc/ssl/certs/proxy-ca.crt when
+  # .Values.proxyCA is set chart-wide.
   extraVolumes:
     - name: tls-secret-volume
       secret:
-        secretName: runner-metrics-tls
+        secretName: '{{ include "runwhen-local.runnerMetricsTls" . }}'
     - name: proxy-ca-volume
       secret:
         secretName: corporate-root-ca       # MUST match .proxyCA.secretName

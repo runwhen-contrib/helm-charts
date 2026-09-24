@@ -2,11 +2,17 @@
 {{- if and .Values.runner.configMap .Values.runner.configMap.create -}}
 {{- $_ := .Values.runner.configMap.apiVersion | required ".Values.runner.configMap.apiVersion must be set !" -}}
 {{- $_ := .Values.runner.configMap.kind | required ".Values.runner.configMap.kind must be set !" -}}
-{{- $_ := .Values.runner.configMap.name | required ".Values.runner.configMap.name must be set !" -}}
+{{- /*
+  Empty/unset `.runner.configMap.name` falls back to the release-derived
+  {prefix}runner-config so multiple releases in one namespace never
+  collide. Explicit `.Values.runner.configMap.name` still wins.
+  Kept in sync with the volume mount in runner-deployment.yaml.
+*/}}
+{{- $runnerCMName := .Values.runner.configMap.name | default (printf "%srunner-config" (include "runwhen-local.resourcePrefix" .)) -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Values.runner.configMap.name }}
+  name: {{ $runnerCMName }}
   labels:
     {{- include "runwhen-local.runnerLabels" . | nindent 4 }}
     app: runner

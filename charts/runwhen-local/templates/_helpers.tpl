@@ -262,24 +262,54 @@ still fits within the 63-char Kubernetes DNS label limit.
 {{- end }}
 
 {{/*
-Create the name of the service account to use
+Release-name-derived resource prefix used to disambiguate every
+collision-class chart resource so multiple releases can coexist in the
+same namespace. The prefix ends with a "-" so callers can compose names
+as `{prefix}runner`, `{prefix}otel-collector`, `{prefix}uploadinfo`, etc.
+Deployment names (runnerFullname, workspaceBuilderFullname) are kept
+release-derived + trunc-44 by their own helpers and do NOT go through
+this prefix.
+
+Trunc-32 budget (63-char DNS label limit):
+  32 (prefix, dash included) + longest suffix must be <= 63
+  Longest composed names to plan for:
+    workspace-builder-advanced-crb        (30 chars) → 32 + 30 = 62 ✓
+    runner-registration-token             (25 chars) → 32 + 25 = 57 ✓
+    runner-workspace-secret               (23 chars) → 32 + 23 = 55 ✓
+    runner-worker-<imageTag>              (14 + tag) — image tags are
+      short (semver / date stamps), typically ≤ 16 chars, so 32 + 30 ≤ 63.
+
+The wire contract with runwhen-runner also passes this string as the
+`RUNNER_RESOURCE_PREFIX` env var so runner-created resources
+(cert-bundle secrets, uploadinfo, runner-worker deployments, exec-*
+pools, mcp-* deployments) match the chart-side names.
+*/}}
+{{- define "runwhen-local.resourcePrefix" -}}
+{{- printf "%s-" (include "runwhen-local.fullname" . | trunc 32 | trimSuffix "-") }}
+{{- end }}
+
+{{/*
+Create the name of the workspace-builder service account to use.
+Defaults to the release-derived {prefix}workspace-builder so multiple
+releases in one namespace never collide. Explicit
+`.Values.workspaceBuilder.serviceAccount.name` still wins;
+`create: false` returns `default` if no name is supplied.
 */}}
 {{- define "runwhen-local.serviceAccountName" -}}
 {{- $wb := include "runwhen-local.resolveWorkspaceBuilder" . | fromYaml -}}
 {{- if $wb.serviceAccount.create }}
-{{- default (include "runwhen-local.fullname" .) $wb.serviceAccount.name }}
+{{- default (printf "%sworkspace-builder" (include "runwhen-local.resourcePrefix" .)) $wb.serviceAccount.name }}
 {{- else }}
 {{- default "default" $wb.serviceAccount.name }}
 {{- end }}
 {{- end }}
 
 {{/*
-Resolve the runner ServiceAccount name. Defaults to the literal "runner"
-for back-compat with existing installs and the runner-control wire
-contract (see TODOs in runner-* templates). Operators with multi-release
-namespaces or admission policies that forbid bare names can override via
-`.Values.runner.serviceAccount.name`. Honours `serviceAccount.create=false`
-(returns `default` if no name is supplied).
+Resolve the runner ServiceAccount name. Defaults to the release-derived
+{prefix}runner so multiple releases in one namespace never collide on the
+runner SA. Operators can still pin an explicit name via
+`.Values.runner.serviceAccount.name` (the documented escape hatch);
+`serviceAccount.create: false` returns `default` if no name is supplied.
 
 Usage:
   serviceAccountName: {{ include "runwhen-local.serviceAccountName.runner" . }}
@@ -287,7 +317,7 @@ Usage:
 {{- define "runwhen-local.serviceAccountName.runner" -}}
 {{- $sa := (.Values.runner.serviceAccount | default dict) -}}
 {{- if hasKey $sa "create" | ternary $sa.create true }}
-{{- default "runner" $sa.name }}
+{{- default (printf "%srunner" (include "runwhen-local.resourcePrefix" .)) $sa.name }}
 {{- else }}
 {{- default "default" $sa.name }}
 {{- end }}
@@ -300,18 +330,20 @@ runs with `serviceAccount.create: false` and binds its Deployment to
 subchart is the SOURCE OF TRUTH for the SA name. The parent-chart's
 ServiceAccount + Role + RoleBinding template MUST resolve to the same
 name; otherwise a multi-release operator who renames via the subchart
-key (per README's "Multi-release deployments" section) ends up with
-the subchart Deployment looking for `<release>-otel-collector` while
-the parent renders `otel-collector` — RBAC fails to bind.
+key ends up with the subchart Deployment looking for one name while the
+parent renders another — RBAC fails to bind.
 
-Defaults to the literal "otel-collector" for back-compat. Override via
-`opentelemetry-collector.serviceAccount.name` (NOT a parent-only key —
-the value MUST be the subchart key so both sides agree).
+Defaults to the release-derived {prefix}otel-collector so multiple
+releases in one namespace never collide. Explicit
+`opentelemetry-collector.serviceAccount.name` still wins (it MUST be
+the subchart key so both layers agree). See the parent-side otel
+deployment template for how the subchart Deployment renders through
+the augmented values context so this default is honoured end-to-end.
 */}}
 {{- define "runwhen-local.serviceAccountName.otelCollector" -}}
 {{- $subchart := index .Values "opentelemetry-collector" | default dict -}}
 {{- $sa := ($subchart.serviceAccount | default dict) -}}
-{{- default "otel-collector" $sa.name }}
+{{- default (printf "%sotel-collector" (include "runwhen-local.resourcePrefix" .)) $sa.name }}
 {{- end }}
 
 {{/*
@@ -319,18 +351,77 @@ Resolve the OpenTelemetry collector ConfigMap name. Same coupling
 shape as the SA helper above: the subchart runs with
 `configMap.create: false` + `configMap.existingName: "otel-collector"`
 and the subchart Deployment mounts that ConfigMap by name. The
-parent-chart's ConfigMap template renders the actual relay config,
-so its name MUST equal `.Values."opentelemetry-collector".configMap.existingName`
+parent-chart's ConfigMap template renders the actual relay config, so
+its name MUST equal `.Values."opentelemetry-collector".configMap.existingName`
 or the collector pod gets stuck in `CreateContainerConfigError`.
 
-Defaults to "otel-collector". Override via
-`opentelemetry-collector.configMap.existingName` when running multiple
-releases in one namespace.
+Defaults to the release-derived {prefix}otel-collector. Override via
+`opentelemetry-collector.configMap.existingName` to pin an explicit
+name.
 */}}
 {{- define "runwhen-local.configMapName.otelCollector" -}}
 {{- $subchart := index .Values "opentelemetry-collector" | default dict -}}
 {{- $cm := ($subchart.configMap | default dict) -}}
-{{- default "otel-collector" $cm.existingName }}
+{{- if $cm.existingName -}}
+{{- tpl (toString $cm.existingName) . }}
+{{- else -}}
+{{- printf "%sotel-collector" (include "runwhen-local.resourcePrefix" .) }}
+{{- end -}}
+{{- end }}
+
+{{/*
+Release-derived prefix for the bundled `opentelemetry-collector` subchart.
+
+The subchart's own templates (`_helpers.tpl`, `_pod.tpl`) render in the
+SUBSCRIPT's context, where `.Values` is subchart-scoped and `.Chart.Name`
+is `opentelemetry-collector` — so `runwhen-local.resourcePrefix` (which
+derives from the parent's `runwhen-local.fullname`) is NOT usable inside
+them. This helper recomputes the same `{prefix}` from `.Release.Name`
+alone, hardcoding the chart's default fullname suffix `runwhen-local`.
+
+When the parent chart has an explicit `nameOverride`/`fullnameOverride`,
+the two prefixes can diverge (this helper mirrors the chart default);
+prefer keeping those unset for multi-release installs.
+*/}}
+{{- define "runwhen-local.otelSubchartPrefix" -}}
+{{- printf "%s-" (printf "%s-runwhen-local" .Release.Name | trunc 32 | trimSuffix "-") -}}
+{{- end }}
+
+{{/*
+Shadow the subchart's `opentelemetry-collector.fullname` so the subchart
+Deployment/Service/other names are release-derived by default. Mantains
+fullnameOverride as the explicit escape hatch. Rendered in subchart context.
+*/}}
+{{- define "opentelemetry-collector.fullname" -}}
+{{- if .Values.fullnameOverride -}}
+{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- printf "%sotel-collector" (include "runwhen-local.otelSubchartPrefix" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Shadow the subchart's `opentelemetry-collector.serviceAccountName` so the
+subchart Deployment binds the release-derived {prefix}otel-collector SA by
+default. Honors an explicit `.Values.serviceAccount.name`. Rendered in
+subchart context.
+*/}}
+{{- define "opentelemetry-collector.serviceAccountName" -}}
+{{- if .Values.serviceAccount.name -}}
+{{- .Values.serviceAccount.name | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- printf "%sotel-collector" (include "runwhen-local.otelSubchartPrefix" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Release-derived name of the mTLS cert-bundle Secret the OTel collector
+mounts (see `runner.metrics.mtls`). Matches the `{prefix}runner-metrics-tls`
+name written by a prefix-aware runwhen-runner. Used in the subchart's
+`extraVolumes[].secret.secretName`, which the subchart tpl-renders.
+*/}}
+{{- define "runwhen-local.runnerMetricsTls" -}}
+{{- printf "%srunner-metrics-tls" (include "runwhen-local.otelSubchartPrefix" .) -}}
 {{- end }}
 
 {{/*

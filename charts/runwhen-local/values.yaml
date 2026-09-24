@@ -148,7 +148,11 @@ workspaceBuilder:
     # Annotations to add to the service account
     annotations: {}
     # The name of the service account to use.
-    name: "workspace-builder"
+    # Empty by default → resolves to the release-derived
+    # {prefix}workspace-builder via runwhen-local.serviceAccountName
+    # so multiple releases can coexist in one namespace. Set to a
+    # literal to pin an explicit name (BYO SA path).
+    name: ""
 
 
   serviceAccountRoles:
@@ -300,7 +304,11 @@ workspaceBuilder:
   uploadInfo:
     secretProvided:
       enabled: false
-      secretName: "uploadinfo"
+      # Empty default → workspace-builder-deployment.yaml falls back to
+      # {prefix}uploadinfo when runner.enabled auto-populates the block,
+      # matching the secret the runner writes at bootstrap (see runner's
+      # runner_bootstrap.go, which composes the name from RUNNER_RESOURCE_PREFIX).
+      secretName: ""
       secretKey: uploadInfo.yaml
       secretPath: uploadInfo.yaml
 
@@ -314,7 +322,11 @@ workspaceBuilder:
     existingConfigMapName: ""
     configMap:
       create: true
-      name: workspace-builder
+      # Empty default → workspace-builder-configmap.yaml + the volume
+      # mount in workspace-builder-deployment.yaml both resolve to
+      # {prefix}workspace-builder so multiple releases in one namespace
+      # never collide.
+      name: ""
       data:
         defaultLocation: none
         workspaceOwnerEmail: tester@my-company.com
@@ -376,23 +388,17 @@ runner:
   # podAnnotations. Per-service entries win on conflict.
   podAnnotations: {}
 
-  # ServiceAccount override block. Defaults preserve back-compat with
-  # the existing runner-control wire contract (SA name "runner"). When
-  # two `runwhen-local` releases must coexist in the same namespace,
-  # set `serviceAccount.name` to a unique value AND mirror the change
-  # into runner.runEnvironment.deployment.serviceAccount /
-  # runEnvironment.pod.serviceAccount so spawned CronCodeRun /
-  # TaskSet workloads bind to the same SA.
-  #
-  # NOTE: The chart-rendered Role/RoleBinding follow `serviceAccount.name`
-  # automatically (see runner-service-account.yaml), so a single
-  # override here keeps SA + RBAC in sync. The deferred rename to
-  # `<release>-runner` is tracked by the TODO in
-  # templates/runner-service-account.yaml — it is held until
-  # runner-control supports SA-name override over the wire.
+  # ServiceAccount override block. Empty `name` resolves to the
+  # release-derived {prefix}runner via runwhen-local.serviceAccountName.runner
+  # so multiple releases in one namespace never collide. The chart-rendered
+  # Role/RoleBinding follow this SA name automatically. Set `name` to a
+  # literal (e.g. `byo-runner-sa`) to pin an explicit name (BYO SA / audit
+  # policy path); the chart still stamps the runner Deployment,
+  # RUNNER_RESOURCE_PREFIX, and runEnvironment fallbacks against the
+  # resolved name so runtime-spawned workloads bind to the same SA.
   serviceAccount:
     create: true
-    name: "runner"
+    name: ""
     annotations: {}
 
   # Parent-side OTel collector ServiceAccount + Role + RoleBinding gate.
@@ -467,7 +473,11 @@ runner:
 
   configMap:
     create: true
-    name: runner-config
+    # Empty default → runner-configmap.yaml + the runner Deployment's
+    # volume mount both resolve to {prefix}runner-config so multiple
+    # releases in one namespace never collide. Set to a literal to pin
+    # an explicit name.
+    name: ""
     apiVersion: config.runwhen.com/v1
     kind: RunnerConfig
     raw: {}
@@ -585,15 +595,17 @@ runner:
     deployment:
       # Service account for spawned SLI (CronCodeRun) Deployments.
       # Empty (default) → resolves to the chart-rendered runner SA via
-      # `runwhen-local.serviceAccountName.runner` (which is `runner`
-      # unless `.runner.serviceAccount.name` is overridden). This keeps
-      # the spawned-workload SA in lock-step with the runner pod's own
-      # SA, so a multi-release operator who sets
-      # `runner.serviceAccount.name=rw2-runner` does NOT end up with
-      # the runner pod on `rw2-runner` and CronCodeRun pods on the
-      # literal `runner` (RBAC mismatch).
-      # Set this to a literal name to pin a specific SA regardless of
-      # the runner override (advanced use).
+      # `runwhen-local.serviceAccountName.runner`, which defaults to the
+      # release-derived {prefix}runner. This keeps spawned-workload SAs
+      # in lock-step with the runner pod's own SA, so a multi-release
+      # operator gets both bound to the same release-scoped SA
+      # automatically. Set this to a literal name to pin a specific SA
+      # regardless of the runner override (advanced use).
+      #
+      # Legacy footgun: older values overlays sometimes pinned this to
+      # the literal "runner", which silently overrode the fallback and
+      # left spawned workloads bound to a non-existent SA on renamed
+      # releases. Leave empty unless you specifically need to pin.
       serviceAccount: ""
       annotations: {}
       podAnnotations: {}
@@ -639,8 +651,10 @@ runner:
       # Service account for spawned TaskSet (CodeRun) Pods.
       # Empty (default) → resolves to the chart-rendered runner SA via
       # `runwhen-local.serviceAccountName.runner`, matching whatever
-      # the runner pod itself binds to. Set to a literal name to pin
-      # a specific SA regardless of the runner override.
+      # the runner pod itself binds to (default {prefix}runner). Set to
+      # a literal name to pin a specific SA regardless of the runner
+      # override. Same legacy footgun as `deployment.serviceAccount` —
+      # do NOT pin to the literal "runner" on multi-release setups.
       serviceAccount: ""
       annotations: {}
       # Labels stamped on the spawned TaskSet (CodeRun) Pod's
@@ -734,12 +748,37 @@ runner:
 ##
 ## See .cursor/skills/new-service-byo/SKILL.md (Subchart matrix) for the
 ## full anchor-and-alias overlay pattern.
+##
+## ─── Multi-release / renamed-secret override (chart 0.7.0+) ─────────────────
+## Every chart-rendered resource is prefix-derived (release-name based) for
+## multi-release namespace safety. The bundled `opentelemetry-collector`
+## subchart is now auto-prefixed via parent-side shadow overrides of its
+## `fullname` / `serviceAccountName` templates plus the
+## `runwhen-local.otelSubchartPrefix` / `runwhen-local.runnerMetricsTls`
+## helpers (see templates/_helpers.tpl). The values below are therefore
+## blank or templated so the default derives `{prefix}` from the release
+## name (`runwhen-local.fullname | trunc 32 | trimSuffix "-"` + "-"):
+##
+##   - `fullnameOverride: ""` keeps the subchart names auto-prefixed; set a
+##     literal to pin them (escape hatch for admission-policy-approved names).
+##   - `serviceAccount.name: ""` makes the subchart Deployment bind the
+##     release-derived SA; the parent-chart's SA/Role/RoleBinding helper
+##     resolves the same default so both layers agree.
+##   - `configMap.existingName` is a TEMPLATE that stays truthy (the subchart
+##     `_pod.tpl` gates the config volume + `--config=/conf/relay.yaml` on
+##     it, and its `configName` helper tpl-renders it). Do NOT blank it.
+##   - `extraVolumes[].secret.secretName` is a template resolving to
+##     `{prefix}runner-metrics-tls`, matching what a prefix-aware
+##     runwhen-runner writes.
+##
+## See README's "Multi-release deployments in one namespace" section for the
+## full renamed-resource table.
 opentelemetry-collector:
-  fullnameOverride: otel-collector
+  fullnameOverride: ""
   mode: deployment
   configMap:
     create: false
-    existingName: "otel-collector"
+    existingName: '{{ include "runwhen-local.otelSubchartPrefix" . }}otel-collector'
   image:
     repository: "otel/opentelemetry-collector"
     pullPolicy: IfNotPresent
@@ -779,7 +818,7 @@ opentelemetry-collector:
   serviceAccount:
     create: false
     annotations: {}
-    name: "otel-collector"
+    name: ""
   # Proxy configuration for opentelemetry-collector
   # These environment variables will be set on the opentelemetry-collector container
   # extraEnvs:
@@ -798,7 +837,7 @@ opentelemetry-collector:
   extraVolumes:
     - name: tls-secret-volume
       secret:
-        secretName: runner-metrics-tls
+        secretName: '{{ include "runwhen-local.runnerMetricsTls" . }}'
     # # Note: must be configured when using .Values.ProxyCA -- can also be transitioned to
     # # a configMap if needed -- just match the values from .Values.ProxyCA.ConfigMapName and .Values.ProxyCA.Key
     # - name: proxy-ca-volume # DO NOT CHANGE
