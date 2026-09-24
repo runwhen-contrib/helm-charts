@@ -15,5 +15,5 @@ spec:
       port: 9090
       targetPort: 9090
   selector:
-    app: runner
+    {{- include "runwhen-local.runnerSelectorLabels" . | nindent 4 }}
 {{- end }}

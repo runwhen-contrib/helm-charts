@@ -2,9 +2,13 @@
 Runner relay Service. Named `{prefix}runner-relay` so multiple releases
 in one namespace never collide. The runner receives the same prefix
 via `RUNNER_RESOURCE_PREFIX` and composes its outbound RELAY_URL against
-this name (see runner_k8s_client.go / executor_dispatch.go). The pod-side
-selector still keys on `app: runner` (legacy label) so back-compat is
-preserved.
+this name (see runner_k8s_client.go / executor_dispatch.go).
+
+The selector MUST be release-scoped (name + instance + component), matching
+the runner Deployment's own selector. A bare `app: runner` selector matches
+EVERY release's runner pod in the namespace, so in a multi-release install a
+worker connects to another release's relay, receives that release's tasks,
+and then authenticates to Vault with the wrong workspace's AppRole.
 */}}
 {{- if .Values.runner.enabled -}}
 apiVersion: v1
@@ -23,5 +27,5 @@ spec:
       port: 8000
       targetPort: 8000
   selector:
-    app: runner
+    {{- include "runwhen-local.runnerSelectorLabels" . | nindent 4 }}
 {{- end }}
