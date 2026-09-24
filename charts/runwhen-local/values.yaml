@@ -348,7 +348,12 @@ workspaceBuilder:
           # The default for kubeconfig_secret_name is set to a secret that workspaceBuilder
           # creates for the use of the runner. This can be simply swapped out with the
           # name of a secret that is stored in the RunWhen Platform.
-          kubeconfig_secret_name: "k8s:file@secret/kubeconfig:kubeconfig"
+          #
+          # Rendered through `tpl` by workspace-builder-configmap.yaml (see
+          # runwhen-local.resourcePrefix), so the secret name is release-scoped
+          # and matches the one the workspace-builder creates at runtime. Pin a
+          # literal name to use an explicit BYO secret instead.
+          kubeconfig_secret_name: 'k8s:file@secret/{{ include "runwhen-local.resourcePrefix" . }}kubeconfig:kubeconfig'
           kubernetes_distribution_binary: kubectl
           cloud_provider: none
           gcp_project_id: none

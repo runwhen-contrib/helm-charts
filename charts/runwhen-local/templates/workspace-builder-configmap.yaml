@@ -16,6 +16,14 @@ metadata:
 data:
   workspaceInfo.yaml: |
     workspaceName: {{ .Values.workspaceName }}
-    {{- $wb.workspaceInfo.configMap.data | toYaml | nindent 4 }}
+    {{- /*
+      Render the workspaceInfo data through `tpl` so release-scoped
+      references inside it (notably `custom.kubeconfig_secret_name`, which
+      must point at the same {prefix}kubeconfig secret the workspace-builder
+      creates at runtime) can use `{{ include "runwhen-local.resourcePrefix" . }}`.
+      Without this the generated ConfigMap leaks a bare `kubeconfig` secret
+      name that collides across releases in a shared namespace.
+    */}}
+    {{- tpl ($wb.workspaceInfo.configMap.data | toYaml) . | nindent 4 }}
 {{- end }}
 {{- end }}

@@ -163,6 +163,7 @@ Renamed resources (bare → release-derived):
 | `workspace-builder` (SA / ConfigMap / Roles / RoleBindings) | `{prefix}workspace-builder*` |
 | `{namespace}-workspace-builder-view-crb` (cluster-scoped) | `{prefix}workspace-builder-view-crb` |
 | `uploadinfo` (Secret, runner-written) | `{prefix}uploadinfo` |
+| `kubeconfig` (Secret, workspace-builder-written; `custom.kubeconfig_secret_name`) | `{prefix}kubeconfig` |
 | `runner-metrics-tls` (Secret, runner-written) | `{prefix}runner-metrics-tls` |
 
 The trunc-32 budget on the prefix keeps every composed name within
@@ -388,6 +389,7 @@ honours an explicit `.name` override):
 | `{namespace}-workspace-builder-view-crb` (ClusterRoleBinding) | `{prefix}workspace-builder-view-crb` |
 | `workspace-builder` (workspaceInfo ConfigMap) | `{prefix}workspace-builder` |
 | `uploadinfo` (runner-written Secret; workspaceBuilder mount reference) | `{prefix}uploadinfo` |
+| `kubeconfig` (workspace-builder-written Secret; `custom.kubeconfig_secret_name` reference) | `{prefix}kubeconfig` |
 | `runner-metrics-tls` (runner-written Secret; OTel mount reference) | `{prefix}runner-metrics-tls` |
 
 Input Secret **operators must create / rename**:
@@ -422,7 +424,7 @@ Upgrade steps:
      workspace-builder \
      --ignore-not-found
    kubectl -n <namespace> delete secret \
-     workspace-builder-token uploadinfo runner-metrics-tls \
+     workspace-builder-token uploadinfo runner-metrics-tls kubeconfig \
      --ignore-not-found
    kubectl delete clusterrolebinding <namespace>-workspace-builder-view-crb --ignore-not-found
    ```
