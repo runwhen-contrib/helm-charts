@@ -507,4 +507,4 @@ Each code collection entry supports the following fields:
 - `workerReplicas` (optional): Number of worker replicas to deploy (defaults to 1)
 - `name` (optional): Custom name for the collection (defaults to repository name)
 
-**Note**: Only one of `tag`, `branch`, or `ref` should be specified per collection. If none are specified, it defaults to `main` branch.
+**Note**: Only one of `tag`, `branch`, or `ref` should be specified per collection. If none are specified, it defaults to `main` branch. 
