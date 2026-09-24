@@ -377,14 +377,24 @@ SUBSCRIPT's context, where `.Values` is subchart-scoped and `.Chart.Name`
 is `opentelemetry-collector` — so `runwhen-local.resourcePrefix` (which
 derives from the parent's `runwhen-local.fullname`) is NOT usable inside
 them. This helper recomputes the same `{prefix}` from `.Release.Name`
-alone, hardcoding the chart's default fullname suffix `runwhen-local`.
+alone, hardcoding the chart name `runwhen-local`.
+
+It MUST mirror `runwhen-local.fullname` exactly: Helm's default fullname
+returns the bare release name when the release name already contains the
+chart name (e.g. release `runwhen-local` → `runwhen-local`, NOT
+`runwhen-local-runwhen-local`), and `{release}-runwhen-local` otherwise.
+Hardcoding the `{release}-runwhen-local` form double-prefixes the default
+release name and desyncs the subchart's Deployment/Service/ConfigMap/SA
+names from the parent-rendered `otel-collector` SA + ConfigMap.
 
 When the parent chart has an explicit `nameOverride`/`fullnameOverride`,
 the two prefixes can diverge (this helper mirrors the chart default);
 prefer keeping those unset for multi-release installs.
 */}}
 {{- define "runwhen-local.otelSubchartPrefix" -}}
-{{- printf "%s-" (printf "%s-runwhen-local" .Release.Name | trunc 32 | trimSuffix "-") -}}
+{{- $name := "runwhen-local" -}}
+{{- $full := contains $name .Release.Name | ternary .Release.Name (printf "%s-%s" .Release.Name $name) -}}
+{{- printf "%s-" ($full | trunc 32 | trimSuffix "-") -}}
 {{- end }}
 
 {{/*
