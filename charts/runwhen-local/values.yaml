@@ -345,15 +345,14 @@ workspaceBuilder:
           # should be referenced from the platform. The secret itself (key and value)
           # must be created in the RunWhen Platform by the user. We do not upload
           # or configure secrets automatically.
-          # The default for kubeconfig_secret_name is set to a secret that workspaceBuilder
-          # creates for the use of the runner. This can be simply swapped out with the
-          # name of a secret that is stored in the RunWhen Platform.
-          #
-          # Rendered through `tpl` by workspace-builder-configmap.yaml (see
-          # runwhen-local.resourcePrefix), so the secret name is release-scoped
-          # and matches the one the workspace-builder creates at runtime. Pin a
-          # literal name to use an explicit BYO secret instead.
-          kubeconfig_secret_name: 'k8s:file@secret/{{ include "runwhen-local.resourcePrefix" . }}kubeconfig:kubeconfig'
+          # The default for kubeconfig_secret_name is set to the secret the
+          # workspaceBuilder creates for the use of the runner. Leave empty to
+          # let workspace-builder-configmap.yaml resolve it to the
+          # release-scoped `k8s:file@secret/{prefix}kubeconfig:kubeconfig`
+          # reference (matching the secret the workspace-builder writes at
+          # runtime). Set a literal `k8s:file@secret/<name>:<key>` to point at
+          # an explicit BYO secret stored in the RunWhen Platform instead.
+          kubeconfig_secret_name: ""
           kubernetes_distribution_binary: kubectl
           cloud_provider: none
           gcp_project_id: none
@@ -762,7 +761,8 @@ runner:
 ## `runwhen-local.otelSubchartPrefix` / `runwhen-local.runnerMetricsTls`
 ## helpers (see templates/_helpers.tpl). The values below are therefore
 ## blank or templated so the default derives `{prefix}` from the release
-## name (`runwhen-local.fullname | trunc 32 | trimSuffix "-"` + "-"):
+## name only (`{release}` when it contains "runwhen-local", else
+## `{release}-runwhen-local`, truncated to 32 chars + "-"):
 ##
 ##   - `fullnameOverride: ""` keeps the subchart names auto-prefixed; set a
 ##     literal to pin them (escape hatch for admission-policy-approved names).

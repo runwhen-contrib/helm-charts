@@ -223,10 +223,15 @@ opentelemetry-collector:
     # preserve any additional volumes (e.g. proxy-ca) here
 ```
 
-The default prefix is `{prefix}` = `runwhen-local.fullname | trunc 32 |
-trimSuffix "-"` followed by a `-` — for a chart with the default
-`nameOverride`, `<release-name>-runwhen-local-` (truncated to 32
-chars).
+The default prefix is `{prefix}` = the release-derived fullname
+(`{release-name}` when the release name already contains
+`runwhen-local`, else `{release-name}-runwhen-local`) truncated to 32
+chars with a trailing `-` — e.g. release `rwl` → `rwl-runwhen-local-`.
+It derives from the release name only (not `nameOverride` /
+`fullnameOverride`), because the bundled `opentelemetry-collector`
+subchart renders in its own values scope and cannot see the parent's
+overrides; a release-only derivation is what keeps the parent chart and
+the subchart from disagreeing on the prefix.
 
 ### Customer overlays (commonLabels, podLabels, podAnnotations)
 

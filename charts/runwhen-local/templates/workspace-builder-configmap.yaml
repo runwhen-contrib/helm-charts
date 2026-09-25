@@ -17,13 +17,23 @@ data:
   workspaceInfo.yaml: |
     workspaceName: {{ .Values.workspaceName }}
     {{- /*
-      Render the workspaceInfo data through `tpl` so release-scoped
-      references inside it (notably `custom.kubeconfig_secret_name`, which
-      must point at the same {prefix}kubeconfig secret the workspace-builder
-      creates at runtime) can use `{{ include "runwhen-local.resourcePrefix" . }}`.
-      Without this the generated ConfigMap leaks a bare `kubeconfig` secret
-      name that collides across releases in a shared namespace.
+      Compose the default kubeconfig secret reference here rather than
+      shipping `{{ }}` syntax through values.yaml (see review F6): an empty
+      `custom.kubeconfig_secret_name` resolves to the release-scoped
+      `k8s:file@secret/{prefix}kubeconfig:kubeconfig` the workspace-builder
+      writes at runtime, so multiple releases never collide. An explicit
+      literal still wins verbatim.
     */}}
-    {{- tpl ($wb.workspaceInfo.configMap.data | toYaml) . | nindent 4 }}
+    {{- $wiData := deepCopy ($wb.workspaceInfo.configMap.data | default dict) -}}
+    {{- $wiCustom := ($wiData.custom | default dict) -}}
+    {{- if not (get $wiCustom "kubeconfig_secret_name") -}}
+    {{- $_ := set $wiCustom "kubeconfig_secret_name" (printf "k8s:file@secret/%skubeconfig:kubeconfig" (include "runwhen-local.resourcePrefix" .)) -}}
+    {{- $_ := set $wiData "custom" $wiCustom -}}
+    {{- end -}}
+    {{- /*
+      Render the workspaceInfo data through `tpl` so release-scoped
+      references inside operator-supplied data still resolve.
+    */}}
+    {{- tpl ($wiData | toYaml) . | nindent 4 }}
 {{- end }}
 {{- end }}

@@ -262,6 +262,29 @@ still fits within the 63-char Kubernetes DNS label limit.
 {{- end }}
 
 {{/*
+Single release-name-derived prefix shared by every collision-class name:
+runwhen-local.resourcePrefix (chart resources + RUNNER_RESOURCE_PREFIX)
+and runwhen-local.otelSubchartPrefix (the bundled opentelemetry-collector
+subchart's shadowed templates, which render in subchart scope).
+
+Derived from .Release.Name alone -- deliberately NOT runwhen-local.fullname
+-- so the parent-side and subchart-side prefixes can never diverge. The
+subchart context cannot see the parent's nameOverride/fullnameOverride, so
+a fullname-derived prefix would split from the subchart's release-derived
+names (and from the OTel TLS mount vs the runner-written
+{prefix}runner-metrics-tls secret) whenever either override is set.
+Mirrors Helm's default fullname shape: {release} when the release name
+already contains "runwhen-local", else {release}-runwhen-local.
+nameOverride/fullnameOverride still drive Deployment names via
+runwhen-local.fullname.
+*/}}
+{{- define "runwhen-local.releasePrefix" -}}
+{{- $chartName := "runwhen-local" -}}
+{{- $full := contains $chartName .Release.Name | ternary .Release.Name (printf "%s-%s" .Release.Name $chartName) -}}
+{{- printf "%s-" ($full | trunc 32 | trimSuffix "-") -}}
+{{- end }}
+
+{{/*
 Release-name-derived resource prefix used to disambiguate every
 collision-class chart resource so multiple releases can coexist in the
 same namespace. The prefix ends with a "-" so callers can compose names
@@ -285,7 +308,7 @@ The wire contract with runwhen-runner also passes this string as the
 pools, mcp-* deployments) match the chart-side names.
 */}}
 {{- define "runwhen-local.resourcePrefix" -}}
-{{- printf "%s-" (include "runwhen-local.fullname" . | trunc 32 | trimSuffix "-") }}
+{{- include "runwhen-local.releasePrefix" . }}
 {{- end }}
 
 {{/*
@@ -343,7 +366,7 @@ the augmented values context so this default is honoured end-to-end.
 {{- define "runwhen-local.serviceAccountName.otelCollector" -}}
 {{- $subchart := index .Values "opentelemetry-collector" | default dict -}}
 {{- $sa := ($subchart.serviceAccount | default dict) -}}
-{{- default (printf "%sotel-collector" (include "runwhen-local.resourcePrefix" .)) $sa.name }}
+{{- default (printf "%sotel-collector" (include "runwhen-local.otelSubchartPrefix" .)) $sa.name }}
 {{- end }}
 
 {{/*
@@ -365,41 +388,28 @@ name.
 {{- if $cm.existingName -}}
 {{- tpl (toString $cm.existingName) . }}
 {{- else -}}
-{{- printf "%sotel-collector" (include "runwhen-local.resourcePrefix" .) }}
+{{- printf "%sotel-collector" (include "runwhen-local.otelSubchartPrefix" .) }}
 {{- end -}}
 {{- end }}
 
 {{/*
-Release-derived prefix for the bundled `opentelemetry-collector` subchart.
-
-The subchart's own templates (`_helpers.tpl`, `_pod.tpl`) render in the
-SUBSCRIPT's context, where `.Values` is subchart-scoped and `.Chart.Name`
-is `opentelemetry-collector` — so `runwhen-local.resourcePrefix` (which
-derives from the parent's `runwhen-local.fullname`) is NOT usable inside
-them. This helper recomputes the same `{prefix}` from `.Release.Name`
-alone, hardcoding the chart name `runwhen-local`.
-
-It MUST mirror `runwhen-local.fullname` exactly: Helm's default fullname
-returns the bare release name when the release name already contains the
-chart name (e.g. release `runwhen-local` → `runwhen-local`, NOT
-`runwhen-local-runwhen-local`), and `{release}-runwhen-local` otherwise.
-Hardcoding the `{release}-runwhen-local` form double-prefixes the default
-release name and desyncs the subchart's Deployment/Service/ConfigMap/SA
-names from the parent-rendered `otel-collector` SA + ConfigMap.
-
-When the parent chart has an explicit `nameOverride`/`fullnameOverride`,
-the two prefixes can diverge (this helper mirrors the chart default);
-prefer keeping those unset for multi-release installs.
+Release-derived prefix for the bundled `opentelemetry-collector`
+subchart. Alias of `runwhen-local.releasePrefix`, kept as its own name so
+call sites state their intent (subchart coupling) and so a future
+subchart-specific need has a seam. See `runwhen-local.releasePrefix` for
+why the derivation is release-only and shared with the parent-side
+resource prefix: it is what keeps the subchart's shadowed Deployment /
+Service / ConfigMap / SA names aligned with the parent-rendered
+otel-collector SA, ConfigMap and RBAC even when nameOverride or
+fullnameOverride is set.
 */}}
 {{- define "runwhen-local.otelSubchartPrefix" -}}
-{{- $name := "runwhen-local" -}}
-{{- $full := contains $name .Release.Name | ternary .Release.Name (printf "%s-%s" .Release.Name $name) -}}
-{{- printf "%s-" ($full | trunc 32 | trimSuffix "-") -}}
+{{- include "runwhen-local.releasePrefix" . }}
 {{- end }}
 
 {{/*
 Shadow the subchart's `opentelemetry-collector.fullname` so the subchart
-Deployment/Service/other names are release-derived by default. Mantains
+Deployment/Service/other names are release-derived by default. Maintains
 fullnameOverride as the explicit escape hatch. Rendered in subchart context.
 */}}
 {{- define "opentelemetry-collector.fullname" -}}
@@ -414,11 +424,14 @@ fullnameOverride as the explicit escape hatch. Rendered in subchart context.
 Shadow the subchart's `opentelemetry-collector.serviceAccountName` so the
 subchart Deployment binds the release-derived {prefix}otel-collector SA by
 default. Honors an explicit `.Values.serviceAccount.name`. Rendered in
-subchart context.
+subchart context. `serviceAccount` is nil-guarded because a values overlay
+that sets `opentelemetry-collector.serviceAccount: null` must still render,
+not fail with a nil-pointer error.
 */}}
 {{- define "opentelemetry-collector.serviceAccountName" -}}
-{{- if .Values.serviceAccount.name -}}
-{{- .Values.serviceAccount.name | trunc 63 | trimSuffix "-" -}}
+{{- $sa := (.Values.serviceAccount | default dict) -}}
+{{- if $sa.name -}}
+{{- $sa.name | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
 {{- printf "%sotel-collector" (include "runwhen-local.otelSubchartPrefix" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}

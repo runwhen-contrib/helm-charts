@@ -1,4 +1,16 @@
 {{- if .Values.runner.enabled -}}
+{{- /*
+  External-ConfigMap guard: when runner.configMap.create is false the chart
+  renders no ConfigMap, so runner.configMap.name MUST name the
+  operator-managed one. The create path defaults the name to
+  {prefix}runner-config; the external path has nothing to fall back to.
+  Kept in sync with runner-configmap.yaml, which only runs on the create path.
+*/}}
+{{- $runnerConfigMap := .Values.runner.configMap | default dict -}}
+{{- $runnerConfigMapName := $runnerConfigMap.name | default (printf "%srunner-config" (include "runwhen-local.resourcePrefix" .)) -}}
+{{- if not $runnerConfigMap.create -}}
+{{- $runnerConfigMapName = $runnerConfigMap.name | required "runner.configMap.name is required when runner.configMap.create is false — set it to the name of the externally-managed ConfigMap" -}}
+{{- end -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -173,7 +185,7 @@ spec:
       volumes:
         - name: runner-config-volume
           configMap:
-            name: {{ .Values.runner.configMap.name | default (printf "%srunner-config" (include "runwhen-local.resourcePrefix" .)) }}
+            name: {{ $runnerConfigMapName }}
         - name: bolt-data
           emptyDir: {}
 
