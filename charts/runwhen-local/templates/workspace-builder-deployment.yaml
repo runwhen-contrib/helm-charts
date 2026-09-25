@@ -1,11 +1,12 @@
 {{- $wb := include "runwhen-local.resolveWorkspaceBuilder" . | fromYaml -}}
+{{- $prefix := include "runwhen-local.resourcePrefix" . -}}
 {{- if and .Values.runner.enabled (not $wb.autoRun.uploadEnabled) -}}
   {{- $_ := set $wb.autoRun "uploadEnabled" true -}}
 {{- end -}}
 {{- if and .Values.runner.enabled (not $wb.uploadInfo.secretProvided.enabled) -}}
   {{- $_ := set $wb.uploadInfo.secretProvided "enabled" true -}}
   {{- if not $wb.uploadInfo.secretProvided.secretName -}}
-    {{- $_ := set $wb.uploadInfo.secretProvided "secretName" "uploadinfo" -}}
+    {{- $_ := set $wb.uploadInfo.secretProvided "secretName" (printf "%suploadinfo" $prefix) -}}
   {{- end -}}
   {{- if not $wb.uploadInfo.secretProvided.secretKey -}}
     {{- $_ := set $wb.uploadInfo.secretProvided "secretKey" "uploadInfo.yaml" -}}
@@ -14,6 +15,13 @@
     {{- $_ := set $wb.uploadInfo.secretProvided "secretPath" "uploadInfo.yaml" -}}
   {{- end -}}
 {{- end -}}
+{{- /*
+  Resolve the workspaceInfo ConfigMap name. Empty/unset default falls
+  back to the release-derived {prefix}workspace-builder so the runner-
+  spawned upload path and the volume mount always agree without operator
+  intervention. Explicit `.workspaceInfo.configMap.name` still wins.
+*/}}
+{{- $workspaceInfoCMName := $wb.workspaceInfo.configMap.name | default (printf "%sworkspace-builder" $prefix) -}}
 {{- if $wb.enabled -}}
 apiVersion: apps/v1
 kind: Deployment
@@ -51,7 +59,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ $wb.serviceAccount.name }}
+      serviceAccountName: {{ include "runwhen-local.serviceAccountName" . }}
       {{- /*
         Same `default true` footgun as runner-service-account.yaml's create gate
         (commit c0034e2): `false | default true` always renders `true`. The
@@ -90,6 +98,8 @@ spec:
           - name: RW_CREATE_KUBECONFIG_SECRET
             value: "true"
           {{- end }}
+          - name: RUNNER_RESOURCE_PREFIX
+            value: {{ $prefix | quote }}
           - name: KUBERNETES_CLUSTER_NAME
             value: {{ $wb.clusterName }}
           {{- if .Values.proxy.enabled }}
@@ -239,7 +249,7 @@ spec:
       {{- end }}
       - name: configmap-volume
         configMap:
-          name: {{ if $wb.workspaceInfo.useExistingConfigMap }}{{ $wb.workspaceInfo.existingConfigMapName }}{{ else }}{{ $wb.workspaceInfo.configMap.name }}{{ end }}
+          name: {{ if $wb.workspaceInfo.useExistingConfigMap }}{{ $wb.workspaceInfo.existingConfigMapName }}{{ else }}{{ $workspaceInfoCMName }}{{ end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

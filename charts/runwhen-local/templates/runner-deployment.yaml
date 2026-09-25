@@ -1,4 +1,16 @@
 {{- if .Values.runner.enabled -}}
+{{- /*
+  External-ConfigMap guard: when runner.configMap.create is false the chart
+  renders no ConfigMap, so runner.configMap.name MUST name the
+  operator-managed one. The create path defaults the name to
+  {prefix}runner-config; the external path has nothing to fall back to.
+  Kept in sync with runner-configmap.yaml, which only runs on the create path.
+*/}}
+{{- $runnerConfigMap := .Values.runner.configMap | default dict -}}
+{{- $runnerConfigMapName := $runnerConfigMap.name | default (printf "%srunner-config" (include "runwhen-local.resourcePrefix" .)) -}}
+{{- if not $runnerConfigMap.create -}}
+{{- $runnerConfigMapName = $runnerConfigMap.name | required "runner.configMap.name is required when runner.configMap.create is false — set it to the name of the externally-managed ConfigMap" -}}
+{{- end -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -112,6 +124,19 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+            {{- /*
+              Release-name-derived prefix passed to runwhen-runner so
+              every resource the runner reads/writes at runtime
+              (cert-bundle secrets, uploadinfo, runner-worker Deployments,
+              exec-* pools, mcp-* Deployments, RELAY_URL, worker
+              ConfigMap/SA refs) matches the chart-side names.
+              Always-on: empty prefix is legal on the runner side and
+              reproduces today's names byte-identical for non-chart /
+              docker installs. Requires runwhen-runner ≥ the release
+              that added RUNNER_RESOURCE_PREFIX handling.
+            */}}
+            - name: RUNNER_RESOURCE_PREFIX
+              value: {{ include "runwhen-local.resourcePrefix" . | quote }}
 
             {{- if .Values.proxy.enabled }}
             {{- with .Values.proxy.httpProxy }}
@@ -160,7 +185,7 @@ spec:
       volumes:
         - name: runner-config-volume
           configMap:
-            name: {{ .Values.runner.configMap.name }}
+            name: {{ $runnerConfigMapName }}
         - name: bolt-data
           emptyDir: {}
 

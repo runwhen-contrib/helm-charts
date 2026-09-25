@@ -1,25 +1,32 @@
 {{- $wb := include "runwhen-local.resolveWorkspaceBuilder" . | fromYaml -}}
 {{- if $wb.enabled -}}
 {{- if $wb.serviceAccountRoles.advancedClusterRole.enabled -}}
+{{- /*
+  Advanced ClusterRole + CRB names must be unique cluster-wide. Route
+  them through the release-derived resource prefix so two releases in
+  the same namespace never collide.
+*/}}
+{{- $saName := include "runwhen-local.serviceAccountName" . -}}
+{{- $prefix := include "runwhen-local.resourcePrefix" . -}}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ $wb.serviceAccount.name }}-advanced-view
+  name: {{ $prefix }}workspace-builder-advanced-view
 rules:
 {{ toYaml $wb.serviceAccountRoles.advancedClusterRole.rules | indent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ $wb.serviceAccount.name }}-advanced-crb
+  name: {{ $prefix }}workspace-builder-advanced-crb
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ $wb.serviceAccount.name }}-advanced-view
+  name: {{ $prefix }}workspace-builder-advanced-view
 subjects:
   - kind: ServiceAccount
-    name: {{ $wb.serviceAccount.name }}
+    name: {{ $saName }}
     namespace: {{ .Release.Namespace }}
 {{- end }}
 {{- end }}

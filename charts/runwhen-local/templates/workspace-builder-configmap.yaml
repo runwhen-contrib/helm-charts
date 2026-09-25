@@ -1,15 +1,39 @@
 {{- $wb := include "runwhen-local.resolveWorkspaceBuilder" . | fromYaml -}}
 {{- if $wb.enabled -}}
 {{- if not $wb.workspaceInfo.useExistingConfigMap }}
+{{- /*
+  Empty/unset `.workspaceInfo.configMap.name` falls back to the
+  release-derived {prefix}workspace-builder so the CM name and the
+  volume mount in workspace-builder-deployment.yaml always agree.
+*/}}
+{{- $workspaceInfoCMName := $wb.workspaceInfo.configMap.name | default (printf "%sworkspace-builder" (include "runwhen-local.resourcePrefix" .)) -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ $wb.workspaceInfo.configMap.name }}
+  name: {{ $workspaceInfoCMName }}
   labels:
     {{- include "runwhen-local.workspaceBuilderLabels" . | nindent 4 }}
 data:
   workspaceInfo.yaml: |
     workspaceName: {{ .Values.workspaceName }}
-    {{- $wb.workspaceInfo.configMap.data | toYaml | nindent 4 }}
+    {{- /*
+      Compose the default kubeconfig secret reference here rather than
+      shipping `{{ }}` syntax through values.yaml (see review F6): an empty
+      `custom.kubeconfig_secret_name` resolves to the release-scoped
+      `k8s:file@secret/{prefix}kubeconfig:kubeconfig` the workspace-builder
+      writes at runtime, so multiple releases never collide. An explicit
+      literal still wins verbatim.
+    */}}
+    {{- $wiData := deepCopy ($wb.workspaceInfo.configMap.data | default dict) -}}
+    {{- $wiCustom := ($wiData.custom | default dict) -}}
+    {{- if not (get $wiCustom "kubeconfig_secret_name") -}}
+    {{- $_ := set $wiCustom "kubeconfig_secret_name" (printf "k8s:file@secret/%skubeconfig:kubeconfig" (include "runwhen-local.resourcePrefix" .)) -}}
+    {{- $_ := set $wiData "custom" $wiCustom -}}
+    {{- end -}}
+    {{- /*
+      Render the workspaceInfo data through `tpl` so release-scoped
+      references inside operator-supplied data still resolve.
+    */}}
+    {{- tpl ($wiData | toYaml) . | nindent 4 }}
 {{- end }}
 {{- end }}
