@@ -143,6 +143,38 @@ data:
         external_labels:
           workspace: {{ include "runwhen-local.workspaceName" . }}
 
+      {{- if .Values.runner.metrics.otlp.enabled }}
+      {{- $_ := required "runner.metrics.otlp.endpoint is required when runner.metrics.otlp.enabled=true" .Values.runner.metrics.otlp.endpoint -}}
+      {{- if eq (default "http/protobuf" .Values.runner.metrics.otlp.protocol) "grpc" }}
+      # Opt-in OTLP/gRPC exporter (runner.metrics.otlp.*). Additive to
+      # Cortex unless runner.metrics.otlp.keepCortex=false.
+      otlp/runwhen:
+        endpoint: {{ .Values.runner.metrics.otlp.endpoint | trimPrefix "https://" | trimPrefix "http://" }}
+        {{- with .Values.runner.metrics.otlp.headers }}
+        headers:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      {{- else }}
+      # Opt-in OTLP/HTTP exporter (runner.metrics.otlp.*). Additive to
+      # Cortex unless runner.metrics.otlp.keepCortex=false. Metric name
+      # normalization stays off (the OTLP wire format carries OTel names
+      # natively, matching the prometheusremotewrite add_metric_suffixes
+      # intent above).
+      otlphttp/runwhen:
+        {{- if hasSuffix "/v1/metrics" .Values.runner.metrics.otlp.endpoint }}
+        # Per-signal endpoint: used verbatim, no /v1/metrics appended.
+        metrics_endpoint: {{ .Values.runner.metrics.otlp.endpoint }}
+        {{- else }}
+        # Generic base endpoint: otlphttp appends /v1/metrics.
+        endpoint: {{ .Values.runner.metrics.otlp.endpoint }}
+        {{- end }}
+        {{- with .Values.runner.metrics.otlp.headers }}
+        headers:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      {{- end }}
+      {{- end }}
+
     processors:
       batch:
         timeout: 10s
@@ -168,13 +200,13 @@ data:
         metrics/otlp:
           receivers: [otlp]
           processors: [batch, resource]
-          exporters: [prometheusremotewrite]
+          exporters: [{{ include "runwhen-local.runnerMetricsExporters" . }}]
 
         # New Prometheus scraping pipeline for runtime metrics
         metrics/prometheus:
           receivers: [prometheus]
           processors: [batch, resource]
-          exporters: [prometheusremotewrite]
+          exporters: [{{ include "runwhen-local.runnerMetricsExporters" . }}]
 
       extensions:
         - health_check

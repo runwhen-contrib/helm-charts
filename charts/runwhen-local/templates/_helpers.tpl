@@ -448,6 +448,31 @@ name written by a prefix-aware runwhen-runner. Used in the subchart's
 {{- end }}
 
 {{/*
+Exporter list for the runner metrics pipelines. Kept in sync with the
+exporter definitions in runner-otel-collector-configmap.yaml.
+
+Includes the Cortex `prometheusremotewrite` exporter unless the install
+has opted to cut over via `runner.metrics.otlp.keepCortex=false`, and
+appends the opt-in OTLP exporter (`otlphttp/runwhen` for http/protobuf,
+`otlp/runwhen` for grpc) when `runner.metrics.otlp.enabled=true`.
+*/}}
+{{- define "runwhen-local.runnerMetricsExporters" -}}
+{{- $otlp := .Values.runner.metrics.otlp | default dict -}}
+{{- $exporters := list -}}
+{{- if or (not $otlp.enabled) $otlp.keepCortex -}}
+{{- $exporters = append $exporters "prometheusremotewrite" -}}
+{{- end -}}
+{{- if $otlp.enabled -}}
+{{- if eq (default "http/protobuf" $otlp.protocol) "grpc" -}}
+{{- $exporters = append $exporters "otlp/runwhen" -}}
+{{- else -}}
+{{- $exporters = append $exporters "otlphttp/runwhen" -}}
+{{- end -}}
+{{- end -}}
+{{- join ", " $exporters -}}
+{{- end }}
+
+{{/*
 Reuse workspacename.
 */}}
 {{- define "runwhen-local.workspaceName" -}}

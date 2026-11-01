@@ -82,6 +82,53 @@ helm show values runwhen-contrib/runwhen-local
 
 For more information see the [RunWhen Platform documentation](https://docs.runwhen.com/platform-documentation).
 
+### Runner metrics export (Cortex → OTLP)
+
+By default the runner's bundled OTel collector exports SLI and runtime
+metrics to RunWhen's Cortex/Mimir tenant over `prometheusremotewrite`
+(`runner.metrics.url`). Cortex/Mimir is being decommissioned in favor of
+RunWhen's OpenObserve-backed observability service, which ingests OTLP.
+
+An opt-in OTLP export path lets an install migrate without cutting over
+blind. Enable the exporter and point it at the platform's in-cluster OTLP
+collector (or the observability service directly):
+
+```yaml
+runner:
+  metrics:
+    otlp:
+      enabled: true
+      # http/protobuf (default): OTLP/HTTP base endpoint; /v1/metrics is
+      # appended. Use the platform's OTel collector service, e.g.
+      endpoint: "http://<release>-otel-collector:4318"
+      # headers:                  # optional auth for a secured endpoint
+      #   Authorization: "Bearer <token>"
+      keepCortex: true           # default: export to Cortex AND OTLP
+```
+
+With `keepCortex: true` (the default) both the existing Cortex exporter
+and the new OTLP exporter receive metrics from the `metrics/otlp` and
+`metrics/prometheus` pipelines, so you can validate the OTLP path before
+removing Cortex. Set `keepCortex: false` to make OTLP the only metrics
+destination.
+
+Notes:
+
+- `protocol` defaults to `http/protobuf`; set `protocol: grpc` and a
+  `host:port` endpoint (e.g. `<release>-otel-collector:4317`) for
+  OTLP/gRPC.
+- `endpoint` accepts either an OTLP/HTTP base endpoint (the collector
+  appends `/v1/metrics`) or a full per-signal URL ending in
+  `/v1/metrics` (used verbatim).
+- Metric naming normalization stays off (`add_metric_suffixes: false`)
+  on the Cortex exporter so existing dashboards keep the OTel-side names;
+  OTLP carries those names natively.
+- When `runner.metrics.otlp.enabled` is `false` the rendered collector
+  config is unchanged from previous releases — Cortex remains the default
+  destination.
+
+This is the supported migration path away from Cortex/Mimir.
+
 ## Troubleshooting
 
 All chart resources carry standard Kubernetes labels including `app.kubernetes.io/component` so you can quickly isolate the workspace builder from the runner.
