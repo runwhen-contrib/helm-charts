@@ -1,10 +1,10 @@
 # =============================================================================
-# OTLP metrics export overlay (migration path off Cortex/Mimir)
+# OTLP metrics + logs export overlay (migration path off Cortex/Mimir)
 # =============================================================================
-# Enables the opt-in OTLP exporter on the runner's bundled OTel collector so
-# runner metrics can be sent to RunWhen's OpenObserve-backed observability
-# service (via its in-cluster OTLP collector) instead of — or in addition to —
-# Cortex/Mimir.
+# Enables the opt-in OTLP exporters on the runner's bundled OTel collector so
+# runner metrics AND logs can be sent to RunWhen's OpenObserve-backed
+# observability service (via its in-cluster OTLP collector) instead of — or in
+# addition to — Cortex/Mimir.
 #
 # Render to inspect:
 #
@@ -12,12 +12,16 @@
 #     -f charts/runwhen-local/examples/values-otlp-metrics.yaml \
 #     | sed -n '/exporters:/,/processors:/p'
 #
-# The defaults below are additive: Cortex keeps exporting to
+# The metrics defaults below are additive: Cortex keeps exporting to
 # `runner.metrics.url` while OTLP is also enabled, so the migration can be
 # validated before cutting over. Set `keepCortex: false` once verified.
 #
+# Logs are a separate opt-in. Here `runner.logs.otlp.endpoint` is left empty, so
+# it falls back to `runner.metrics.otlp.endpoint`: one collector endpoint serves
+# both signals. See examples/values-otlp-logs.yaml for a per-signal endpoint.
+#
 # Endpoint shape (choose one):
-#   * OTLP/HTTP base endpoint  -> the collector appends `/v1/metrics`
+#   * OTLP/HTTP base endpoint  -> the collector appends `/v1/metrics` or `/v1/logs`
 #       endpoint: "http://<release>-otel-collector:4318"
 #   * OTLP/HTTP per-signal URL -> used verbatim
 #       endpoint: "http://<release>-otel-collector:4318/v1/metrics"
@@ -44,3 +48,14 @@ runner:
       # `true` (default): keep exporting to Cortex while also exporting
       # OTLP. `false` cuts over so OTLP is the only destination.
       keepCortex: true
+
+  # Logs counterpart. Ships runner/worker stdout logs to the same OTLP
+  # endpoint. Independent of metrics: its own endpoint/protocol/headers.
+  logs:
+    otlp:
+      enabled: true
+      # Empty -> fall back to runner.metrics.otlp.endpoint above. Set an
+      # explicit base or per-signal endpoint to route logs elsewhere.
+      endpoint: ""
+      protocol: "http/protobuf"
+      headers: {}

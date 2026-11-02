@@ -473,6 +473,31 @@ appends the opt-in OTLP exporter (`otlphttp/runwhen` for http/protobuf,
 {{- end }}
 
 {{/*
+Exporter list for the runner logs pipeline. Sibling of
+`runwhen-local.runnerMetricsExporters`; kept in sync with the exporter
+definitions in runner-otel-collector-configmap.yaml.
+
+Logs are an independent opt-in from metrics (`runner.logs.otlp.enabled`)
+with their own endpoint/protocol/headers, so the logs exporter is a
+distinct instance — `otlphttp/runwhen-logs` for http/protobuf,
+`otlp/runwhen-logs` for grpc — rather than sharing the metrics exporter.
+Sharing would force the two signals onto one protocol and one base
+endpoint; the sibling keeps them decoupled while mirroring the metrics
+helper's shape. Returns an empty string when disabled so the configmap
+can gate the `logs` pipeline on it.
+*/}}
+{{- define "runwhen-local.runnerLogsExporters" -}}
+{{- $otlp := .Values.runner.logs.otlp | default dict -}}
+{{- if $otlp.enabled -}}
+{{- if eq (default "http/protobuf" $otlp.protocol) "grpc" -}}
+otlp/runwhen-logs
+{{- else -}}
+otlphttp/runwhen-logs
+{{- end -}}
+{{- end -}}
+{{- end }}
+
+{{/*
 Reuse workspacename.
 */}}
 {{- define "runwhen-local.workspaceName" -}}

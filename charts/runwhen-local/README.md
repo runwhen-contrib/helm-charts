@@ -82,16 +82,26 @@ helm show values runwhen-contrib/runwhen-local
 
 For more information see the [RunWhen Platform documentation](https://docs.runwhen.com/platform-documentation).
 
-### Runner metrics export (Cortex → OTLP)
+### Runner metrics and logs export (Cortex → OTLP)
 
 By default the runner's bundled OTel collector exports SLI and runtime
 metrics to RunWhen's Cortex/Mimir tenant over `prometheusremotewrite`
 (`runner.metrics.url`). Cortex/Mimir is being decommissioned in favor of
 RunWhen's OpenObserve-backed observability service, which ingests OTLP.
 
-An opt-in OTLP export path lets an install migrate without cutting over
-blind. Enable the exporter and point it at the platform's in-cluster OTLP
-collector (or the observability service directly):
+Both signals have an independent, opt-in OTLP export path:
+
+- `runner.metrics.otlp` migrates metrics off Cortex.
+- `runner.logs.otlp` ships runner and worker logs (which the pods write
+  to stdout) to the same observability service over OTLP. The collector
+  previously had no logs pipeline at all, so any OTLP logs sent to it
+  were rejected by the receiver; enabling this adds the pipeline that
+  accepts and forwards them.
+
+Each is disabled by default, so the rendered collector config is
+unchanged until you opt in.
+
+#### Metrics
 
 ```yaml
 runner:
@@ -112,22 +122,48 @@ and the new OTLP exporter receive metrics from the `metrics/otlp` and
 removing Cortex. Set `keepCortex: false` to make OTLP the only metrics
 destination.
 
-Notes:
+#### Logs
+
+```yaml
+runner:
+  logs:
+    otlp:
+      enabled: true
+      # OTLP/HTTP base endpoint; /v1/logs is appended. Leave empty to
+      # reuse runner.metrics.otlp.endpoint.
+      endpoint: "http://<release>-otel-collector:4318"
+      # headers:                  # optional auth for a secured endpoint
+      #   Authorization: "Bearer <token>"
+```
+
+Enabling logs adds a `logs` pipeline (`receivers: [otlp]`,
+`processors: [batch, resource]`) fed by a dedicated exporter —
+`otlphttp/runwhen-logs` (or `otlp/runwhen-logs` for gRPC) — so the
+metrics exporter is untouched.
+
+#### Endpoint handling and protocol (both signals)
 
 - `protocol` defaults to `http/protobuf`; set `protocol: grpc` and a
   `host:port` endpoint (e.g. `<release>-otel-collector:4317`) for
-  OTLP/gRPC.
-- `endpoint` accepts either an OTLP/HTTP base endpoint (the collector
-  appends `/v1/metrics`) or a full per-signal URL ending in
-  `/v1/metrics` (used verbatim).
+  OTLP/gRPC. Any `http(s)://` scheme is stripped for gRPC.
+- `endpoint` accepts an OTLP/HTTP **base** endpoint (the collector
+  appends `/v1/metrics` or `/v1/logs`) or a full per-signal URL ending in
+  `/v1/metrics` (metrics) / `/v1/logs` (logs), which is used verbatim.
+- `runner.logs.otlp.endpoint` may be left empty to fall back to
+  `runner.metrics.otlp.endpoint`. Pointing logs at a value that ends in
+  `/v1/metrics` rewrites the path to `/v1/logs` rather than emitting a
+  mismatched URL on the logs signal.
 - Metric naming normalization stays off (`add_metric_suffixes: false`)
   on the Cortex exporter so existing dashboards keep the OTel-side names;
   OTLP carries those names natively.
-- When `runner.metrics.otlp.enabled` is `false` the rendered collector
-  config is unchanged from previous releases — Cortex remains the default
-  destination.
 
-This is the supported migration path away from Cortex/Mimir.
+When `runner.metrics.otlp.enabled` and `runner.logs.otlp.enabled` are
+both `false` (the defaults) the rendered collector config is unchanged
+from previous releases — Cortex remains the only destination.
+
+This is the supported migration path away from Cortex/Mimir. Renderable
+overlays live in `examples/values-otlp-metrics.yaml` (metrics + logs) and
+`examples/values-otlp-logs.yaml` (logs with a per-signal endpoint).
 
 ## Troubleshooting
 
