@@ -160,6 +160,27 @@ spec:
             */}}
             {{- include "runwhen-local.trustBundleEnv" . | nindent 12 }}
 
+            {{- /*
+              Opt-in OTLP logs env (runner.logs.otlp.enabled). Points the
+              runner process at THIS release's bundled collector Service so
+              its stdout log bridge ships to the collector, which owns the
+              onward forward to OpenObserve. Renders nothing when the flag
+              is off, keeping the pod spec byte-identical to a chart
+              without this feature. Emitted BEFORE runner.extraEnv so an
+              operator's own OTEL_* value (in extraEnv) wins; the helper
+              also skips any variable already present there to avoid a
+              duplicate key.
+
+              The worker pods the runner spawns at runtime are NOT
+              chart-rendered, so Helm cannot set their env directly; the
+              runner must pass it (runner.runEnvironment.extraEnv) -- see
+              the README's "Runner metrics and logs export" section.
+            */}}
+            {{- $runnerOtlpLogsEnv := include "runwhen-local.runnerOtlpLogsEnv" (list . (printf "%s-runner" .Release.Name) .Values.runner.extraEnv) }}
+            {{- with $runnerOtlpLogsEnv }}
+            {{- . | nindent 12 }}
+            {{- end }}
+
             {{- with .Values.runner.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}

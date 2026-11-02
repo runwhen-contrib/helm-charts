@@ -141,6 +141,56 @@ Enabling logs adds a `logs` pipeline (`receivers: [otlp]`,
 `otlphttp/runwhen-logs` (or `otlp/runwhen-logs` for gRPC) — so the
 metrics exporter is untouched.
 
+#### How the runner and worker pods are pointed at the collector
+
+The collector only receives logs if a producer sends them. Enabling
+`runner.logs.otlp.enabled` also sets the standard OpenTelemetry log
+environment on the **runner** Deployment's container (the chart-rendered
+runner pod), so its stdout log bridge ships to the observability service:
+
+| Variable | http/protobuf (default) | grpc |
+| --- | --- | --- |
+| `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT` | `http://<collector Service>:4318/v1/logs` | `<collector Service>:4317` |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | `http/protobuf` | `grpc` |
+| `OTEL_LOGS_EXPORTER` | `otlp` | `otlp` |
+| `OTEL_SERVICE_NAME` | `<release>-runner` | `<release>-runner` |
+
+`<collector Service>` is this release's bundled collector Service
+(`runwhen-local.otelCollectorServiceName`; `{prefix}otel-collector` by
+default, honouring `opentelemetry-collector.fullnameOverride`). The pod
+env **always targets that local Service** — the collector owns the
+onward forward to whatever `runner.logs.otlp.endpoint` names. So an
+external or per-signal logs endpoint does not change the pod env; the
+pods keep sending to the in-cluster collector. `OTEL_SERVICE_NAME` and
+any other variable already set in `runner.extraEnv` are left untouched.
+
+**Worker and task pods are not covered directly.** The runner creates
+its worker Deployments and the CronCodeRun/TaskSet pods at runtime; the
+chart never renders those pod specs, so Helm cannot set their env. Their
+logs stay unshipped **unless the runner passes the env itself**. The
+documented route is `runner.runEnvironment.extraEnv`, which the chart
+writes into the runner ConfigMap and the runner applies to the pods it
+spawns (requires a runner release with standard `OTEL_*` support — see
+runwhen/runwhen-runner#95):
+
+```yaml
+runner:
+  logs:
+    otlp:
+      enabled: true
+      endpoint: "http://<release>-otel-collector:4318/v1/logs"
+  runEnvironment:
+    extraEnv:
+      - name: OTEL_EXPORTER_OTLP_LOGS_ENDPOINT
+        value: "http://<release>-otel-collector:4318/v1/logs"
+      - name: OTEL_EXPORTER_OTLP_PROTOCOL
+        value: "http/protobuf"
+      - name: OTEL_LOGS_EXPORTER
+        value: "otlp"
+      - name: OTEL_SERVICE_NAME
+        value: "<release>-worker"
+```
+
 #### Endpoint handling and protocol (both signals)
 
 - `protocol` defaults to `http/protobuf`; set `protocol: grpc` and a
