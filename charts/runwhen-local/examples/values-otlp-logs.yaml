@@ -1,0 +1,43 @@
+# =============================================================================
+# OTLP logs export overlay (runner/worker logs → OpenObserve)
+# =============================================================================
+# Enables the opt-in OTLP logs exporter on the runner's bundled OTel collector.
+# The collector ships with no logs pipeline by default, so runner and worker
+# stdout logs cannot reach the platform's observability stack until this is on.
+# Metrics are left on their default (Cortex) path here.
+#
+# Render to inspect:
+#
+#   helm template rw charts/runwhen-local \
+#     -f charts/runwhen-local/examples/values-otlp-logs.yaml \
+#     | sed -n '/exporters:/,/processors:/p'
+#
+# Endpoint shape (choose one):
+#   * OTLP/HTTP base endpoint   -> the collector appends `/v1/logs`
+#       endpoint: "http://<release>-otel-collector:4318"
+#   * OTLP/HTTP per-signal URL  -> used verbatim (this file)
+#       endpoint: "http://<release>-otel-collector:4318/v1/logs"
+#   * Metrics endpoint reused   -> `/v1/metrics` is rewritten to `/v1/logs`
+#       endpoint: "http://<release>-otel-collector:4318/v1/metrics"
+#   * OTLP/gRPC host:port       -> set protocol: grpc
+#       endpoint: "<release>-otel-collector:4317"
+#
+# Leave `endpoint: ""` to fall back to `runner.metrics.otlp.endpoint` instead.
+#
+# Adjust `<release>` to your Helm release name. The bundled
+# opentelemetry-collector subchart's service is named
+# `{prefix}otel-collector` for the same release.
+
+runner:
+  logs:
+    otlp:
+      enabled: true
+      # Full per-signal URL: used verbatim, no `/v1/logs` appended.
+      endpoint: "http://rw-runwhen-local-otel-collector:4318/v1/logs"
+      # protocol defaults to http/protobuf; use `grpc` with a host:port
+      # endpoint (e.g. rw-runwhen-local-otel-collector:4317) for OTLP/gRPC.
+      protocol: "http/protobuf"
+      # Optional headers for an authenticated endpoint, e.g.
+      # headers:
+      #   Authorization: "Bearer <token>"
+      headers: {}

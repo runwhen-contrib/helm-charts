@@ -505,6 +505,76 @@ runner:
     mtls:
       enabled: true
 
+    # -- Opt-in OTLP export path for runner metrics. When enabled, the
+    # bundled OTel collector ALSO exports to `otlp.endpoint` (the
+    # platform's in-cluster collector fronting OpenObserve, or the
+    # observability service directly), so an install can migrate off
+    # Cortex/Mimir. Disabled by default: the `prometheusremotewrite`
+    # exporter above stays the default destination and the rendered
+    # collector config is unchanged while this block is off.
+    otlp:
+      enabled: false
+
+      # OTLP endpoint of the observability service or its in-cluster
+      # collector.
+      #   http/protobuf (default): an OTLP/HTTP base endpoint such as
+      #     `http://<release>-otel-collector:4318`. The `otlphttp`
+      #     exporter appends `/v1/metrics`. A value that already ends in
+      #     `/v1/metrics` is treated as a per-signal endpoint and used
+      #     verbatim.
+      #   grpc: a `host:port` endpoint such as
+      #     `<release>-otel-collector:4317`. Any `http(s)://` scheme is
+      #     stripped for the `otlp` exporter.
+      endpoint: ""
+
+      # OTLP protocol: `http/protobuf` (default) or `grpc`.
+      protocol: "http/protobuf"
+
+      # Extra headers sent with every OTLP request, e.g. an
+      # Authorization header for an authenticated OpenObserve endpoint.
+      headers: {}
+
+      # Keep exporting to Cortex alongside OTLP. `true` (default)
+      # migrates additively, leaving the existing
+      # `prometheusremotewrite` exporter in both pipelines. Set `false`
+      # to cut over so OTLP becomes the only metrics destination.
+      keepCortex: true
+
+  # -- Opt-in OTLP logs export path for the runner. Runner and worker
+  # pods write their logs to stdout; with this enabled the bundled OTel
+  # collector gains a `logs` pipeline that accepts OTLP logs on its
+  # existing `otlp` receiver (HTTP 4318 / gRPC 4317) and forwards them
+  # to the platform's observability service (OpenObserve). This is a
+  # separate decision from `runner.metrics.otlp` — logs are a different
+  # volume and carry independent endpoint/protocol/headers — so it is
+  # disabled by default and the rendered collector config is unchanged
+  # while this block is off.
+  logs:
+    otlp:
+      enabled: false
+
+      # OTLP endpoint for logs. Empty falls back to
+      # `runner.metrics.otlp.endpoint`, so a single endpoint can serve
+      # both signals.
+      #   http/protobuf (default): an OTLP/HTTP base endpoint such as
+      #     `http://<release>-otel-collector:4318`. The `otlphttp`
+      #     exporter appends `/v1/logs`. A value that already ends in
+      #     `/v1/logs` is treated as a per-signal endpoint and used
+      #     verbatim; a value ending in `/v1/metrics` (i.e. the metrics
+      #     endpoint reused here) is rewritten to `/v1/logs` rather than
+      #     emitting a mismatched URL.
+      #   grpc: a `host:port` endpoint such as
+      #     `<release>-otel-collector:4317`. Any `http(s)://` scheme is
+      #     stripped for the `otlp` exporter.
+      endpoint: ""
+
+      # OTLP protocol: `http/protobuf` (default) or `grpc`.
+      protocol: "http/protobuf"
+
+      # Extra headers sent with every OTLP request, e.g. an
+      # Authorization header for an authenticated OpenObserve endpoint.
+      headers: {}
+
   # securityContext (container) is used to set the security context for the runner container
   # securityContext: {}
 

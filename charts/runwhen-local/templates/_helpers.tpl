@@ -393,6 +393,29 @@ name.
 {{- end }}
 
 {{/*
+Resolve the OpenTelemetry collector Service name from the PARENT chart
+scope. The subchart's Service (templates/service.yaml) is named by
+`opentelemetry-collector.fullname`, which the parent shadows below so the
+name is release-derived by default. That shadow helper reads
+`.Values.fullnameOverride`, and when it is invoked from a parent template
+that key is the ROOT fullnameOverride -- not the subchart's -- so calling
+it here would miss an operator's `opentelemetry-collector.fullnameOverride`.
+This helper reads the subchart-scoped key explicitly (the same rule the
+subchart's own Service renders with) so a runner's OTLP env can never
+point at a Service name that does not exist. Mirrors
+runwhen-local.serviceAccountName.otelCollector and
+runwhen-local.configMapName.otelCollector.
+*/}}
+{{- define "runwhen-local.otelCollectorServiceName" -}}
+{{- $subchart := index .Values "opentelemetry-collector" | default dict -}}
+{{- if $subchart.fullnameOverride -}}
+{{- $subchart.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- printf "%sotel-collector" (include "runwhen-local.otelSubchartPrefix" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end }}
+
+{{/*
 Release-derived prefix for the bundled `opentelemetry-collector`
 subchart. Alias of `runwhen-local.releasePrefix`, kept as its own name so
 call sites state their intent (subchart coupling) and so a future
@@ -445,6 +468,118 @@ name written by a prefix-aware runwhen-runner. Used in the subchart's
 */}}
 {{- define "runwhen-local.runnerMetricsTls" -}}
 {{- printf "%srunner-metrics-tls" (include "runwhen-local.otelSubchartPrefix" .) -}}
+{{- end }}
+
+{{/*
+Exporter list for the runner metrics pipelines. Kept in sync with the
+exporter definitions in runner-otel-collector-configmap.yaml.
+
+Includes the Cortex `prometheusremotewrite` exporter unless the install
+has opted to cut over via `runner.metrics.otlp.keepCortex=false`, and
+appends the opt-in OTLP exporter (`otlphttp/runwhen` for http/protobuf,
+`otlp/runwhen` for grpc) when `runner.metrics.otlp.enabled=true`.
+*/}}
+{{- define "runwhen-local.runnerMetricsExporters" -}}
+{{- $otlp := .Values.runner.metrics.otlp | default dict -}}
+{{- $exporters := list -}}
+{{- if or (not $otlp.enabled) $otlp.keepCortex -}}
+{{- $exporters = append $exporters "prometheusremotewrite" -}}
+{{- end -}}
+{{- if $otlp.enabled -}}
+{{- if eq (default "http/protobuf" $otlp.protocol) "grpc" -}}
+{{- $exporters = append $exporters "otlp/runwhen" -}}
+{{- else -}}
+{{- $exporters = append $exporters "otlphttp/runwhen" -}}
+{{- end -}}
+{{- end -}}
+{{- join ", " $exporters -}}
+{{- end }}
+
+{{/*
+Exporter list for the runner logs pipeline. Sibling of
+`runwhen-local.runnerMetricsExporters`; kept in sync with the exporter
+definitions in runner-otel-collector-configmap.yaml.
+
+Logs are an independent opt-in from metrics (`runner.logs.otlp.enabled`)
+with their own endpoint/protocol/headers, so the logs exporter is a
+distinct instance — `otlphttp/runwhen-logs` for http/protobuf,
+`otlp/runwhen-logs` for grpc — rather than sharing the metrics exporter.
+Sharing would force the two signals onto one protocol and one base
+endpoint; the sibling keeps them decoupled while mirroring the metrics
+helper's shape. Returns an empty string when disabled so the configmap
+can gate the `logs` pipeline on it.
+*/}}
+{{- define "runwhen-local.runnerLogsExporters" -}}
+{{- $otlp := .Values.runner.logs.otlp | default dict -}}
+{{- if $otlp.enabled -}}
+{{- if eq (default "http/protobuf" $otlp.protocol) "grpc" -}}
+otlp/runwhen-logs
+{{- else -}}
+otlphttp/runwhen-logs
+{{- end -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Standard OpenTelemetry env that points a runner/worker process at THIS
+release's bundled OTel collector for LOGS. Emitted only when
+`runner.logs.otlp.enabled=true`, so with the flag off (the default) the
+consumer pod spec renders byte-identically to a chart without this feature.
+
+The endpoint ALWAYS targets the in-cluster collector Service resolved by
+`runwhen-local.otelCollectorServiceName`; the collector owns the onward
+forward (to OpenObserve, or whatever `runner.logs.otlp.endpoint` names).
+The pod therefore never needs to know the final destination, and an
+external or per-signal logs endpoint does not change the pod env.
+
+protocol: http/protobuf (the default) -> http://<collector>:4318/v1/logs
+          grpc                         -> <collector>:4317 (no path; the
+          runner's gRPC exporter accepts a bare host:port)
+
+Inputs (list):
+  0  root context
+  1  OTEL_SERVICE_NAME for this component (empty omits the variable)
+  2  the container's already-configured env entries (usually the user's
+     extraEnv); any of our variable names present there is skipped, so an
+     explicit operator value wins and no duplicate key is emitted.
+
+Rendered under a container's `env:` list with `nindent 12`.
+*/}}
+{{- define "runwhen-local.runnerOtlpLogsEnv" -}}
+{{- $ctx := index . 0 -}}
+{{- $serviceName := index . 1 -}}
+{{- $extra := index . 2 | default list -}}
+{{- $logsOtlp := $ctx.Values.runner.logs.otlp | default dict -}}
+{{- if $logsOtlp.enabled -}}
+{{- $protocol := default "http/protobuf" $logsOtlp.protocol -}}
+{{- $collector := include "runwhen-local.otelCollectorServiceName" $ctx -}}
+{{- $endpoint := printf "http://%s:4318/v1/logs" $collector -}}
+{{- if eq $protocol "grpc" -}}
+{{- $endpoint = printf "%s:4317" $collector -}}
+{{- end -}}
+{{- $existing := dict -}}
+{{- range $extra -}}
+{{- if kindIs "map" . -}}
+{{- if .name -}}{{- $_ := set $existing .name true -}}{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- if not (hasKey $existing "OTEL_EXPORTER_OTLP_LOGS_ENDPOINT") }}
+- name: OTEL_EXPORTER_OTLP_LOGS_ENDPOINT
+  value: {{ $endpoint | quote }}
+{{- end }}
+{{- if not (hasKey $existing "OTEL_EXPORTER_OTLP_PROTOCOL") }}
+- name: OTEL_EXPORTER_OTLP_PROTOCOL
+  value: {{ $protocol | quote }}
+{{- end }}
+{{- if not (hasKey $existing "OTEL_LOGS_EXPORTER") }}
+- name: OTEL_LOGS_EXPORTER
+  value: "otlp"
+{{- end }}
+{{- if and $serviceName (not (hasKey $existing "OTEL_SERVICE_NAME")) }}
+- name: OTEL_SERVICE_NAME
+  value: {{ $serviceName | quote }}
+{{- end }}
+{{- end -}}
 {{- end }}
 
 {{/*

@@ -82,6 +82,139 @@ helm show values runwhen-contrib/runwhen-local
 
 For more information see the [RunWhen Platform documentation](https://docs.runwhen.com/platform-documentation).
 
+### Runner metrics and logs export (Cortex → OTLP)
+
+By default the runner's bundled OTel collector exports SLI and runtime
+metrics to RunWhen's Cortex/Mimir tenant over `prometheusremotewrite`
+(`runner.metrics.url`). Cortex/Mimir is being decommissioned in favor of
+RunWhen's OpenObserve-backed observability service, which ingests OTLP.
+
+Both signals have an independent, opt-in OTLP export path:
+
+- `runner.metrics.otlp` migrates metrics off Cortex.
+- `runner.logs.otlp` ships runner and worker logs (which the pods write
+  to stdout) to the same observability service over OTLP. The collector
+  previously had no logs pipeline at all, so any OTLP logs sent to it
+  were rejected by the receiver; enabling this adds the pipeline that
+  accepts and forwards them.
+
+Each is disabled by default, so the rendered collector config is
+unchanged until you opt in.
+
+#### Metrics
+
+```yaml
+runner:
+  metrics:
+    otlp:
+      enabled: true
+      # http/protobuf (default): OTLP/HTTP base endpoint; /v1/metrics is
+      # appended. Use the platform's OTel collector service, e.g.
+      endpoint: "http://<release>-otel-collector:4318"
+      # headers:                  # optional auth for a secured endpoint
+      #   Authorization: "Bearer <token>"
+      keepCortex: true           # default: export to Cortex AND OTLP
+```
+
+With `keepCortex: true` (the default) both the existing Cortex exporter
+and the new OTLP exporter receive metrics from the `metrics/otlp` and
+`metrics/prometheus` pipelines, so you can validate the OTLP path before
+removing Cortex. Set `keepCortex: false` to make OTLP the only metrics
+destination.
+
+#### Logs
+
+```yaml
+runner:
+  logs:
+    otlp:
+      enabled: true
+      # OTLP/HTTP base endpoint; /v1/logs is appended. Leave empty to
+      # reuse runner.metrics.otlp.endpoint.
+      endpoint: "http://<release>-otel-collector:4318"
+      # headers:                  # optional auth for a secured endpoint
+      #   Authorization: "Bearer <token>"
+```
+
+Enabling logs adds a `logs` pipeline (`receivers: [otlp]`,
+`processors: [batch, resource]`) fed by a dedicated exporter —
+`otlphttp/runwhen-logs` (or `otlp/runwhen-logs` for gRPC) — so the
+metrics exporter is untouched.
+
+#### How the runner and worker pods are pointed at the collector
+
+The collector only receives logs if a producer sends them. Enabling
+`runner.logs.otlp.enabled` also sets the standard OpenTelemetry log
+environment on the **runner** Deployment's container (the chart-rendered
+runner pod), so its stdout log bridge ships to the observability service:
+
+| Variable | http/protobuf (default) | grpc |
+| --- | --- | --- |
+| `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT` | `http://<collector Service>:4318/v1/logs` | `<collector Service>:4317` |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | `http/protobuf` | `grpc` |
+| `OTEL_LOGS_EXPORTER` | `otlp` | `otlp` |
+| `OTEL_SERVICE_NAME` | `<release>-runner` | `<release>-runner` |
+
+`<collector Service>` is this release's bundled collector Service
+(`runwhen-local.otelCollectorServiceName`; `{prefix}otel-collector` by
+default, honouring `opentelemetry-collector.fullnameOverride`). The pod
+env **always targets that local Service** — the collector owns the
+onward forward to whatever `runner.logs.otlp.endpoint` names. So an
+external or per-signal logs endpoint does not change the pod env; the
+pods keep sending to the in-cluster collector. `OTEL_SERVICE_NAME` and
+any other variable already set in `runner.extraEnv` are left untouched.
+
+**Worker and task pods are not covered directly.** The runner creates
+its worker Deployments and the CronCodeRun/TaskSet pods at runtime; the
+chart never renders those pod specs, so Helm cannot set their env. Their
+logs stay unshipped **unless the runner passes the env itself**. The
+documented route is `runner.runEnvironment.extraEnv`, which the chart
+writes into the runner ConfigMap and the runner applies to the pods it
+spawns (requires a runner release with standard `OTEL_*` support — see
+runwhen/runwhen-runner#95):
+
+```yaml
+runner:
+  logs:
+    otlp:
+      enabled: true
+      endpoint: "http://<release>-otel-collector:4318/v1/logs"
+  runEnvironment:
+    extraEnv:
+      - name: OTEL_EXPORTER_OTLP_LOGS_ENDPOINT
+        value: "http://<release>-otel-collector:4318/v1/logs"
+      - name: OTEL_EXPORTER_OTLP_PROTOCOL
+        value: "http/protobuf"
+      - name: OTEL_LOGS_EXPORTER
+        value: "otlp"
+      - name: OTEL_SERVICE_NAME
+        value: "<release>-worker"
+```
+
+#### Endpoint handling and protocol (both signals)
+
+- `protocol` defaults to `http/protobuf`; set `protocol: grpc` and a
+  `host:port` endpoint (e.g. `<release>-otel-collector:4317`) for
+  OTLP/gRPC. Any `http(s)://` scheme is stripped for gRPC.
+- `endpoint` accepts an OTLP/HTTP **base** endpoint (the collector
+  appends `/v1/metrics` or `/v1/logs`) or a full per-signal URL ending in
+  `/v1/metrics` (metrics) / `/v1/logs` (logs), which is used verbatim.
+- `runner.logs.otlp.endpoint` may be left empty to fall back to
+  `runner.metrics.otlp.endpoint`. Pointing logs at a value that ends in
+  `/v1/metrics` rewrites the path to `/v1/logs` rather than emitting a
+  mismatched URL on the logs signal.
+- Metric naming normalization stays off (`add_metric_suffixes: false`)
+  on the Cortex exporter so existing dashboards keep the OTel-side names;
+  OTLP carries those names natively.
+
+When `runner.metrics.otlp.enabled` and `runner.logs.otlp.enabled` are
+both `false` (the defaults) the rendered collector config is unchanged
+from previous releases — Cortex remains the only destination.
+
+This is the supported migration path away from Cortex/Mimir. Renderable
+overlays live in `examples/values-otlp-metrics.yaml` (metrics + logs) and
+`examples/values-otlp-logs.yaml` (logs with a per-signal endpoint).
+
 ## Troubleshooting
 
 All chart resources carry standard Kubernetes labels including `app.kubernetes.io/component` so you can quickly isolate the workspace builder from the runner.
