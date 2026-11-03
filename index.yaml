@@ -3,6 +3,26 @@ entries:
   runwhen-local:
   - apiVersion: v2
     appVersion: 0.12.5
+    created: "2026-11-03T01:26:20.896837504Z"
+    dependencies:
+    - condition: runner.enabled
+      name: opentelemetry-collector
+      repository: https://open-telemetry.github.io/opentelemetry-helm-charts
+      version: 0.158.1
+    description: The RunWhen Local Helm Chart - Private runners powering Agentic AI
+    digest: 6dda70c65f82041a3b9583c7346a3c5f8ecc8d4402c2aa78ab35e83da906c297
+    icon: https://storage.googleapis.com/runwhen-nonprod-shared-images/icons/runwhen_icon.png
+    maintainers:
+    - email: shea.stewart@runwhen.com
+      name: stewartshea
+      url: www.runwhen.com
+    name: runwhen-local
+    type: application
+    urls:
+    - https://github.com/runwhen-contrib/helm-charts/releases/download/runwhen-local-0.7.7/runwhen-local-0.7.7.tgz
+    version: 0.7.7
+  - apiVersion: v2
+    appVersion: 0.12.5
     created: "2026-10-30T12:53:40.957046405Z"
     dependencies:
     - condition: runner.enabled
@@ -1843,4 +1863,4 @@ entries:
     urls:
     - https://github.com/runwhen-contrib/helm-charts/releases/download/runwhen-local-0.0.12/runwhen-local-0.0.12.tgz
     version: 0.0.12
-generated: "2026-10-30T12:53:40.957502803Z"
+generated: "2026-11-03T01:26:20.897096318Z"
