@@ -1,0 +1,10 @@
+suite: install mode validation
+templates:
+  - templates/workspace-builder-deployment.yaml
+tests:
+  - it: rejects unsupported install modes
+    set:
+      installMode: invalid
+    asserts:
+      - failedTemplate:
+          errorMessage: installMode must be classic or v13

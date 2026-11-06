@@ -238,11 +238,17 @@ DEPRECATED: Support for the old "runwhenLocal" values key.
   Remove this fallback once all consumers have migrated to "workspaceBuilder:".
 */}}
 {{- define "runwhen-local.resolveWorkspaceBuilder" -}}
-{{- if .Values.runwhenLocal -}}
-{{- mergeOverwrite (deepCopy .Values.workspaceBuilder) .Values.runwhenLocal | toYaml -}}
-{{- else -}}
-{{- .Values.workspaceBuilder | toYaml -}}
+{{- if not (has .Values.installMode (list "classic" "v13")) -}}
+{{- fail "installMode must be classic or v13" -}}
 {{- end -}}
+{{- $wb := deepCopy .Values.workspaceBuilder -}}
+{{- if .Values.runwhenLocal -}}
+{{- $wb = mergeOverwrite $wb .Values.runwhenLocal -}}
+{{- end -}}
+{{- if eq .Values.installMode "v13" -}}
+{{- $_ := set $wb "enabled" false -}}
+{{- end -}}
+{{- $wb | toYaml -}}
 {{- end -}}
 
 {{/*

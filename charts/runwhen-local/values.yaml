@@ -18,6 +18,11 @@
 ###############################################################################
 ######################## Global/Shared Settings ###############################
 ###############################################################################
+# classic preserves Workspace Builder; v13 uses Connections for discovery.
+# V13 forces Builder off even when the deprecated runwhenLocal alias enables it.
+# runner.enabled remains independent in both modes.
+installMode: classic
+
 workspaceName: "workspace-name"
 
 imagePullSecrets: []
