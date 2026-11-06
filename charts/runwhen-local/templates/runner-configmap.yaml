@@ -28,8 +28,12 @@ data:
       log:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      controlAddr: {{ .Values.runner.controlAddr }}
-      metricsAddr: {{ .Values.runner.metrics.url }}
+      {{- with .Values.runner.controlAddr }}
+      controlAddr: {{ . }}
+      {{- end }}
+      {{- with ((.Values.runner.metrics).url) }}
+      metricsAddr: {{ . }}
+      {{- end }}
       proxy:
         enabled: {{ .Values.proxy.enabled }}
         httpProxy: "{{ .Values.proxy.httpProxy }}"

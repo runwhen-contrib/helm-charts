@@ -18,7 +18,7 @@
 ###############################################################################
 ######################## Global/Shared Settings ###############################
 ###############################################################################
-workspaceName: "workspace-name"
+workspaceName: ""
 
 imagePullSecrets: []
 
@@ -100,7 +100,7 @@ platformArch: "amd64"
 ###############################################################################
 
 workspaceBuilder:
-  enabled: true
+  enabled: false
 
   # Number of workspace-builder replicas. The workspace-builder reads from
   # / writes to a shared ConfigMap and the in-cluster K8s API; running >1
@@ -490,20 +490,17 @@ runner:
     registry: "us-docker.pkg.dev"
     repository: "runwhen-nonprod-shared/public-images/runner"
     tag: "r-2026-10-16.1"
-  controlAddr: "https://runner.beta.runwhen.com"
+  # Leave empty to resolve runner-control from the runner-registration-token
+  # Secret claim (and runner-creds.control_addr on subsequent boots). Set only
+  # to explicitly override the platform-stated address.
+  controlAddr: ""
   metrics:
-    url: "https://runner-cortex-tenant.beta.runwhen.com/push"
+    url: ""
     # -- Client certificate (mTLS) for the OTel collector's
-    # prometheusremotewrite exporter. Enabled by default — matches the
-    # SaaS service (most users). When enabled, the collector mounts the
-    # `runner-metrics-tls` Secret and presents a client cert to the
-    # metrics endpoint.
-    #
-    # Set to false when the platform chart has runner.mtls.enabled=false
-    # and also clear opentelemetry-collector.extraVolumes and
-    # extraVolumeMounts in your overlay.
+    # prometheusremotewrite exporter. Disabled by default; enable when pushing
+    # to an mTLS Cortex endpoint.
     mtls:
-      enabled: true
+      enabled: false
 
     # -- Opt-in OTLP export path for runner metrics. When enabled, the
     # bundled OTel collector ALSO exports to `otlp.endpoint` (the
@@ -906,30 +903,11 @@ opentelemetry-collector:
   #   # NO_PROXY environment variable
   #   - name: NO_PROXY
   #     value: "127.0.0.1,localhost,$(KUBERNETES_SERVICE_HOST)"
-  # -- TLS volume for the OTel collector's mTLS client cert. Clear
-  #    when runner.metrics.mtls.enabled=false — the runner-metrics-tls
-  #    Secret does not exist in that mode.
-  extraVolumes:
-    - name: tls-secret-volume
-      secret:
-        secretName: '{{ include "runwhen-local.runnerMetricsTls" . }}'
-    # # Note: must be configured when using .Values.ProxyCA -- can also be transitioned to
-    # # a configMap if needed -- just match the values from .Values.ProxyCA.ConfigMapName and .Values.ProxyCA.Key
-    # - name: proxy-ca-volume # DO NOT CHANGE
-    #   secret:
-    #     secretName: # Value from .Values.proxyCA.secretName
-    #     items:
-    #       - key: ca.crt # Value from .Values.proxyCA.key
-    #         path: proxy-ca.crt # DO NOT CHANGE
-  extraVolumeMounts:
-    - name: tls-secret-volume
-      mountPath: /tls
-      readOnly: true
-    # # Note: must be used when using .Values.ProxyCA
-    # - name: proxy-ca-volume
-    #   mountPath: /etc/ssl/certs/proxy-ca.crt
-    #   readOnly: true
-    #   subPath: proxy-ca.crt
+  # -- TLS volume for the OTel collector's mTLS client cert. Empty by default
+  #    because runner.metrics.mtls.enabled defaults to false; populate when
+  #    mTLS is enabled and the runner-metrics-tls Secret exists.
+  extraVolumes: []
+  extraVolumeMounts: []
   resources:
     requests:
       cpu: "10m"
