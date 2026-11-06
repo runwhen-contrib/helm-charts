@@ -647,4 +647,16 @@ Each code collection entry supports the following fields:
 - `workerReplicas` (optional): Number of worker replicas to deploy (defaults to 1)
 - `name` (optional): Custom name for the collection (defaults to repository name)
 
-**Note**: Only one of `tag`, `branch`, or `ref` should be specified per collection. If none are specified, it defaults to `main` branch. 
+**Note**: Only one of `tag`, `branch`, or `ref` should be specified per collection. If none are specified, it defaults to `main` branch.
+
+## Discovery install mode
+
+`installMode` defaults to `classic`, preserving Workspace Builder behavior.
+Set `installMode: v13` when Connections own discovery. This forces every
+Workspace Builder resource off, including when the deprecated `runwhenLocal`
+values alias sets `enabled: true`. The Runner remains controlled independently
+by `runner.enabled` and stays enabled by default.
+
+Before switching an existing workspace, preserve its namespace include/exclude
+policy in the intended connection settings and retire its owned legacy discovery
+schedules through the V13 backend. This chart does not migrate those settings.

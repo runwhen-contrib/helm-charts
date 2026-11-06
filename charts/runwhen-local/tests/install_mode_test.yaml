@@ -1,0 +1,146 @@
+suite: V13 builder retirement
+templates:
+  - templates/workspace-builder-advancedClusterRole.yaml
+  - templates/workspace-builder-clusterviewer.yaml
+  - templates/workspace-builder-configmap.yaml
+  - templates/workspace-builder-deployment.yaml
+  - templates/workspace-builder-ingress.yaml
+  - templates/workspace-builder-namespacerole.yaml
+  - templates/workspace-builder-service.yaml
+  - templates/workspace-builder-serviceaccount.yaml
+  - templates/runner-deployment.yaml
+release:
+  name: rw
+tests:
+  - it: keeps the builder by default
+    template: templates/workspace-builder-deployment.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+  - it: keeps explicit classic builder configuration
+    template: templates/workspace-builder-deployment.yaml
+    set:
+      installMode: classic
+    asserts:
+      - hasDocuments:
+          count: 1
+  - it: preserves a classic legacy alias disabling the builder
+    template: templates/workspace-builder-deployment.yaml
+    set:
+      installMode: classic
+      workspaceBuilder.enabled: true
+      runwhenLocal.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: omits workspace-builder-advancedClusterRole.yaml in V13 even with legacy alias enabled
+    template: templates/workspace-builder-advancedClusterRole.yaml
+    set:
+      installMode: v13
+      workspaceBuilder.enabled: true
+      runwhenLocal.enabled: true
+      workspaceBuilder.ingress.enabled: true
+      workspaceBuilder.serviceAccountRoles.advancedClusterRole.enabled: true
+      workspaceBuilder.serviceAccountRoles.namespaceRole.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: omits workspace-builder-clusterviewer.yaml in V13 even with legacy alias enabled
+    template: templates/workspace-builder-clusterviewer.yaml
+    set:
+      installMode: v13
+      workspaceBuilder.enabled: true
+      runwhenLocal.enabled: true
+      workspaceBuilder.ingress.enabled: true
+      workspaceBuilder.serviceAccountRoles.advancedClusterRole.enabled: true
+      workspaceBuilder.serviceAccountRoles.namespaceRole.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: omits workspace-builder-configmap.yaml in V13 even with legacy alias enabled
+    template: templates/workspace-builder-configmap.yaml
+    set:
+      installMode: v13
+      workspaceBuilder.enabled: true
+      runwhenLocal.enabled: true
+      workspaceBuilder.ingress.enabled: true
+      workspaceBuilder.serviceAccountRoles.advancedClusterRole.enabled: true
+      workspaceBuilder.serviceAccountRoles.namespaceRole.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: omits workspace-builder-deployment.yaml in V13 even with legacy alias enabled
+    template: templates/workspace-builder-deployment.yaml
+    set:
+      installMode: v13
+      workspaceBuilder.enabled: true
+      runwhenLocal.enabled: true
+      workspaceBuilder.ingress.enabled: true
+      workspaceBuilder.serviceAccountRoles.advancedClusterRole.enabled: true
+      workspaceBuilder.serviceAccountRoles.namespaceRole.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: omits workspace-builder-ingress.yaml in V13 even with legacy alias enabled
+    template: templates/workspace-builder-ingress.yaml
+    set:
+      installMode: v13
+      workspaceBuilder.enabled: true
+      runwhenLocal.enabled: true
+      workspaceBuilder.ingress.enabled: true
+      workspaceBuilder.serviceAccountRoles.advancedClusterRole.enabled: true
+      workspaceBuilder.serviceAccountRoles.namespaceRole.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: omits workspace-builder-namespacerole.yaml in V13 even with legacy alias enabled
+    template: templates/workspace-builder-namespacerole.yaml
+    set:
+      installMode: v13
+      workspaceBuilder.enabled: true
+      runwhenLocal.enabled: true
+      workspaceBuilder.ingress.enabled: true
+      workspaceBuilder.serviceAccountRoles.advancedClusterRole.enabled: true
+      workspaceBuilder.serviceAccountRoles.namespaceRole.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: omits workspace-builder-service.yaml in V13 even with legacy alias enabled
+    template: templates/workspace-builder-service.yaml
+    set:
+      installMode: v13
+      workspaceBuilder.enabled: true
+      runwhenLocal.enabled: true
+      workspaceBuilder.ingress.enabled: true
+      workspaceBuilder.serviceAccountRoles.advancedClusterRole.enabled: true
+      workspaceBuilder.serviceAccountRoles.namespaceRole.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: omits workspace-builder-serviceaccount.yaml in V13 even with legacy alias enabled
+    template: templates/workspace-builder-serviceaccount.yaml
+    set:
+      installMode: v13
+      workspaceBuilder.enabled: true
+      runwhenLocal.enabled: true
+      workspaceBuilder.ingress.enabled: true
+      workspaceBuilder.serviceAccountRoles.advancedClusterRole.enabled: true
+      workspaceBuilder.serviceAccountRoles.namespaceRole.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: retains the V13 runner by default
+    template: templates/runner-deployment.yaml
+    set:
+      installMode: v13
+    asserts:
+      - hasDocuments:
+          count: 1
+  - it: respects independent runner disable in V13
+    template: templates/runner-deployment.yaml
+    set:
+      installMode: v13
+      runner.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0

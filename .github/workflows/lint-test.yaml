@@ -13,6 +13,7 @@ jobs:
 
       - name: Install Helm
         uses: azure/setup-helm@v3
+        with: {version: v3.19.0}
 
       - uses: actions/setup-python@v4
         with:
@@ -35,6 +36,11 @@ jobs:
 
       - name: Run chart-testing (lint)
         run: ct lint --debug --target-branch main
+
+      - name: Test runner and discovery install modes
+        run: |
+          helm plugin install https://github.com/helm-unittest/helm-unittest --version v1.1.2
+          helm unittest charts/runwhen-local
 
       # - name: Create kind cluster
       #   uses: helm/kind-action@v1.8.0
