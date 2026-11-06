@@ -114,8 +114,10 @@ spec:
             {{- end }}
 
           env:
+            {{- with .Values.runner.controlAddr }}
             - name: RUNNER_CONTROL_ADDR
-              value: "{{ .Values.runner.controlAddr | default "https://runner.beta.runwhen.com" }}"
+              value: {{ . | quote }}
+            {{- end }}
             {{- if .Values.runner.debugLogs }}
             - name: RUNNER_LOG_LEVEL
               value: "DEBUG"
