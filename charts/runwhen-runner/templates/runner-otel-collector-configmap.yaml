@@ -1,0 +1,267 @@
+{{- if .Values.runner.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "runwhen-runner.configMapName.otelCollector" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "runwhen-runner.labels" . | nindent 4 }}
+    app: otel-collector
+    app.kubernetes.io/component: otel-collector
+data:
+  relay: |
+    extensions:
+      health_check:
+        endpoint: ${env:MY_POD_IP}:13133
+
+    receivers:
+      otlp:
+        protocols:
+          http: 
+            endpoint: ${env:MY_POD_IP}:4318
+          grpc:
+            endpoint: ${env:MY_POD_IP}:4317
+
+      prometheus:
+        config:
+          scrape_configs:
+            - job_name: 'runwhen-runtime-metrics'
+              kubernetes_sd_configs:
+                - role: pod
+                  namespaces:
+                    names:
+                      - {{ .Release.Namespace }}
+              scrape_interval: 60s
+              scrape_timeout: 10s
+              metrics_path: /metrics
+              scheme: http
+              # Relabel configs to filter and label
+              relabel_configs:
+                # Only scrape pods with type=runner-worker label
+                - source_labels: [__meta_kubernetes_pod_label_type]
+                  regex: runner-worker
+                  action: keep
+                # Use prometheus.io annotations for scraping configuration
+                - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+                  action: keep
+                  regex: "true"
+                - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+                  action: replace
+                  target_label: __metrics_path__
+                  regex: (.+)
+                - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scheme]
+                  action: replace
+                  regex: (https?)
+                  target_label: __scheme__
+                - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+                  action: replace
+                  regex: ([^:]+)(?::\d+)?;(\d+)
+                  replacement: $$1:$$2
+                  target_label: __address__
+                # Set instance label to pod name
+                - source_labels: [__meta_kubernetes_pod_name]
+                  target_label: instance
+                # Set service label
+                - source_labels: []
+                  target_label: service
+                  replacement: 'runwhen-runtime'
+                # Add custom labels for your metrics engine
+                - source_labels: [__meta_kubernetes_pod_label_ccID]
+                  target_label: ccID
+                - source_labels: [__meta_kubernetes_pod_label_type]
+                  target_label: type
+                - source_labels: [__meta_kubernetes_pod_label_imageTag]
+                  target_label: imageTag
+                - source_labels: [__meta_kubernetes_pod_label_workspace]
+                  target_label: workspace
+                - source_labels: [__meta_kubernetes_pod_label_namespace]
+                  target_label: namespace
+                - source_labels: [__meta_kubernetes_pod_label_release]
+                  target_label: release
+                # Add pod-specific labels
+                - source_labels: [__meta_kubernetes_pod_name]
+                  target_label: pod_name
+                - source_labels: [__meta_kubernetes_pod_node_name]
+                  target_label: node_name
+                - source_labels: [__meta_kubernetes_pod_host_ip]
+                  target_label: host_ip
+
+            - job_name: 'runwhen-runtime-worker-mertrics'
+              kubernetes_sd_configs:
+                - role: pod
+                  namespaces:
+                    names:
+                      - {{ .Release.Namespace }}
+
+              scrape_interval: 60s
+              scrape_timeout: 10s
+              metrics_path: /metrics
+              scheme: http
+
+              # Force port 9091 for separate go worker metrics
+              relabel_configs:
+                - source_labels: [__meta_kubernetes_pod_label_type]
+                  regex: runner-worker
+                  action: keep
+                - source_labels: [__address__]
+                  regex: ([^:]+)(?::\d+)?
+                  replacement: $$1:9091
+                  target_label: __address__
+                - source_labels: [__meta_kubernetes_pod_name]
+                  target_label: instance
+                - target_label: service
+                  replacement: 'runwhen-runtime-vault'
+              metric_relabel_configs:
+                - source_labels: [__name__]
+                  action: keep
+                  regex: vault_token_cache_hits_total|vault_token_renewal_total|vault_token_ttl_seconds|vault_token_age_seconds|vault_auth_total|vault_auth_success_total|vault_auth_duration_seconds_bucket|worker_tasks_executed_total|worker_task_execution_seconds_bucket|go_goroutines|go_gc_duration_seconds|process_cpu_seconds_total|process_resident_memory_bytes|process_open_fds|process_start_time_seconds
+
+    exporters:
+      {{- if ((.Values.runner.metrics).url) }}
+      prometheusremotewrite:
+        endpoint: {{ .Values.runner.metrics.url }}
+        # Disable Prometheus naming normalization so metric names match
+        # the OTel-side names (no `_total` counter suffix, no `_seconds`
+        # unit suffix, etc). Replaces the historical
+        # `--feature-gates=-pkg.translator.prometheus.NormalizeName`
+        # CLI flag, which was removed when the gate graduated to stable
+        # in collector v0.146.0+. Keeps existing dashboards/alerts in
+        # cortex valid across the 0.127 → 0.153 image bump.
+        add_metric_suffixes: false
+        tls:
+          {{- if .Values.runner.metrics.mtls.enabled }}
+          {{- if .Values.proxyCA }}
+          ca_file: "/etc/ssl/certs/proxy-ca.crt"
+          {{- else }}
+          ca_file: "/tls/ca.crt"
+          {{- end }}
+          cert_file: "/tls/tls.crt"
+          key_file: "/tls/tls.key"
+          {{- else if .Values.proxyCA }}
+          ca_file: "/etc/ssl/certs/proxy-ca.crt"
+          {{- end }}
+          insecure_skip_verify: true      {{- else if not (((.Values.runner.metrics).otlp).enabled) }}
+      debug:
+        verbosity: basic
+      {{- end }}
+
+      {{- if .Values.runner.metrics.otlp.enabled }}
+      {{- $_ := required "runner.metrics.otlp.endpoint is required when runner.metrics.otlp.enabled=true" .Values.runner.metrics.otlp.endpoint -}}
+      {{- if eq (default "http/protobuf" .Values.runner.metrics.otlp.protocol) "grpc" }}
+      # Opt-in OTLP/gRPC exporter (runner.metrics.otlp.*). Additive to
+      # Cortex unless runner.metrics.otlp.keepCortex=false.
+      otlp/runwhen:
+        endpoint: {{ .Values.runner.metrics.otlp.endpoint | trimPrefix "https://" | trimPrefix "http://" }}
+        {{- with .Values.runner.metrics.otlp.headers }}
+        headers:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      {{- else }}
+      # Opt-in OTLP/HTTP exporter (runner.metrics.otlp.*). Additive to
+      # Cortex unless runner.metrics.otlp.keepCortex=false. Metric name
+      # normalization stays off (the OTLP wire format carries OTel names
+      # natively, matching the prometheusremotewrite add_metric_suffixes
+      # intent above).
+      otlphttp/runwhen:
+        {{- if hasSuffix "/v1/metrics" .Values.runner.metrics.otlp.endpoint }}
+        # Per-signal endpoint: used verbatim, no /v1/metrics appended.
+        metrics_endpoint: {{ .Values.runner.metrics.otlp.endpoint }}
+        {{- else }}
+        # Generic base endpoint: otlphttp appends /v1/metrics.
+        endpoint: {{ .Values.runner.metrics.otlp.endpoint }}
+        {{- end }}
+        {{- with .Values.runner.metrics.otlp.headers }}
+        headers:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      {{- end }}
+      {{- end }}
+
+      {{- if .Values.runner.logs.otlp.enabled }}
+      {{- $metricsOtlp := .Values.runner.metrics.otlp | default dict -}}
+      {{- $logsOtlp := .Values.runner.logs.otlp | default dict -}}
+      {{- $logsEndpoint := $logsOtlp.endpoint | default $metricsOtlp.endpoint -}}
+      {{- $_ := required "runner.logs.otlp.endpoint is required when runner.logs.otlp.enabled=true (or set runner.metrics.otlp.endpoint to use as the fallback)" $logsEndpoint -}}
+      {{- if eq (default "http/protobuf" $logsOtlp.protocol) "grpc" }}
+      # Opt-in OTLP/gRPC logs exporter (runner.logs.otlp.*). Feeds the
+      # logs pipeline below.
+      otlp/runwhen-logs:
+        endpoint: {{ $logsEndpoint | trimPrefix "https://" | trimPrefix "http://" }}
+        {{- with $logsOtlp.headers }}
+        headers:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      {{- else }}
+      # Opt-in OTLP/HTTP logs exporter (runner.logs.otlp.*). Feeds the
+      # logs pipeline below.
+      otlphttp/runwhen-logs:
+        {{- if hasSuffix "/v1/logs" $logsEndpoint }}
+        # Per-signal logs endpoint: used verbatim, no /v1/logs appended.
+        logs_endpoint: {{ $logsEndpoint }}
+        {{- else if hasSuffix "/v1/metrics" $logsEndpoint }}
+        # Metrics endpoint reused for logs: derive the logs path instead
+        # of emitting a /v1/metrics URL on the logs signal.
+        logs_endpoint: {{ printf "%s/v1/logs" (trimSuffix "/v1/metrics" $logsEndpoint) }}
+        {{- else }}
+        # Generic base endpoint: otlphttp appends /v1/logs.
+        endpoint: {{ $logsEndpoint }}
+        {{- end }}
+        {{- with $logsOtlp.headers }}
+        headers:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      {{- end }}
+      {{- end }}
+
+    processors:
+      batch:
+        timeout: 10s
+        send_batch_size: 1024
+        send_batch_max_size: 2048
+
+      # Add resource processor to enrich metrics with additional labels
+      resource:
+        attributes:
+          - key: k8s.cluster.name
+            value: {{ if .Values.cluster }}{{ .Values.cluster.name | default "unknown" }}{{ else }}unknown{{ end }}
+            action: upsert
+          - key: k8s.namespace.name
+            value: {{ .Release.Namespace }}
+            action: upsert
+          - key: deployment.environment
+            value: {{ .Values.environment | default "production" }}
+            action: upsert
+
+    service:
+      pipelines:
+        # Existing OTLP pipeline (unchanged)
+        metrics/otlp:
+          receivers: [otlp]
+          processors: [batch, resource]
+          exporters: [{{ include "runwhen-runner.runnerMetricsExporters" . }}]
+
+        # New Prometheus scraping pipeline for runtime metrics
+        metrics/prometheus:
+          receivers: [prometheus]
+          processors: [batch, resource]
+          exporters: [{{ include "runwhen-runner.runnerMetricsExporters" . }}]
+
+        {{- if .Values.runner.logs.otlp.enabled }}
+
+        # Opt-in OTLP logs pipeline (runner.logs.otlp.*). Accepts OTLP
+        # logs on the shared `otlp` receiver and forwards them to the
+        # observability service.
+        logs:
+          receivers: [otlp]
+          processors: [batch, resource]
+          exporters: [{{ include "runwhen-runner.runnerLogsExporters" . }}]
+        {{- end }}
+
+      extensions:
+        - health_check
+
+      telemetry:
+        logs:
+          level: debug
+
+{{- end }} 
