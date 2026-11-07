@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "charts/runwhen-local/Chart.yaml"
+      - "charts/runner/Chart.yaml"
   workflow_dispatch:
 
 permissions:
@@ -44,9 +45,10 @@ jobs:
       - name: Update Helm dependencies
         run: |
           helm dependency update ./charts/runwhen-local
+          helm dependency update ./charts/runner
           if [[ `git status --porcelain` ]]; then
             echo "Dependencies updated, committing changes."
-            git add ./charts/runwhen-local/Chart.lock
+            git add ./charts/runwhen-local/Chart.lock ./charts/runner/Chart.lock
             git commit -m "Update Chart.lock to match Chart.yaml [skip actions]"
             git push
           else
