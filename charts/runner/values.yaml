@@ -281,7 +281,12 @@ runner:
   # while this block is off.
   logs:
     otlp:
-      enabled: false
+      # The runner ships its own logs to its bundled collector (a LOCAL
+      # address, `http://<prefix>otel-collector:4318/v1/logs`), which then
+      # forwards them per the runner's PAPI-stated config. On by default so the
+      # runner contributes logs like every other component; set false to keep
+      # the runner's logs on stderr only.
+      enabled: true
 
       # OTLP endpoint for logs. Empty falls back to
       # `runner.metrics.otlp.endpoint`, so a single endpoint can serve
