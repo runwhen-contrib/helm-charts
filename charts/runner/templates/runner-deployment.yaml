@@ -1,0 +1,262 @@
+{{- if .Values.runner.enabled -}}
+{{- /*
+  External-ConfigMap guard: when runner.configMap.create is false the chart
+  renders no ConfigMap, so runner.configMap.name MUST name the
+  operator-managed one. The create path defaults the name to
+  {prefix}runner-config; the external path has nothing to fall back to.
+  Kept in sync with runner-configmap.yaml, which only runs on the create path.
+*/}}
+{{- $runnerConfigMap := .Values.runner.configMap | default dict -}}
+{{- $runnerConfigMapName := $runnerConfigMap.name | default (printf "%srunner-config" (include "runner.resourcePrefix" .)) -}}
+{{- if not $runnerConfigMap.create -}}
+{{- $runnerConfigMapName = $runnerConfigMap.name | required "runner.configMap.name is required when runner.configMap.create is false — set it to the name of the externally-managed ConfigMap" -}}
+{{- end -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "runner.runnerFullname" . }}
+  labels:
+    {{- include "runner.runnerLabels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.runner.replicas | default 1 }}
+  selector:
+    matchLabels:
+      {{- include "runner.runnerSelectorLabels" . | nindent 6 }}
+      app: runner
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+  template:
+    metadata:
+      labels:
+        {{- include "runner.runnerSelectorLabels" . | nindent 8 }}
+        app: runner
+        {{- include "runner.podLabels" (list . .Values.runner.podLabels) | nindent 8 }}
+      {{- /*
+        Annotation precedence: per-service .Values.runner.podAnnotations
+        wins over chart-wide .Values.podAnnotations on conflict. Sprig
+        `merge dst src` keeps `dst` values (first arg wins), so passing
+        runner.podAnnotations as the first arg is correct. Render under
+        a single `annotations:` keyword (strict parsers reject dupes).
+      */}}
+      {{- $podAnnotations := merge (deepCopy (.Values.runner.podAnnotations | default dict)) (deepCopy (.Values.podAnnotations | default dict)) }}
+      {{- if $podAnnotations }}
+      annotations:
+        {{- range $k, $v := $podAnnotations }}
+        {{ $k }}: {{ $v | quote }}
+        {{- end }}
+      {{- end }}
+    spec:
+      {{- /*
+        Pod-level securityContext: prefer runner.podSecurityContext; fall
+        back to the chart-wide helper. Render only ONE block (multiple
+        keys with the same name produce invalid YAML on strict parsers).
+      */}}
+      {{- if .Values.runner.podSecurityContext }}
+      securityContext:
+        {{- toYaml .Values.runner.podSecurityContext | nindent 8 }}
+      {{- else }}
+      {{- include "runner.podSecurityContext" . | nindent 6 }}
+      {{- end }}
+
+      serviceAccount: {{ include "runner.serviceAccountName.runner" . }}
+      serviceAccountName: {{ include "runner.serviceAccountName.runner" . }}
+      {{- /*
+        Same `default true` footgun as runner-service-account.yaml's create gate
+        (commit c0034e2): in Go templates `false | default true` evaluates to
+        `true` because `default` treats `false` as "empty". The ternary form
+        below preserves the implicit `automountServiceAccountToken: true`
+        default for values files that omit the key entirely, while honouring
+        an explicit `false` — needed for OpenShift restricted-v2 / federal
+        clusters that bind tokens via projected volumes only.
+      */}}
+      automountServiceAccountToken: {{ ternary .Values.runner.automountServiceAccountToken true (hasKey .Values.runner "automountServiceAccountToken") }}
+
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      containers:
+        - name: runner
+          image: {{ include "runner.image" (list . .Values.runner.image "" "" "") | quote }}
+          imagePullPolicy: {{ .Values.runner.imagePullPolicy | default "Always" }}
+          {{- include "runner.containerSecurityContext" . | nindent 10 }}
+
+          ports:
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+            - name: relay
+              containerPort: 8000
+              protocol: TCP
+
+          {{- with .Values.runner.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
+          resources:
+            {{- if eq .Values.platformType "EKS_Fargate" }}
+            {{- toYaml .Values.runner.resources.EKS_Fargate | nindent 12 }}
+            {{- else }}
+            {{- toYaml .Values.runner.resources.default | nindent 12 }}
+            {{- end }}
+
+          env:
+            {{- with .Values.runner.controlAddr }}
+            - name: RUNNER_CONTROL_ADDR
+              value: {{ . | quote }}
+            {{- end }}
+            {{- if .Values.runner.debugLogs }}
+            - name: RUNNER_LOG_LEVEL
+              value: "DEBUG"
+            {{- end }}
+            - name: RUNNER_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            {{- /*
+              Release-name-derived prefix passed to runwhen-runner so
+              every resource the runner reads/writes at runtime
+              (cert-bundle secrets, uploadinfo, runner-worker Deployments,
+              exec-* pools, mcp-* Deployments, RELAY_URL, worker
+              ConfigMap/SA refs) matches the chart-side names.
+              Always-on: empty prefix is legal on the runner side and
+              reproduces today's names byte-identical for non-chart /
+              docker installs. Requires runwhen-runner ≥ the release
+              that added RUNNER_RESOURCE_PREFIX handling.
+            */}}
+            - name: RUNNER_RESOURCE_PREFIX
+              value: {{ include "runner.resourcePrefix" . | quote }}
+
+            {{- if .Values.proxy.enabled }}
+            {{- with .Values.proxy.httpProxy }}
+            - name: HTTP_PROXY
+              value: {{ . }}
+            {{- end }}
+            {{- with .Values.proxy.httpsProxy }}
+            - name: HTTPS_PROXY
+              value: {{ . }}
+            {{- end }}
+            {{- with .Values.proxy.noProxy }}
+            - name: NO_PROXY
+              value: {{ . }}
+            {{- end }}
+            {{- end }}
+
+            {{- /*
+              Trust-bundle env vars are decoupled from proxy.enabled —
+              corporate root CAs are independently useful (private TLS,
+              internal mTLS) on non-proxied clusters.
+            */}}
+            {{- include "runner.trustBundleEnv" . | nindent 12 }}
+
+            {{- /*
+              Opt-in OTLP logs env (runner.logs.otlp.enabled). Points the
+              runner process at THIS release's bundled collector Service so
+              its stdout log bridge ships to the collector, which owns the
+              onward forward to OpenObserve. Renders nothing when the flag
+              is off, keeping the pod spec byte-identical to a chart
+              without this feature. Emitted BEFORE runner.extraEnv so an
+              operator's own OTEL_* value (in extraEnv) wins; the helper
+              also skips any variable already present there to avoid a
+              duplicate key.
+
+              The worker pods the runner spawns at runtime are NOT
+              chart-rendered, so Helm cannot set their env directly; the
+              runner must pass it (runner.runEnvironment.extraEnv) -- see
+              the README's "Runner metrics and logs export" section.
+            */}}
+            {{- $runnerOtlpLogsEnv := include "runner.runnerOtlpLogsEnv" (list . (printf "%s-runner" .Release.Name) .Values.runner.extraEnv) }}
+            {{- with $runnerOtlpLogsEnv }}
+            {{- . | nindent 12 }}
+            {{- end }}
+
+            {{- with .Values.runner.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+
+          volumeMounts:
+            - name: runner-config-volume
+              mountPath: "/etc/runwhen/runner/config.yaml"
+              subPath: "config.yaml"
+            - name: bolt-data
+              mountPath: "/data"
+              subPath: "data"
+
+            {{- if .Values.proxyCA }}
+            - name: proxy-ca
+              mountPath: /etc/ssl/certs/ca-certificates.crt
+              subPath: ca-certificates.crt
+            {{- end }}
+
+            {{- with .Values.runner.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+
+      volumes:
+        - name: runner-config-volume
+          configMap:
+            name: {{ $runnerConfigMapName }}
+        - name: bolt-data
+          emptyDir: {}
+
+        {{- if .Values.proxyCA }}
+        {{- with .Values.proxyCA }}
+        - name: proxy-ca
+          {{- if .secretName }}
+          secret:
+            secretName: {{ .secretName }}
+          {{- else if .configMapName }}
+          configMap:
+            name: {{ .configMapName }}
+          {{- end }}
+            items:
+              - key: {{ .key | default "ca.crt" }}
+                path: ca-certificates.crt
+            defaultMode: 420
+        {{- end }}
+        {{- end }}
+
+        {{- with .Values.volumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- if or (eq .Values.platformArch "arm64") (not (empty .Values.tolerations)) (not (empty .Values.runner.tolerations)) }}
+      tolerations:
+        {{- if eq .Values.platformArch "arm64" }}
+        - key: "kubernetes.io/arch"
+          operator: "Equal"
+          value: "arm64"
+          effect: "NoSchedule"
+        {{- end }}
+        {{- with .Values.tolerations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.runner.tolerations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+
+{{- end }}
