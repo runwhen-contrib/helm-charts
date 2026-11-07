@@ -1,0 +1,662 @@
+# This Helm Chart installs RunWhen Local & the Runner
+
+# RunWhen Local consists of the Workspace Builder and the Troubleshooting Cheat Sheet
+# 1. Workspace Builder scans your clusters or cloud accounts and matches them with
+#    applicable troubleshooting commands found in CodeCollection respositories
+#    Workspace Builder content is used to build a workspace in the RunWen Platform.
+# 2. Troubleshooting Cheat Sheet generates live documentation from output of Workspace
+#    Builder, tailoring troubleshooting commands for the specific environment
+#    and providing helpful documentation
+
+# The Runner is the agent that contacts the RunWhen Platform and executes codebundle
+# code, which is either:
+# 1. Executing tasks (investigative troubleshooting or operational readiness checks)
+#    as instructed by a user or Digital Assistant and submitting the results back
+#    to the RunWhen Platform
+# 2. Measuring the health of a service and pushing a metric to the RunWhen Platform
+
+###############################################################################
+######################## Global/Shared Settings ###############################
+###############################################################################
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+# Annotations and labels stamped on EVERY pod template the chart renders
+# (workspace-builder + runner). Use podAnnotations for sidecar injection
+# (Linkerd/Istio), OPA audit hooks, vault-agent inject, etc. Per-service
+# podAnnotations (runner.podAnnotations)
+# take precedence on conflict.
+podAnnotations: {}
+
+# Pod-template labels merged with `commonLabels` and stamped under
+# .spec.template.metadata.labels on every chart-rendered pod template.
+# Use for admission-policy enforcement labels (Pod Security Standards,
+# OPA Gatekeeper, Kyverno), service-mesh inject markers, FinOps, etc.
+# These are NOT propagated into spec.selector.matchLabels (which is
+# immutable post-create).
+podLabels: {}
+
+# Labels stamped on EVERY chart-rendered resource's metadata.labels
+# (Deployments, Services, ConfigMaps, ServiceAccounts, RBAC, Ingresses,
+# Secrets). Use for cost-center / compliance / data-classification
+# labels enforced by admission policies.
+commonLabels: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  # readOnlyRootFilesystem: true
+  readOnlyRootFilesystem: false
+  seccompProfile:
+    type: "RuntimeDefault"
+
+podSecurityContext: {}
+
+# Override the container image registry used for all images
+# Note: grafana-agent is a subchart and must still be explicitly updated.
+registryOverride: ""
+
+# Set proxy env for RunWhen Local and Runner Deployments and any supporting infrastructure such as the grafana-agent
+proxy:
+  enabled: false
+  # HTTP_PROXY environment variable
+  httpProxy: ""
+  # HTTPS_PROXY environment variable
+  httpsProxy: ""
+  # NO_PROXY environment variable
+  noProxy: "127.0.0.1,localhost,$($KUBERNETES_SERVICE_HOST)"
+
+# Set the proxy CA details, if the runner is being deployed be sure to set
+# the grafana-agent mounts and volumes to match the proxyCA configuration
+# -- Those are not set by default as the secretName or ConfigMapName and Key
+#    are not directly templatable from this chart.
+proxyCA: {}
+  # secretName: ""
+  # configMapName: "" # not fully templated yet
+  # key: ""
+
+# Is this a platform the requires special configuration?
+# Currently supports EKS_Fargate, kubernetes
+platformType: "kubernetes"
+
+# Platform Architecture can be: amd64 or arm64
+# when changing platforms, consider toleration updates to the Grafana-Agent subchart
+platformArch: "amd64"
+
+###############################################################################
+######################## Runner Configuration #################################
+###############################################################################
+
+runner:
+  enabled: true
+
+  # Number of runner replicas. The runner currently establishes a single
+  # control-plane connection and shares state via the runner ConfigMap;
+  # running >1 replica is not generally supported and should only be
+  # considered for HA experiments.
+  replicas: 1
+
+  # Override the pod template's automountServiceAccountToken. Default
+  # true for back-compat (the runner needs the SA token to schedule
+  # CronCodeRun deployments and TaskSet pods). Customers running on
+  # OpenShift restricted-v2 / federal clusters that mandate explicit
+  # projected tokens can set false and project the token via
+  # runner.volumes / runner.volumeMounts.
+  automountServiceAccountToken: true
+
+  # Per-service pod-template labels merged with chart-wide podLabels.
+  # Used for admission-policy markers / sidecar inject hints scoped to
+  # the runner pod only. NOT propagated into the immutable
+  # spec.selector.matchLabels.
+  podLabels: {}
+
+  # Per-service pod-template annotations merged with chart-wide
+  # podAnnotations. Per-service entries win on conflict.
+  podAnnotations: {}
+
+  # ServiceAccount override block. Empty `name` resolves to the
+  # release-derived {prefix}runner via runner.serviceAccountName.runner
+  # so multiple releases in one namespace never collide. The chart-rendered
+  # Role/RoleBinding follow this SA name automatically. Set `name` to a
+  # literal (e.g. `byo-runner-sa`) to pin an explicit name (BYO SA / audit
+  # policy path); the chart still stamps the runner Deployment,
+  # RUNNER_RESOURCE_PREFIX, and runEnvironment fallbacks against the
+  # resolved name so runtime-spawned workloads bind to the same SA.
+  serviceAccount:
+    create: true
+    name: ""
+    annotations: {}
+
+  # Parent-side OTel collector ServiceAccount + Role + RoleBinding gate.
+  # The bundled opentelemetry-collector subchart runs with
+  # serviceAccount.create=false and the parent chart owns the RBAC by
+  # default. Set runner.otelCollector.serviceAccount.create to false on
+  # regulated clusters where the SA + RBAC must be pre-created externally
+  # (Crossplane / Terraform / GitOps overlay). The subchart Deployment will
+  # still reference the SA by name via
+  # opentelemetry-collector.serviceAccount.name (single source of truth).
+  otelCollector:
+    serviceAccount:
+      create: true
+
+  # Health probes for the runner pod. Default: not rendered (preserves
+  # existing behaviour). When set, each block is emitted verbatim under
+  # spec.containers[].{startupProbe,readinessProbe,livenessProbe}.
+  # The runner exposes Prometheus metrics on TCP/9090 and a relay on
+  # TCP/8000; TCP probes against 9090 are usually safest because the
+  # relay performs an in-cluster handshake before responding.
+  #
+  # Example:
+  # startupProbe:
+  #   tcpSocket:
+  #     port: metrics
+  #   initialDelaySeconds: 10
+  #   periodSeconds: 5
+  #   failureThreshold: 30
+  # readinessProbe:
+  #   tcpSocket:
+  #     port: metrics
+  #   periodSeconds: 10
+  #   failureThreshold: 3
+  # livenessProbe:
+  #   tcpSocket:
+  #     port: metrics
+  #   periodSeconds: 30
+  #   failureThreshold: 3
+  startupProbe: {}
+  readinessProbe: {}
+  livenessProbe: {}
+
+  # following value is added to config, where as service code reads log level from env var
+  # TODO:remove this and associated code in runner-configmap.yaml
+  log:
+    level: info
+    format: console
+  debugLogs: true
+
+  # CodeCollection Runner Configuration
+  # Configure multiple code collections with their specific settings
+  # Each collection can specify repository URL, tag/ref/branch, and number of worker replicas
+  codeCollections:
+    # - repoURL: https://github.com/runwhen-contrib/rw-public-codecollection.git
+    #   tag: v0.0.17
+    #   workerReplicas: 1
+    #   # Optional: specify branch instead of tag
+    #   # branch: main
+    #   # Optional: specify ref instead of tag
+    #   # ref: abc123
+    #   # Optional: custom name for this collection (defaults to repo name)
+    #   # name: custom-collection-name
+    - repoURL: https://github.com/runwhen-contrib/rw-cli-codecollection
+      branch: main
+      workerReplicas: 4
+    # - repoURL: https://github.com/runwhen-contrib/rw-workspace-utils.git
+    #   branch: main
+    #   workerReplicas: 1
+    - repoURL: https://github.com/runwhen-contrib/rw-generic-codecollection.git
+      tag: main
+      workerReplicas: 3
+
+  configMap:
+    create: true
+    # Empty default → runner-configmap.yaml + the runner Deployment's
+    # volume mount both resolve to {prefix}runner-config so multiple
+    # releases in one namespace never collide. Set to a literal to pin
+    # an explicit name.
+    name: ""
+    apiVersion: config.runwhen.com/v1
+    kind: RunnerConfig
+    raw: {}
+
+  image:
+    registry: "us-docker.pkg.dev"
+    repository: "runwhen-nonprod-shared/public-images/runner"
+    tag: "r-2026-10-16.1"
+  # Leave empty to resolve runner-control from the runner-registration-token
+  # Secret claim (and runner-creds.control_addr on subsequent boots). Set only
+  # to explicitly override the platform-stated address.
+  controlAddr: ""
+  metrics:
+    url: ""
+    # -- Client certificate (mTLS) for the OTel collector's
+    # prometheusremotewrite exporter. Disabled by default; enable when pushing
+    # to an mTLS Cortex endpoint.
+    mtls:
+      enabled: false
+
+    # -- Opt-in OTLP export path for runner metrics. When enabled, the
+    # bundled OTel collector ALSO exports to `otlp.endpoint` (the
+    # platform's in-cluster collector fronting OpenObserve, or the
+    # observability service directly), so an install can migrate off
+    # Cortex/Mimir. Disabled by default: the `prometheusremotewrite`
+    # exporter above stays the default destination and the rendered
+    # collector config is unchanged while this block is off.
+    otlp:
+      enabled: false
+
+      # OTLP endpoint of the observability service or its in-cluster
+      # collector.
+      #   http/protobuf (default): an OTLP/HTTP base endpoint such as
+      #     `http://<release>-otel-collector:4318`. The `otlphttp`
+      #     exporter appends `/v1/metrics`. A value that already ends in
+      #     `/v1/metrics` is treated as a per-signal endpoint and used
+      #     verbatim.
+      #   grpc: a `host:port` endpoint such as
+      #     `<release>-otel-collector:4317`. Any `http(s)://` scheme is
+      #     stripped for the `otlp` exporter.
+      endpoint: ""
+
+      # OTLP protocol: `http/protobuf` (default) or `grpc`.
+      protocol: "http/protobuf"
+
+      # Extra headers sent with every OTLP request, e.g. an
+      # Authorization header for an authenticated OpenObserve endpoint.
+      headers: {}
+
+      # Keep exporting to Cortex alongside OTLP. `true` (default)
+      # migrates additively, leaving the existing
+      # `prometheusremotewrite` exporter in both pipelines. Set `false`
+      # to cut over so OTLP becomes the only metrics destination.
+      keepCortex: true
+
+  # -- Opt-in OTLP logs export path for the runner. Runner and worker
+  # pods write their logs to stdout; with this enabled the bundled OTel
+  # collector gains a `logs` pipeline that accepts OTLP logs on its
+  # existing `otlp` receiver (HTTP 4318 / gRPC 4317) and forwards them
+  # to the platform's observability service (OpenObserve). This is a
+  # separate decision from `runner.metrics.otlp` — logs are a different
+  # volume and carry independent endpoint/protocol/headers — so it is
+  # disabled by default and the rendered collector config is unchanged
+  # while this block is off.
+  logs:
+    otlp:
+      # The runner ships its own logs to its bundled collector (a LOCAL
+      # address, `http://<prefix>otel-collector:4318/v1/logs`), which then
+      # forwards them per the runner's PAPI-stated config. On by default so the
+      # runner contributes logs like every other component; set false to keep
+      # the runner's logs on stderr only.
+      enabled: true
+
+      # OTLP endpoint for logs. Empty falls back to
+      # `runner.metrics.otlp.endpoint`, so a single endpoint can serve
+      # both signals.
+      #   http/protobuf (default): an OTLP/HTTP base endpoint such as
+      #     `http://<release>-otel-collector:4318`. The `otlphttp`
+      #     exporter appends `/v1/logs`. A value that already ends in
+      #     `/v1/logs` is treated as a per-signal endpoint and used
+      #     verbatim; a value ending in `/v1/metrics` (i.e. the metrics
+      #     endpoint reused here) is rewritten to `/v1/logs` rather than
+      #     emitting a mismatched URL.
+      #   grpc: a `host:port` endpoint such as
+      #     `<release>-otel-collector:4317`. Any `http(s)://` scheme is
+      #     stripped for the `otlp` exporter.
+      endpoint: ""
+
+      # OTLP protocol: `http/protobuf` (default) or `grpc`.
+      protocol: "http/protobuf"
+
+      # Extra headers sent with every OTLP request, e.g. an
+      # Authorization header for an authenticated OpenObserve endpoint.
+      headers: {}
+
+  # securityContext (container) is used to set the security context for the runner container
+  # securityContext: {}
+
+  # securityContext is used to set the security context for the runner pod
+  # podSecurityContext: {}
+
+  # Extra environment variables for the runner container
+  extraEnv: {}
+
+  # Extra volumes for the runner container
+  volumes: {}
+
+  # Extra volume mounts for the runner container
+  volumeMounts: {}
+
+  # Additional tolerations for the runner container
+  tolerations: []
+
+  ## The target environments configuration for deploying the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods
+  runEnvironment:
+    image:
+      pullSecret: ""
+      pullPolicy: ""
+      registry: ""
+      repository: ""
+    # volumes common for all the pods created by the runner
+    volumes: {}
+
+    # volumeMounts common for all the pods created by the runner
+    volumeMounts: {}
+
+    # extraEnv is used to add additional environment variables for the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods
+    extraEnv: {}
+
+    # containerSecurityContext is used to set the security context for both the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods
+    # securityContext: {}
+
+    # securityContext is used to set the security context for both the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods
+    # podSecurityContext: {}
+
+    secretProviders: {}
+      # mycustomprovider:
+      #   description: "A description of the secret provider using the VaultSecretProvider with AppRole Auth"
+      #   type: vault
+      #   vaultSecretProvider:
+      #     addr: "https://vault.superfake.runwhen.com"
+      #     authMountPath: "dev" # /auth/$authMountPath/login
+      #     roleID:
+      #       kubernetes:
+      #         secret:
+      #           name: vault-secret
+      #           key: role-id
+      #     secretID:
+      #       kubernetes:
+      #         secret:
+      #           name: vault-secret
+      #           key: secret-id
+
+    # secretsProvided is used to mount the secrets to the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods
+    # The secrets are mounted as files or environment variables and must come from either a built in provider or a custom provider
+    #
+    # The built in providers and the format of their secrets provided entries are as follows:
+    # Built In Providers Supported:
+    # 1. Provider: k8s:file - Kubernetes Secret or ConfigMap Field loaded as a file
+    #    Format: <codeKey>: "k8s:file@<kind>/<name>:<field>"
+    # 2. Provider: k8s:env - Kubernetes Secret or ConfigMap Field loaded as an environment variable
+    #    Format: <codeKey>: "k8s:env@<kind>/<name>:<field>"
+    #
+    # Custom Providers Supported: Added through .Values.runner.runEnvironment.SecretProviders
+    # 1. Provider: <your-provider> Type: vault - Vault Secret loaded at use time
+    #    Format: <codeKey>: "<your-secret-provider-name>@<path/data/to/secret>:<field>"
+    #    Note: The path is the path to the secret in the vault including `/data/` assuming kv-v2
+    # Note: The generic format is <codeKey>: "<provider-name>@<path/deliminated/options>:<field>"
+    secretsProvided: {}
+      # kubeconfig: "k8s:file@secret/my-kubeconfig:kubeconfig-key-in-secret"
+      # someConfig: "k8s:file@configmap/my-cm:key-in-cm"
+      # hello: "k8s:env@secret/my-secret:hello"
+      # vaultSecret: "my-vault@/dev/data/simple-test-secret:hello"
+
+    # blockedSecrets is used to block secrets from being mounted to the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods
+    # The format of the blockedSecrets entries are as follows:
+    # - "<provider-name>@<some optional path>:<optional field>"
+    blockedSecrets: []
+    # Block the use of all k8s secrets/configmaps being mounted to the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods
+    # - "k8s:file@"
+    # Block the use of all k8s secrets/configmaps being mounted as environment variables to the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods
+    # - "k8s:env@"
+    # Block the use of a specific secret being mounted to the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods
+    # - "myvault@/dev/data/simple-test-secret"
+
+    #### The configurations applied to the SLI (CronCodeRun) Deployments ####
+    deployment:
+      # Service account for spawned SLI (CronCodeRun) Deployments.
+      # Empty (default) → resolves to the chart-rendered runner SA via
+      # `runner.serviceAccountName.runner`, which defaults to the
+      # release-derived {prefix}runner. This keeps spawned-workload SAs
+      # in lock-step with the runner pod's own SA, so a multi-release
+      # operator gets both bound to the same release-scoped SA
+      # automatically. Set this to a literal name to pin a specific SA
+      # regardless of the runner override (advanced use).
+      #
+      # Legacy footgun: older values overlays sometimes pinned this to
+      # the literal "runner", which silently overrode the fallback and
+      # left spawned workloads bound to a non-existent SA on renamed
+      # releases. Leave empty unless you specifically need to pin.
+      serviceAccount: ""
+      annotations: {}
+      podAnnotations: {}
+      # Labels stamped on the spawned CronCodeRun *Deployment*'s
+      # `metadata.labels`. The chart auto-merges the chart-wide
+      # `.Values.commonLabels` underneath this map (per-runEnvironment
+      # wins on conflict). Leave `{}` to inherit `commonLabels` only.
+      # Honoured by the runwhen-runner Deployment-spawn path.
+      labels: {}
+      # Labels stamped on the spawned CronCodeRun *pod template*
+      # (`spec.template.metadata.labels`). This is what Kubernetes pod
+      # admission policies (Kyverno, OPA, PodSecurity) match on, and it
+      # is the ONLY surface that lets you stamp e.g. `cost-center` or
+      # `tier=restricted` onto runtime-spawned worker pods. The chart
+      # auto-merges chart-wide `.Values.commonLabels` + `.Values.podLabels`
+      # underneath this map (per-runEnvironment wins on conflict).
+      # Leave `{}` to inherit `commonLabels` + `podLabels`.
+      # REQUIRES runwhen-runner ≥ v0.10.56 (older versions silently
+      # ignore the new `podLabels` field in the runEnvironment config).
+      podLabels: {}
+      affinity: {}
+      nodeName: ""
+      nodeSelector: {}
+      tolerations: []
+      resources:
+        default:
+          requests:
+            cpu: "100m"
+            memory: "512Mi"
+          limits:
+            cpu: "1"
+            memory: "1024Mi"
+        EKS_Fargate:
+          requests:
+            cpu: "300m"
+            memory: "196Mi"
+          limits:
+            cpu: "300m"
+            memory: "196Mi"
+    #### The configurations applied to the TaskSet (CodeRun) Pods ####
+    pod:
+      runAsJob: false
+      # Service account for spawned TaskSet (CodeRun) Pods.
+      # Empty (default) → resolves to the chart-rendered runner SA via
+      # `runner.serviceAccountName.runner`, matching whatever
+      # the runner pod itself binds to (default {prefix}runner). Set to
+      # a literal name to pin a specific SA regardless of the runner
+      # override. Same legacy footgun as `deployment.serviceAccount` —
+      # do NOT pin to the literal "runner" on multi-release setups.
+      serviceAccount: ""
+      annotations: {}
+      # Labels stamped on the spawned TaskSet (CodeRun) Pod's
+      # `metadata.labels`. The chart auto-merges chart-wide
+      # `.Values.commonLabels` underneath this map (per-runEnvironment
+      # wins on conflict).
+      # NOTE: As of runwhen-runner v0.10.55, the runner only spawns
+      # Deployments — TaskSet Pod-direct spawning is not yet wired, so
+      # this knob is reserved for forward-compatibility. The Deployment
+      # path under `runEnvironment.deployment` is the surface that
+      # actually controls runtime worker pod labelling.
+      labels: {}
+      # Labels stamped on the spawned TaskSet pod template (relevant
+      # only when the runner is enhanced to spawn Jobs/Pods directly).
+      # The chart auto-merges chart-wide `.Values.commonLabels` +
+      # `.Values.podLabels` underneath this map. See `labels:` above
+      # for the runner-version caveat.
+      podLabels: {}
+      affinity: {}
+      nodeName: ""
+      nodeSelector: {}
+      tolerations: []
+      resources:
+        default:
+          requests:
+            cpu: "50m"
+            memory: "128Mi"
+          limits:
+            cpu: "1"
+            memory: "512Mi"
+        EKS_Fargate:
+          requests:
+            cpu: "300m"
+            memory: "256Mi"
+          limits:
+            cpu: "300m"
+            memory: "256Mi"
+    # The proxy configurations applied to the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods
+    # By default the global values for .Values.proxy and .Values.proxyCA are used.
+    proxy: {}
+      # enabled: false
+      # httpProxy: ""
+      # httpsProxy: ""
+      # noProxy: "127.0.0.1,$($KUBERNETES_SERVICE_HOST)"
+    # The proxy CA details, if the runner is being deployed be sure to set
+    # the grafana-agent mounts and volumes to match the proxyCA configuration
+    proxyCA: {}
+      # secretName: ""
+      # configMapName: ""
+      # key: ""
+
+  # proxy configuration for the runner container, set runEnvironment.proxy.enabled to true to use this configuration
+  # for the SLI (CronCodeRun) Deployments and TaskSet (CodeRun) Pods as well, or configure custom proxy settings in the runEnvironment.proxy fields
+  resources:
+    default:
+      requests:
+        cpu: "50m"
+        memory: "64Mi"
+      limits:
+        cpu: "600m"
+        memory: "256Mi"
+    EKS_Fargate:
+      requests:
+        cpu: "200m"
+        memory: "256Mi"
+      limits:
+        cpu: "200m"
+        memory: "256Mi"
+
+
+## opentelemetry-collector is only deployed if runner.enabled is true
+## https://github.com/open-telemetry/opentelemetry-helm-charts/blob/main/charts/opentelemetry-collector/values.yaml
+##
+## NOTE: This subchart does NOT honour the parent chart's
+## .Values.registryOverride, .Values.commonLabels, .Values.podLabels, or
+## .Values.podAnnotations. Operators running with admission policies,
+## FinOps tagging, or a mirrored container registry must drive each of
+## the subchart's own knobs explicitly:
+##
+##   opentelemetry-collector:
+##     image:
+##       repository: <mirror>/otel/opentelemetry-collector  # FULL path required
+##     additionalLabels:                                    # commonLabels analogue
+##       cost-center: platform-eng
+##     podLabels:                                           # admission/inject markers
+##       policy/enforce: baseline
+##     podAnnotations:                                      # sidecar inject etc.
+##       linkerd.io/inject: enabled
+##     serviceAccount:
+##       automountServiceAccountToken: false                # OpenShift restricted-v2
+##
+## See .cursor/skills/new-service-byo/SKILL.md (Subchart matrix) for the
+## full anchor-and-alias overlay pattern.
+##
+## ─── Multi-release / renamed-secret override ─────────────────────────────────
+## Every chart-rendered resource is prefix-derived (release-name based) for
+## multi-release namespace safety. The bundled `opentelemetry-collector`
+## subchart is auto-prefixed via parent-side shadow overrides of its
+## `fullname` / `serviceAccountName` templates plus the
+## `runner.otelSubchartPrefix` / `runner.runnerMetricsTls`
+## helpers (see templates/_helpers.tpl). The values below are therefore
+## blank or templated so the default derives `{prefix}` from the release
+## name only (`{release}-`, truncated to 32 chars):
+##
+##   - `fullnameOverride: ""` keeps the subchart names auto-prefixed; set a
+##     literal to pin them (escape hatch for admission-policy-approved names).
+##   - `serviceAccount.name: ""` makes the subchart Deployment bind the
+##     release-derived SA; the parent-chart's SA/Role/RoleBinding helper
+##     resolves the same default so both layers agree.
+##   - `configMap.existingName` is a TEMPLATE that stays truthy (the subchart
+##     `_pod.tpl` gates the config volume + `--config=/conf/relay.yaml` on
+##     it, and its `configName` helper tpl-renders it). Do NOT blank it.
+##   - `extraVolumes[].secret.secretName` is a template resolving to
+##     `{prefix}runner-metrics-tls`, matching what a prefix-aware
+##     runwhen-runner writes.
+##
+## See README's "Multi-release naming" section for the full renamed-resource
+## table.
+opentelemetry-collector:
+  fullnameOverride: ""
+  mode: deployment
+  configMap:
+    create: false
+    existingName: '{{ include "runner.otelSubchartPrefix" . }}otel-collector'
+  image:
+    repository: "otel/opentelemetry-collector"
+    pullPolicy: IfNotPresent
+    # Pinned to the chart's tested appVersion (0.158.1 → 0.153.0). Bump
+    # the chart dependency in Chart.yaml and this tag together.
+    tag: "0.153.0"
+  imagePullSecrets: []
+  # Pod-level securityContext — runAsNonRoot + seccomp only. Do NOT pin
+  # runAsUser/fsGroup: OpenShift restricted-v2 assigns a per-project UID
+  # range and rejects fixed values (e.g. 10001). Vanilla clusters inherit
+  # the image USER when runAsUser is omitted.
+  #
+  # Prior to 0.6.6 this block included:
+  #   runAsUser: 10001
+  #   fsGroup: 10001
+  # Clusters with OPA/Gatekeeper policies that mandate `runAsUser` (e.g.
+  # PCI, fedramp) should restore the pinned UID in their overlay:
+  #   opentelemetry-collector:
+  #     podSecurityContext:
+  #       runAsUser: 10001
+  #       fsGroup: 10001
+  podSecurityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: "RuntimeDefault"
+  command:
+    name: "otelcol"
+    ## Metric-name normalization (no `_total` / unit suffixes) is now
+    ## controlled per-exporter via `add_metric_suffixes: false` in the
+    ## relay config (see runner-otel-collector-configmap.yaml). The
+    ## old `pkg.translator.prometheus.NormalizeName` feature gate
+    ## graduated to stable and was REMOVED in collector v0.146.0+,
+    ## so passing it now hard-fails the pod with
+    ##   invalid argument "-pkg.translator.prometheus.NormalizeName"
+    ##   for "--feature-gates" flag: no such feature gate ...
+    extraArgs: []
+  serviceAccount:
+    create: false
+    annotations: {}
+    name: ""
+  # Proxy configuration for opentelemetry-collector
+  # These environment variables will be set on the opentelemetry-collector container
+  # extraEnvs:
+  #   # HTTP_PROXY environment variable
+  #   - name: HTTP_PROXY
+  #     value: ""  # Set your HTTP proxy URL here, e.g., "http://proxy.example.com:8080"
+  #   # HTTPS_PROXY environment variable
+  #   - name: HTTPS_PROXY
+  #     value: ""  # Set your HTTPS proxy URL here, e.g., "http://proxy.example.com:8080"
+  #   # NO_PROXY environment variable
+  #   - name: NO_PROXY
+  #     value: "127.0.0.1,localhost,$(KUBERNETES_SERVICE_HOST)"
+  # -- TLS volume for the OTel collector's mTLS client cert. Empty by default
+  #    because runner.metrics.mtls.enabled defaults to false; populate when
+  #    mTLS is enabled and the runner-metrics-tls Secret exists.
+  extraVolumes: []
+  extraVolumeMounts: []
+  resources:
+    requests:
+      cpu: "10m"
+      memory: "32Mi"
+    limits:
+      cpu: "50m"
+      memory: "64Mi"
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: true
+    seccompProfile:
+      type: "RuntimeDefault"

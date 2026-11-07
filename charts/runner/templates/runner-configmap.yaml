@@ -1,0 +1,376 @@
+{{- if .Values.runner.enabled -}}
+{{- if and .Values.runner.configMap .Values.runner.configMap.create -}}
+{{- $_ := .Values.runner.configMap.apiVersion | required ".Values.runner.configMap.apiVersion must be set !" -}}
+{{- $_ := .Values.runner.configMap.kind | required ".Values.runner.configMap.kind must be set !" -}}
+{{- /*
+  Empty/unset `.runner.configMap.name` falls back to the release-derived
+  {prefix}runner-config so multiple releases in one namespace never
+  collide. Explicit `.Values.runner.configMap.name` still wins.
+  Kept in sync with the volume mount in runner-deployment.yaml.
+*/}}
+{{- $runnerCMName := .Values.runner.configMap.name | default (printf "%srunner-config" (include "runner.resourcePrefix" .)) -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $runnerCMName }}
+  labels:
+    {{- include "runner.runnerLabels" . | nindent 4 }}
+    app: runner
+data:
+  config.yaml: |
+    apiVersion: {{ .Values.runner.configMap.apiVersion }}
+    kind: {{ .Values.runner.configMap.kind }}
+    {{- if .Values.runner.configMap.raw }}
+    {{- toYaml .Values.runner.configMap.raw | nindent 4 }}
+    {{- else }}
+    global:
+      {{- with .Values.runner.log }}
+      log:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.runner.controlAddr }}
+      controlAddr: {{ . }}
+      {{- end }}
+      {{- with ((.Values.runner.metrics).url) }}
+      metricsAddr: {{ . }}
+      {{- end }}
+      proxy:
+        enabled: {{ .Values.proxy.enabled }}
+        httpProxy: "{{ .Values.proxy.httpProxy }}"
+        httpsProxy: "{{ .Values.proxy.httpsProxy }}"
+        noProxy:  "{{ .Values.proxy.noProxy }}"
+    environment:
+      {{- with .Values.runner.runEnvironment.blockedSecrets }}
+      blockedSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.runner.runEnvironment.secretsProvided }}
+      secretsProvided:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.runner.runEnvironment.secretProviders }}
+      secretProviders:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      imagePullSecret: "{{ .Values.runner.runEnvironment.image.pullSecret }}"
+      imagePullPolicy: "{{ .Values.runner.runEnvironment.image.pullPolicy }}"
+      imageRegistry: "{{ (.Values.runner.runEnvironment.image.registry | default .Values.registryOverride) }}"
+      imageRepository: "{{ .Values.runner.runEnvironment.image.repository }}"
+      kubernetes:
+        proxy:
+          enabled: {{ or .Values.runner.runEnvironment.proxy.enabled .Values.proxy.enabled }}
+          httpProxy: "{{ or .Values.runner.runEnvironment.proxy.httpProxy .Values.proxy.httpProxy }}"
+          httpsProxy: "{{ or .Values.runner.runEnvironment.proxy.httpsProxy .Values.proxy.httpsProxy }}"
+          noProxy: "{{ or .Values.runner.runEnvironment.proxy.noProxy .Values.proxy.noProxy }}"
+          proxyCA: "{{ or .Values.runner.runEnvironment.proxy.proxyCA .Values.proxy.proxyCA }}"
+        {{- /*
+          The `kubernetes.proxyCA` block below tells the runwhen-runner to
+          mount a CA bundle into every spawned CronCodeRun/TaskSet pod.
+
+          Previous gating required `proxy.enabled` (or runEnvironment.proxy.enabled)
+          to be true, but enterprise operators routinely need to inject a
+          custom CA chain into worker pods on non-proxy clusters:
+            * private container/artifact registries with internal CAs
+            * cluster-internal MITM TLS termination (service mesh, ingress)
+            * BYO trust bundles served via configMap/secret
+          In all those cases `proxy.enabled` is `false`, yet a CA mount is
+          still required, so we now gate ONLY on the CA reference being set.
+          `with` short-circuits when both proxyCA values are nil/empty, so
+          this remains opt-in: render the block only if a CA is configured.
+        */}}
+        {{- with or .Values.proxyCA .Values.runner.runEnvironment.proxy.proxyCA }}
+        proxyCA:
+          {{- if .secretName }}
+          secret:
+            name: {{ .secretName }}
+          {{- else if .configMapName }}
+          configMap:
+            name: {{.configMapName }}
+          {{- end }}
+            key: {{ .key | default "ca.crt" }}
+        {{- end }}
+        deployment:
+          {{- /*
+            Default to the chart-rendered runner SA so spawned CronCodeRun
+            workloads bind to the same SA the chart created. Operators may
+            still override via runEnvironment.deployment.serviceAccount.
+          */}}
+          serviceAccount: {{ .Values.runner.runEnvironment.deployment.serviceAccount | default (include "runner.serviceAccountName.runner" .) }}
+          {{- with .Values.runner.runEnvironment.deployment.annotations }}
+          annotations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          podAnnotations: 
+            prometheus.io/port: "9090"
+            prometheus.io/scrape: "true"
+          {{- with .Values.runner.runEnvironment.deployment.podAnnotations }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.deployment.affinity }}
+          affinity:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.deployment.nodeName }}
+          nodeName: {{ . }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.deployment.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.deployment.tolerations }}
+          # Additional tolerations for this deployment
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.extraEnv }}
+          envVars:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+          {{- if eq .Values.platformType "EKS_Fargate" }}
+            {{- toYaml .Values.runner.runEnvironment.deployment.resources.EKS_Fargate | nindent 12 }}
+          {{- else }}
+            {{- toYaml .Values.runner.runEnvironment.deployment.resources.default | nindent 12 }}
+          {{- end }}
+
+          {{- /*
+            ─────────────────────────────────────────────────────────────────
+            Labels propagated to the runwhen-runner Go binary so that every
+            spawned CronCodeRun Deployment + worker Pod inherits the chart-wide
+            commonLabels / podLabels (admission-policy match labels).
+
+            `deployment.labels` → Deployment.metadata.labels  (cost-center, etc.)
+            `deployment.podLabels` → Deployment.spec.template.metadata.labels
+                                      (i.e. the worker pod template — what
+                                       Kyverno/PSA/cost-center policies match)
+
+            Sprig `merge` is FIRST-WINS on conflict, so per-runEnvironment
+            override beats chart-wide commonLabels/podLabels — same precedence
+            we use for chart-rendered pods (see `runner.podLabels`).
+
+            REQUIRES runwhen-runner ≥ v0.10.56 to honour the new `podLabels`
+            field. Older versions silently ignore it; the Deployment-level
+            `labels` block has been honoured since the runner first shipped.
+          */}}
+          {{- $deployLabels := merge (deepCopy (.Values.runner.runEnvironment.deployment.labels | default dict)) (deepCopy (.Values.commonLabels | default dict)) }}
+          {{- if $deployLabels }}
+          labels:
+            {{- range $k, $v := $deployLabels }}
+            {{ $k }}: {{ $v | quote }}
+            {{- end }}
+          {{- end }}
+          {{- $deployPodLabels := merge (deepCopy (.Values.runner.runEnvironment.deployment.podLabels | default dict)) (deepCopy (.Values.podLabels | default dict)) (deepCopy (.Values.commonLabels | default dict)) }}
+          {{- if $deployPodLabels }}
+          podLabels:
+            {{- range $k, $v := $deployPodLabels }}
+            {{ $k }}: {{ $v | quote }}
+            {{- end }}
+          {{- end }}
+
+          # ------------------------
+          # Container-level securityContext (Deployment)
+          # If runEnvironment.containerSecurityContext is set, use it;
+          # else if global .Values.containerSecurityContext is set, use that;
+          # else fall back to your default snippet.
+          # ------------------------
+          {{- if .Values.runner.runEnvironment.containerSecurityContext }}
+          securityContext:
+            {{- toYaml .Values.runner.runEnvironment.containerSecurityContext | nindent 12 }}
+          {{- else if .Values.containerSecurityContext }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          {{- else }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+            seccompProfile:
+              type: "RuntimeDefault"
+          {{- end }}
+
+          # ------------------------
+          # Pod-level securityContext (Deployment)
+          # If runEnvironment.securityContext is set, use it;
+          # else if global .Values.podSecurityContext is set, use that.
+          # ------------------------
+          {{- if .Values.runner.runEnvironment.securityContext }}
+          podSecurityContext:
+            {{- toYaml .Values.runner.runEnvironment.securityContext | nindent 12 }}
+          {{- else if .Values.podSecurityContext }}
+          podSecurityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          {{- end }}
+
+          {{- if or (eq .Values.platformArch "arm64") (not (empty .Values.tolerations)) (not (empty .Values.runner.runEnvironment.deployment.tolerations)) }}
+          tolerations:
+          {{- if eq .Values.platformArch "arm64" }}
+          - key: "kubernetes.io/arch"
+            operator: "Equal"
+            value: "arm64"
+            effect: "NoSchedule"
+          {{- end }}
+          {{- with .Values.tolerations }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.deployment.tolerations }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+          {{- end }}
+
+          {{- with .Values.runner.runEnvironment.volumes }}
+          volumes:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
+        pod:
+          runAsJob: {{ .Values.runner.runEnvironment.pod.runAsJob }}
+          {{- /*
+            Default the spawned TaskSet pod SA to the chart-rendered runner
+            SA so the two stay in sync. Operators may override via
+            runEnvironment.pod.serviceAccount.
+          */}}
+          serviceAccount: {{ .Values.runner.runEnvironment.pod.serviceAccount | default (include "runner.serviceAccountName.runner" .) }}
+          {{- with .Values.runner.runEnvironment.pod.annotations }}
+          annotations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.pod.affinity }}
+          affinity:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.pod.nodeName }}
+          nodeName: {{ . }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.pod.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.pod.tolerations }}
+          # Additional tolerations for the pod
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.extraEnv }}
+          envVars:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+          {{- if eq .Values.platformType "EKS_Fargate" }}
+            {{- toYaml .Values.runner.runEnvironment.pod.resources.EKS_Fargate | nindent 12 }}
+          {{- else }}
+            {{- toYaml .Values.runner.runEnvironment.pod.resources.default | nindent 12 }}
+          {{- end }}
+
+          {{- /*
+            Labels for the TaskSet (CodeRun) pod-direct spawn path. Today the
+            runwhen-runner only spawns Deployments — the `pod:` block below is
+            consumed as forward-compat configuration so admission-policy
+            labels are already wired the day the Pod-direct/Job spawn path
+            ships. Same precedence as the deployment block.
+          */}}
+          {{- $podLabels := merge (deepCopy (.Values.runner.runEnvironment.pod.labels | default dict)) (deepCopy (.Values.commonLabels | default dict)) }}
+          {{- if $podLabels }}
+          labels:
+            {{- range $k, $v := $podLabels }}
+            {{ $k }}: {{ $v | quote }}
+            {{- end }}
+          {{- end }}
+          {{- $podPodLabels := merge (deepCopy (.Values.runner.runEnvironment.pod.podLabels | default dict)) (deepCopy (.Values.podLabels | default dict)) (deepCopy (.Values.commonLabels | default dict)) }}
+          {{- if $podPodLabels }}
+          podLabels:
+            {{- range $k, $v := $podPodLabels }}
+            {{ $k }}: {{ $v | quote }}
+            {{- end }}
+          {{- end }}
+
+          # ------------------------
+          # Container-level securityContext (Pod)
+          # If runEnvironment.containerSecurityContext is set, use it;
+          # else if global .Values.containerSecurityContext is set, use that;
+          # else fall back to your default snippet.
+          # ------------------------
+          {{- if .Values.runner.runEnvironment.containerSecurityContext }}
+          securityContext:
+            {{- toYaml .Values.runner.runEnvironment.containerSecurityContext | nindent 12 }}
+          {{- else if .Values.containerSecurityContext }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          {{- else }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+            seccompProfile:
+              type: "RuntimeDefault"
+          {{- end }}
+
+          # ------------------------
+          # Pod-level securityContext (Pod)
+          # If runEnvironment.securityContext is set, use it;
+          # else if global .Values.podSecurityContext is set, use that.
+          # ------------------------
+          {{- if .Values.runner.runEnvironment.securityContext }}
+          podSecurityContext:
+            {{- toYaml .Values.runner.runEnvironment.securityContext | nindent 12 }}
+          {{- else if .Values.podSecurityContext }}
+          podSecurityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          {{- end }}
+
+          {{- if or (eq .Values.platformArch "arm64") (not (empty .Values.tolerations)) (not (empty .Values.runner.runEnvironment.pod.tolerations)) }}
+          tolerations:
+          {{- if eq .Values.platformArch "arm64" }}
+          - key: "kubernetes.io/arch"
+            operator: "Equal"
+            value: "arm64"
+            effect: "NoSchedule"
+          {{- end }}
+          {{- with .Values.tolerations }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.pod.tolerations }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+          {{- end }}
+
+          {{- with .Values.runner.runEnvironment.volumes }}
+          volumes:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.runEnvironment.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
+      {{- with .Values.runner.codeCollections }}
+      codeCollections:
+        {{- range $index, $collection := . }}
+        - repoURL: {{ $collection.repoURL }}
+          {{- if $collection.tag }}
+          tag: {{ $collection.tag }}
+          {{- end }}
+          {{- if $collection.branch }}
+          branch: {{ $collection.branch }}
+          {{- end }}
+          {{- if $collection.ref }}
+          ref: {{ $collection.ref }}
+          {{- end }}
+          {{- if $collection.workerReplicas }}
+          workerReplicas: {{ $collection.workerReplicas }}
+          {{- end }}
+          {{- if $collection.name }}
+          name: {{ $collection.name }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+{{- end -}}
+{{- end -}}
