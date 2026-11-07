@@ -126,7 +126,7 @@ runner:
   podAnnotations: {}
 
   # ServiceAccount override block. Empty `name` resolves to the
-  # release-derived {prefix}runner via runwhen-runner.serviceAccountName.runner
+  # release-derived {prefix}runner via runner.serviceAccountName.runner
   # so multiple releases in one namespace never collide. The chart-rendered
   # Role/RoleBinding follow this SA name automatically. Set `name` to a
   # literal (e.g. `byo-runner-sa`) to pin an explicit name (BYO SA / audit
@@ -399,7 +399,7 @@ runner:
     deployment:
       # Service account for spawned SLI (CronCodeRun) Deployments.
       # Empty (default) → resolves to the chart-rendered runner SA via
-      # `runwhen-runner.serviceAccountName.runner`, which defaults to the
+      # `runner.serviceAccountName.runner`, which defaults to the
       # release-derived {prefix}runner. This keeps spawned-workload SAs
       # in lock-step with the runner pod's own SA, so a multi-release
       # operator gets both bound to the same release-scoped SA
@@ -454,7 +454,7 @@ runner:
       runAsJob: false
       # Service account for spawned TaskSet (CodeRun) Pods.
       # Empty (default) → resolves to the chart-rendered runner SA via
-      # `runwhen-runner.serviceAccountName.runner`, matching whatever
+      # `runner.serviceAccountName.runner`, matching whatever
       # the runner pod itself binds to (default {prefix}runner). Set to
       # a literal name to pin a specific SA regardless of the runner
       # override. Same legacy footgun as `deployment.serviceAccount` —
@@ -553,16 +553,15 @@ runner:
 ## See .cursor/skills/new-service-byo/SKILL.md (Subchart matrix) for the
 ## full anchor-and-alias overlay pattern.
 ##
-## ─── Multi-release / renamed-secret override (chart 0.7.0+) ─────────────────
+## ─── Multi-release / renamed-secret override ─────────────────────────────────
 ## Every chart-rendered resource is prefix-derived (release-name based) for
 ## multi-release namespace safety. The bundled `opentelemetry-collector`
-## subchart is now auto-prefixed via parent-side shadow overrides of its
+## subchart is auto-prefixed via parent-side shadow overrides of its
 ## `fullname` / `serviceAccountName` templates plus the
-## `runwhen-runner.otelSubchartPrefix` / `runwhen-runner.runnerMetricsTls`
+## `runner.otelSubchartPrefix` / `runner.runnerMetricsTls`
 ## helpers (see templates/_helpers.tpl). The values below are therefore
 ## blank or templated so the default derives `{prefix}` from the release
-## name only (`{release}` when it contains "runwhen-runner", else
-## `{release}-runwhen-runner`, truncated to 32 chars + "-"):
+## name only (`{release}-`, truncated to 32 chars):
 ##
 ##   - `fullnameOverride: ""` keeps the subchart names auto-prefixed; set a
 ##     literal to pin them (escape hatch for admission-policy-approved names).
@@ -576,14 +575,14 @@ runner:
 ##     `{prefix}runner-metrics-tls`, matching what a prefix-aware
 ##     runwhen-runner writes.
 ##
-## See README's "Multi-release deployments in one namespace" section for the
-## full renamed-resource table.
+## See README's "Multi-release naming" section for the full renamed-resource
+## table.
 opentelemetry-collector:
   fullnameOverride: ""
   mode: deployment
   configMap:
     create: false
-    existingName: '{{ include "runwhen-runner.otelSubchartPrefix" . }}otel-collector'
+    existingName: '{{ include "runner.otelSubchartPrefix" . }}otel-collector'
   image:
     repository: "otel/opentelemetry-collector"
     pullPolicy: IfNotPresent

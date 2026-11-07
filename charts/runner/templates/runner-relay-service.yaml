@@ -14,9 +14,9 @@ and then authenticates to Vault with the wrong workspace's AppRole.
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "runwhen-runner.resourcePrefix" . }}runner-relay
+  name: {{ include "runner.resourcePrefix" . }}runner-relay
   labels:
-    {{- include "runwhen-runner.labels" . | nindent 4 }}
+    {{- include "runner.labels" . | nindent 4 }}
     app: runner
     app.kubernetes.io/component: runner-relay
 spec:
@@ -27,5 +27,5 @@ spec:
       port: 8000
       targetPort: 8000
   selector:
-    {{- include "runwhen-runner.runnerSelectorLabels" . | nindent 4 }}
+    {{- include "runner.runnerSelectorLabels" . | nindent 4 }}
 {{- end }}

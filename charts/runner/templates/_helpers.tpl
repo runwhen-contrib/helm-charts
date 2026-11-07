@@ -1,7 +1,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "runwhen-runner.name" -}}
+{{- define "runner.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -10,7 +10,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "runwhen-runner.fullname" -}}
+{{- define "runner.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -26,7 +26,7 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "runwhen-runner.chart" -}}
+{{- define "runner.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -38,9 +38,9 @@ FinOps tags, compliance markers). Selector labels are intentionally
 separate from this — selectors are immutable post-create, so we never
 let user labels into them.
 */}}
-{{- define "runwhen-runner.labels" -}}
-helm.sh/chart: {{ include "runwhen-runner.chart" . }}
-{{ include "runwhen-runner.selectorLabels" . }}
+{{- define "runner.labels" -}}
+helm.sh/chart: {{ include "runner.chart" . }}
+{{ include "runner.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -54,21 +54,21 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 Selector labels (shared base) — kept lean and stable; never mixed with
 user-supplied labels because spec.selector.matchLabels is immutable.
 */}}
-{{- define "runwhen-runner.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "runwhen-runner.name" . }}
+{{- define "runner.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "runner.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Runner component labels and selectors
 */}}
-{{- define "runwhen-runner.runnerSelectorLabels" -}}
-{{ include "runwhen-runner.selectorLabels" . }}
+{{- define "runner.runnerSelectorLabels" -}}
+{{ include "runner.selectorLabels" . }}
 app.kubernetes.io/component: runner
 {{- end }}
 
-{{- define "runwhen-runner.runnerLabels" -}}
-{{ include "runwhen-runner.labels" . }}
+{{- define "runner.runnerLabels" -}}
+{{ include "runner.labels" . }}
 app.kubernetes.io/component: runner
 {{- end }}
 
@@ -99,12 +99,12 @@ So passing per-service first guarantees per-service wins.
 
 Usage:
   # Chart-wide + commonLabels only:
-  {{- include "runwhen-runner.podLabels" . | nindent 8 }}
+  {{- include "runner.podLabels" . | nindent 8 }}
 
   # With per-service overlay:
-  {{- include "runwhen-runner.podLabels" (list . .Values.runner.podLabels) | nindent 8 }}
+  {{- include "runner.podLabels" (list . .Values.runner.podLabels) | nindent 8 }}
 */}}
-{{- define "runwhen-runner.podLabels" -}}
+{{- define "runner.podLabels" -}}
 {{- $ctx := . -}}
 {{- $extra := dict -}}
 {{- if kindIs "slice" . -}}
@@ -127,9 +127,9 @@ Usage:
   template:
     metadata:
       labels: ...
-      {{- include "runwhen-runner.podAnnotations" . | nindent 6 }}
+      {{- include "runner.podAnnotations" . | nindent 6 }}
 */}}
-{{- define "runwhen-runner.podAnnotations" -}}
+{{- define "runner.podAnnotations" -}}
 {{- with .Values.podAnnotations }}
 annotations:
 {{- range $k, $v := . }}
@@ -149,9 +149,9 @@ Inputs (passed as a list):
   4 — fallback tag (string)
 
 Usage:
-  image: {{ include "runwhen-runner.image" (list . $values.image "ghcr.io" "runwhen-contrib/foo" "latest") | quote }}
+  image: {{ include "runner.image" (list . $values.image "ghcr.io" "runwhen-contrib/foo" "latest") | quote }}
 */}}
-{{- define "runwhen-runner.image" -}}
+{{- define "runner.image" -}}
 {{- $ctx := index . 0 -}}
 {{- $img := index . 1 -}}
 {{- $defReg := index . 2 -}}
@@ -180,12 +180,12 @@ Render under a container's `env:` list with `nindent 12` (deployment) or
 
 Usage:
   # Chart-wide proxyCA only:
-  {{- include "runwhen-runner.trustBundleEnv" . | nindent 12 }}
+  {{- include "runner.trustBundleEnv" . | nindent 12 }}
 
   # Chart-wide OR per-service overlay (workspace-builder):
-  {{- include "runwhen-runner.trustBundleEnv" (list . $wb.proxyCA) | nindent 10 }}
+  {{- include "runner.trustBundleEnv" (list . $wb.proxyCA) | nindent 10 }}
 */}}
-{{- define "runwhen-runner.trustBundleEnv" -}}
+{{- define "runner.trustBundleEnv" -}}
 {{- $ctx := . -}}
 {{- $extra := dict -}}
 {{- if kindIs "slice" . -}}
@@ -212,15 +212,15 @@ Create the runner deployment name.
 Truncate to 44 so the longest downstream suffix (-runner-rolebinding = 19 chars)
 still fits within the 63-char Kubernetes DNS label limit.
 */}}
-{{- define "runwhen-runner.runnerFullname" -}}
-{{- printf "%s-runner" (include "runwhen-runner.fullname" . | trunc 44 | trimSuffix "-") }}
+{{- define "runner.runnerFullname" -}}
+{{- printf "%s-runner" (include "runner.fullname" . | trunc 44 | trimSuffix "-") }}
 {{- end }}
 
 {{/*
 Release-name-derived prefix shared by every collision-class chart resource so
 multiple releases can coexist in one namespace. Ends with "-" so callers compose
 names as `{prefix}runner`, `{prefix}otel-collector`, `{prefix}uploadinfo`, etc.
-Derived from .Release.Name alone -- deliberately NOT runwhen-runner.fullname --
+Derived from .Release.Name alone -- deliberately NOT runner.fullname --
 because the bundled opentelemetry-collector subchart cannot see the parent's
 nameOverride/fullnameOverride, so a fullname-derived prefix would split the
 parent-rendered names from the subchart's (and from the OTel TLS mount vs the
@@ -228,7 +228,7 @@ runner-written {prefix}runner-metrics-tls secret). Deployment names
 (runnerFullname) are release-derived + trunc-44 and do NOT go through this
 prefix.
 */}}
-{{- define "runwhen-runner.releasePrefix" -}}
+{{- define "runner.releasePrefix" -}}
 {{- printf "%s-" (.Release.Name | trunc 32 | trimSuffix "-") -}}
 {{- end }}
 
@@ -253,8 +253,8 @@ The wire contract with runwhen-runner also passes this string as the
 (cert-bundle secrets, uploadinfo, runner-worker deployments, exec-*
 pools, mcp-* deployments) match the chart-side names.
 */}}
-{{- define "runwhen-runner.resourcePrefix" -}}
-{{- include "runwhen-runner.releasePrefix" . }}
+{{- define "runner.resourcePrefix" -}}
+{{- include "runner.releasePrefix" . }}
 {{- end }}
 
 {{/*
@@ -265,12 +265,12 @@ runner SA. Operators can still pin an explicit name via
 `serviceAccount.create: false` returns `default` if no name is supplied.
 
 Usage:
-  serviceAccountName: {{ include "runwhen-runner.serviceAccountName.runner" . }}
+  serviceAccountName: {{ include "runner.serviceAccountName.runner" . }}
 */}}
-{{- define "runwhen-runner.serviceAccountName.runner" -}}
+{{- define "runner.serviceAccountName.runner" -}}
 {{- $sa := (.Values.runner.serviceAccount | default dict) -}}
 {{- if hasKey $sa "create" | ternary $sa.create true }}
-{{- default (printf "%srunner" (include "runwhen-runner.resourcePrefix" .)) $sa.name }}
+{{- default (printf "%srunner" (include "runner.resourcePrefix" .)) $sa.name }}
 {{- else }}
 {{- default "default" $sa.name }}
 {{- end }}
@@ -293,10 +293,10 @@ the subchart key so both layers agree). See the parent-side otel
 deployment template for how the subchart Deployment renders through
 the augmented values context so this default is honoured end-to-end.
 */}}
-{{- define "runwhen-runner.serviceAccountName.otelCollector" -}}
+{{- define "runner.serviceAccountName.otelCollector" -}}
 {{- $subchart := index .Values "opentelemetry-collector" | default dict -}}
 {{- $sa := ($subchart.serviceAccount | default dict) -}}
-{{- default (printf "%sotel-collector" (include "runwhen-runner.otelSubchartPrefix" .)) $sa.name }}
+{{- default (printf "%sotel-collector" (include "runner.otelSubchartPrefix" .)) $sa.name }}
 {{- end }}
 
 {{/*
@@ -312,13 +312,13 @@ Defaults to the release-derived {prefix}otel-collector. Override via
 `opentelemetry-collector.configMap.existingName` to pin an explicit
 name.
 */}}
-{{- define "runwhen-runner.configMapName.otelCollector" -}}
+{{- define "runner.configMapName.otelCollector" -}}
 {{- $subchart := index .Values "opentelemetry-collector" | default dict -}}
 {{- $cm := ($subchart.configMap | default dict) -}}
 {{- if $cm.existingName -}}
 {{- tpl (toString $cm.existingName) . }}
 {{- else -}}
-{{- printf "%sotel-collector" (include "runwhen-runner.otelSubchartPrefix" .) }}
+{{- printf "%sotel-collector" (include "runner.otelSubchartPrefix" .) }}
 {{- end -}}
 {{- end }}
 
@@ -333,31 +333,31 @@ it here would miss an operator's `opentelemetry-collector.fullnameOverride`.
 This helper reads the subchart-scoped key explicitly (the same rule the
 subchart's own Service renders with) so a runner's OTLP env can never
 point at a Service name that does not exist. Mirrors
-runwhen-runner.serviceAccountName.otelCollector and
-runwhen-runner.configMapName.otelCollector.
+runner.serviceAccountName.otelCollector and
+runner.configMapName.otelCollector.
 */}}
-{{- define "runwhen-runner.otelCollectorServiceName" -}}
+{{- define "runner.otelCollectorServiceName" -}}
 {{- $subchart := index .Values "opentelemetry-collector" | default dict -}}
 {{- if $subchart.fullnameOverride -}}
 {{- $subchart.fullnameOverride | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
-{{- printf "%sotel-collector" (include "runwhen-runner.otelSubchartPrefix" .) | trunc 63 | trimSuffix "-" -}}
+{{- printf "%sotel-collector" (include "runner.otelSubchartPrefix" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end }}
 
 {{/*
 Release-derived prefix for the bundled `opentelemetry-collector`
-subchart. Alias of `runwhen-runner.releasePrefix`, kept as its own name so
+subchart. Alias of `runner.releasePrefix`, kept as its own name so
 call sites state their intent (subchart coupling) and so a future
-subchart-specific need has a seam. See `runwhen-runner.releasePrefix` for
+subchart-specific need has a seam. See `runner.releasePrefix` for
 why the derivation is release-only and shared with the parent-side
 resource prefix: it is what keeps the subchart's shadowed Deployment /
 Service / ConfigMap / SA names aligned with the parent-rendered
 otel-collector SA, ConfigMap and RBAC even when nameOverride or
 fullnameOverride is set.
 */}}
-{{- define "runwhen-runner.otelSubchartPrefix" -}}
-{{- include "runwhen-runner.releasePrefix" . }}
+{{- define "runner.otelSubchartPrefix" -}}
+{{- include "runner.releasePrefix" . }}
 {{- end }}
 
 {{/*
@@ -369,7 +369,7 @@ fullnameOverride as the explicit escape hatch. Rendered in subchart context.
 {{- if .Values.fullnameOverride -}}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
-{{- printf "%sotel-collector" (include "runwhen-runner.otelSubchartPrefix" .) | trunc 63 | trimSuffix "-" -}}
+{{- printf "%sotel-collector" (include "runner.otelSubchartPrefix" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end }}
 
@@ -386,18 +386,18 @@ not fail with a nil-pointer error.
 {{- if $sa.name -}}
 {{- $sa.name | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
-{{- printf "%sotel-collector" (include "runwhen-runner.otelSubchartPrefix" .) | trunc 63 | trimSuffix "-" -}}
+{{- printf "%sotel-collector" (include "runner.otelSubchartPrefix" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end }}
 
 {{/*
 Release-derived name of the mTLS cert-bundle Secret the OTel collector
 mounts (see `runner.metrics.mtls`). Matches the `{prefix}runner-metrics-tls`
-name written by a prefix-aware runwhen-runner. Used in the subchart's
+name written by a prefix-aware runner. Used in the subchart's
 `extraVolumes[].secret.secretName`, which the subchart tpl-renders.
 */}}
-{{- define "runwhen-runner.runnerMetricsTls" -}}
-{{- printf "%srunner-metrics-tls" (include "runwhen-runner.otelSubchartPrefix" .) -}}
+{{- define "runner.runnerMetricsTls" -}}
+{{- printf "%srunner-metrics-tls" (include "runner.otelSubchartPrefix" .) -}}
 {{- end }}
 
 {{/*
@@ -409,7 +409,7 @@ has opted to cut over via `runner.metrics.otlp.keepCortex=false`, and
 appends the opt-in OTLP exporter (`otlphttp/runwhen` for http/protobuf,
 `otlp/runwhen` for grpc) when `runner.metrics.otlp.enabled=true`.
 */}}
-{{- define "runwhen-runner.runnerMetricsExporters" -}}
+{{- define "runner.runnerMetricsExporters" -}}
 {{- $metrics := .Values.runner.metrics | default dict -}}
 {{- $otlp := $metrics.otlp | default dict -}}
 {{- $exporters := list -}}
@@ -431,7 +431,7 @@ appends the opt-in OTLP exporter (`otlphttp/runwhen` for http/protobuf,
 
 {{/*
 Exporter list for the runner logs pipeline. Sibling of
-`runwhen-runner.runnerMetricsExporters`; kept in sync with the exporter
+`runner.runnerMetricsExporters`; kept in sync with the exporter
 definitions in runner-otel-collector-configmap.yaml.
 
 Logs are an independent opt-in from metrics (`runner.logs.otlp.enabled`)
@@ -443,7 +443,7 @@ endpoint; the sibling keeps them decoupled while mirroring the metrics
 helper's shape. Returns an empty string when disabled so the configmap
 can gate the `logs` pipeline on it.
 */}}
-{{- define "runwhen-runner.runnerLogsExporters" -}}
+{{- define "runner.runnerLogsExporters" -}}
 {{- $otlp := .Values.runner.logs.otlp | default dict -}}
 {{- if $otlp.enabled -}}
 {{- if eq (default "http/protobuf" $otlp.protocol) "grpc" -}}
@@ -461,7 +461,7 @@ release's bundled OTel collector for LOGS. Emitted only when
 consumer pod spec renders byte-identically to a chart without this feature.
 
 The endpoint ALWAYS targets the in-cluster collector Service resolved by
-`runwhen-runner.otelCollectorServiceName`; the collector owns the onward
+`runner.otelCollectorServiceName`; the collector owns the onward
 forward (to OpenObserve, or whatever `runner.logs.otlp.endpoint` names).
 The pod therefore never needs to know the final destination, and an
 external or per-signal logs endpoint does not change the pod env.
@@ -479,14 +479,14 @@ Inputs (list):
 
 Rendered under a container's `env:` list with `nindent 12`.
 */}}
-{{- define "runwhen-runner.runnerOtlpLogsEnv" -}}
+{{- define "runner.runnerOtlpLogsEnv" -}}
 {{- $ctx := index . 0 -}}
 {{- $serviceName := index . 1 -}}
 {{- $extra := index . 2 | default list -}}
 {{- $logsOtlp := $ctx.Values.runner.logs.otlp | default dict -}}
 {{- if $logsOtlp.enabled -}}
 {{- $protocol := default "http/protobuf" $logsOtlp.protocol -}}
-{{- $collector := include "runwhen-runner.otelCollectorServiceName" $ctx -}}
+{{- $collector := include "runner.otelCollectorServiceName" $ctx -}}
 {{- $endpoint := printf "http://%s:4318/v1/logs" $collector -}}
 {{- if eq $protocol "grpc" -}}
 {{- $endpoint = printf "%s:4317" $collector -}}
@@ -519,14 +519,14 @@ Rendered under a container's `env:` list with `nindent 12`.
 {{/*
 Set Global Security Context
 */}}
-{{- define "runwhen-runner.containerSecurityContext" -}}
+{{- define "runner.containerSecurityContext" -}}
 {{- if .Values.containerSecurityContext }}
 securityContext:
 {{ toYaml .Values.containerSecurityContext | indent 2 }}
 {{- end }}
 {{- end }}
 
-{{- define "runwhen-runner.podSecurityContext" -}}
+{{- define "runner.podSecurityContext" -}}
 {{- if .Values.podSecurityContext }}
 securityContext:
 {{ toYaml .Values.podSecurityContext | indent 2 }}

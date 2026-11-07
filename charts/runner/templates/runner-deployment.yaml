@@ -7,21 +7,21 @@
   Kept in sync with runner-configmap.yaml, which only runs on the create path.
 */}}
 {{- $runnerConfigMap := .Values.runner.configMap | default dict -}}
-{{- $runnerConfigMapName := $runnerConfigMap.name | default (printf "%srunner-config" (include "runwhen-runner.resourcePrefix" .)) -}}
+{{- $runnerConfigMapName := $runnerConfigMap.name | default (printf "%srunner-config" (include "runner.resourcePrefix" .)) -}}
 {{- if not $runnerConfigMap.create -}}
 {{- $runnerConfigMapName = $runnerConfigMap.name | required "runner.configMap.name is required when runner.configMap.create is false — set it to the name of the externally-managed ConfigMap" -}}
 {{- end -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "runwhen-runner.runnerFullname" . }}
+  name: {{ include "runner.runnerFullname" . }}
   labels:
-    {{- include "runwhen-runner.runnerLabels" . | nindent 4 }}
+    {{- include "runner.runnerLabels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.runner.replicas | default 1 }}
   selector:
     matchLabels:
-      {{- include "runwhen-runner.runnerSelectorLabels" . | nindent 6 }}
+      {{- include "runner.runnerSelectorLabels" . | nindent 6 }}
       app: runner
   strategy:
     type: RollingUpdate
@@ -31,9 +31,9 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "runwhen-runner.runnerSelectorLabels" . | nindent 8 }}
+        {{- include "runner.runnerSelectorLabels" . | nindent 8 }}
         app: runner
-        {{- include "runwhen-runner.podLabels" (list . .Values.runner.podLabels) | nindent 8 }}
+        {{- include "runner.podLabels" (list . .Values.runner.podLabels) | nindent 8 }}
       {{- /*
         Annotation precedence: per-service .Values.runner.podAnnotations
         wins over chart-wide .Values.podAnnotations on conflict. Sprig
@@ -58,11 +58,11 @@ spec:
       securityContext:
         {{- toYaml .Values.runner.podSecurityContext | nindent 8 }}
       {{- else }}
-      {{- include "runwhen-runner.podSecurityContext" . | nindent 6 }}
+      {{- include "runner.podSecurityContext" . | nindent 6 }}
       {{- end }}
 
-      serviceAccount: {{ include "runwhen-runner.serviceAccountName.runner" . }}
-      serviceAccountName: {{ include "runwhen-runner.serviceAccountName.runner" . }}
+      serviceAccount: {{ include "runner.serviceAccountName.runner" . }}
+      serviceAccountName: {{ include "runner.serviceAccountName.runner" . }}
       {{- /*
         Same `default true` footgun as runner-service-account.yaml's create gate
         (commit c0034e2): in Go templates `false | default true` evaluates to
@@ -81,9 +81,9 @@ spec:
 
       containers:
         - name: runner
-          image: {{ include "runwhen-runner.image" (list . .Values.runner.image "" "" "") | quote }}
+          image: {{ include "runner.image" (list . .Values.runner.image "" "" "") | quote }}
           imagePullPolicy: {{ .Values.runner.imagePullPolicy | default "Always" }}
-          {{- include "runwhen-runner.containerSecurityContext" . | nindent 10 }}
+          {{- include "runner.containerSecurityContext" . | nindent 10 }}
 
           ports:
             - name: metrics
@@ -138,7 +138,7 @@ spec:
               that added RUNNER_RESOURCE_PREFIX handling.
             */}}
             - name: RUNNER_RESOURCE_PREFIX
-              value: {{ include "runwhen-runner.resourcePrefix" . | quote }}
+              value: {{ include "runner.resourcePrefix" . | quote }}
 
             {{- if .Values.proxy.enabled }}
             {{- with .Values.proxy.httpProxy }}
@@ -160,7 +160,7 @@ spec:
               corporate root CAs are independently useful (private TLS,
               internal mTLS) on non-proxied clusters.
             */}}
-            {{- include "runwhen-runner.trustBundleEnv" . | nindent 12 }}
+            {{- include "runner.trustBundleEnv" . | nindent 12 }}
 
             {{- /*
               Opt-in OTLP logs env (runner.logs.otlp.enabled). Points the
@@ -178,7 +178,7 @@ spec:
               runner must pass it (runner.runEnvironment.extraEnv) -- see
               the README's "Runner metrics and logs export" section.
             */}}
-            {{- $runnerOtlpLogsEnv := include "runwhen-runner.runnerOtlpLogsEnv" (list . (printf "%s-runner" .Release.Name) .Values.runner.extraEnv) }}
+            {{- $runnerOtlpLogsEnv := include "runner.runnerOtlpLogsEnv" (list . (printf "%s-runner" .Release.Name) .Values.runner.extraEnv) }}
             {{- with $runnerOtlpLogsEnv }}
             {{- . | nindent 12 }}
             {{- end }}

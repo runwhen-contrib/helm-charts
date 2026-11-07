@@ -8,13 +8,13 @@
   collide. Explicit `.Values.runner.configMap.name` still wins.
   Kept in sync with the volume mount in runner-deployment.yaml.
 */}}
-{{- $runnerCMName := .Values.runner.configMap.name | default (printf "%srunner-config" (include "runwhen-runner.resourcePrefix" .)) -}}
+{{- $runnerCMName := .Values.runner.configMap.name | default (printf "%srunner-config" (include "runner.resourcePrefix" .)) -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ $runnerCMName }}
   labels:
-    {{- include "runwhen-runner.runnerLabels" . | nindent 4 }}
+    {{- include "runner.runnerLabels" . | nindent 4 }}
     app: runner
 data:
   config.yaml: |
@@ -95,7 +95,7 @@ data:
             workloads bind to the same SA the chart created. Operators may
             still override via runEnvironment.deployment.serviceAccount.
           */}}
-          serviceAccount: {{ .Values.runner.runEnvironment.deployment.serviceAccount | default (include "runwhen-runner.serviceAccountName.runner" .) }}
+          serviceAccount: {{ .Values.runner.runEnvironment.deployment.serviceAccount | default (include "runner.serviceAccountName.runner" .) }}
           {{- with .Values.runner.runEnvironment.deployment.annotations }}
           annotations:
             {{- toYaml . | nindent 12 }}
@@ -146,7 +146,7 @@ data:
 
             Sprig `merge` is FIRST-WINS on conflict, so per-runEnvironment
             override beats chart-wide commonLabels/podLabels — same precedence
-            we use for chart-rendered pods (see `runwhen-runner.podLabels`).
+            we use for chart-rendered pods (see `runner.podLabels`).
 
             REQUIRES runwhen-runner ≥ v0.10.56 to honour the new `podLabels`
             field. Older versions silently ignore it; the Deployment-level
@@ -235,7 +235,7 @@ data:
             SA so the two stay in sync. Operators may override via
             runEnvironment.pod.serviceAccount.
           */}}
-          serviceAccount: {{ .Values.runner.runEnvironment.pod.serviceAccount | default (include "runwhen-runner.serviceAccountName.runner" .) }}
+          serviceAccount: {{ .Values.runner.runEnvironment.pod.serviceAccount | default (include "runner.serviceAccountName.runner" .) }}
           {{- with .Values.runner.runEnvironment.pod.annotations }}
           annotations:
             {{- toYaml . | nindent 12 }}

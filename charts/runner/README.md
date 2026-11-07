@@ -1,4 +1,4 @@
-# runwhen-runner
+# runner
 
 A private RunWhen **runner** and its bundled OpenTelemetry collector — no
 workspace builder, no discovery. Split out of `runwhen-local` so a runner-only
