@@ -2,14 +2,14 @@ apiVersion: v2
 name: runner
 description: The RunWhen Runner Helm Chart - a private runner and its OpenTelemetry collector, no workspace builder
 type: application
-version: 0.1.0
+version: 0.1.1
 appVersion: "0.12.5"
 icon: https://storage.googleapis.com/runwhen-nonprod-shared-images/icons/runwhen_icon.png
 dependencies:
   - name: opentelemetry-collector
     version: "0.158.1"
     repository: "https://open-telemetry.github.io/opentelemetry-helm-charts"
-    condition: runner.enabled
+    condition: runner.otelCollector.enabled,runner.enabled
 maintainers:
 - email: shea.stewart@runwhen.com
   name: stewartshea

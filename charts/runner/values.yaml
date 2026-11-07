@@ -147,6 +147,11 @@ runner:
   # still reference the SA by name via
   # opentelemetry-collector.serviceAccount.name (single source of truth).
   otelCollector:
+    # Deploy the bundled OpenTelemetry collector. Default `true` for standalone
+    # runner installs; set `false` when co-deploying inside `runwhen-platform`
+    # (where the platform's own `<release>-otel-collector` Service already lives
+    # in the same namespace at the exact `<prefix>otel-collector:4318` address).
+    enabled: true
     serviceAccount:
       create: true
 

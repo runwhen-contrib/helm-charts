@@ -44,7 +44,9 @@ service:
     logs:
       level: info
 {{- end -}}
-{{- if .Values.runner.enabled -}}
+{{- $otelCol := (.Values.runner.otelCollector | default dict) -}}
+{{- $otelEnabled := ternary $otelCol.enabled true (hasKey $otelCol "enabled") -}}
+{{- if and .Values.runner.enabled $otelEnabled -}}
 {{- $cmName := include "runner.configMapName.otelCollector" . -}}
 {{/*
   Preserve the runner-written config across `helm upgrade`. A plain render would

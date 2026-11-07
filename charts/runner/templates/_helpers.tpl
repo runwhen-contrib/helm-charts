@@ -213,7 +213,12 @@ Truncate to 44 so the longest downstream suffix (-runner-rolebinding = 19 chars)
 still fits within the 63-char Kubernetes DNS label limit.
 */}}
 {{- define "runner.runnerFullname" -}}
-{{- printf "%s-runner" (include "runner.fullname" . | trunc 44 | trimSuffix "-") }}
+{{- $full := include "runner.fullname" . | trunc 44 | trimSuffix "-" -}}
+{{- if hasSuffix "-runner" $full -}}
+{{- $full -}}
+{{- else -}}
+{{- printf "%s-runner" $full -}}
+{{- end -}}
 {{- end }}
 
 {{/*
