@@ -3,6 +3,27 @@ entries:
   runner:
   - apiVersion: v2
     appVersion: 0.12.5
+    created: "2026-11-24T20:00:12.660874628Z"
+    dependencies:
+    - condition: runner.otelCollector.enabled,runner.enabled
+      name: opentelemetry-collector
+      repository: https://open-telemetry.github.io/opentelemetry-helm-charts
+      version: 0.183.1
+    description: The RunWhen Runner Helm Chart - a private runner and its OpenTelemetry
+      collector, no workspace builder
+    digest: aba0ba88d1479ee6ec2029e57e933368e1a733354cac59694dcd18bb7d0bc4a2
+    icon: https://storage.googleapis.com/runwhen-nonprod-shared-images/icons/runwhen_icon.png
+    maintainers:
+    - email: shea.stewart@runwhen.com
+      name: stewartshea
+      url: www.runwhen.com
+    name: runner
+    type: application
+    urls:
+    - https://github.com/runwhen-contrib/helm-charts/releases/download/runner-0.1.3/runner-0.1.3.tgz
+    version: 0.1.3
+  - apiVersion: v2
+    appVersion: 0.12.5
     created: "2026-11-08T20:48:12.514889541Z"
     dependencies:
     - condition: runner.otelCollector.enabled,runner.enabled
@@ -1927,4 +1948,4 @@ entries:
     urls:
     - https://github.com/runwhen-contrib/helm-charts/releases/download/runwhen-local-0.0.12/runwhen-local-0.0.12.tgz
     version: 0.0.12
-generated: "2026-11-08T20:48:12.515126673Z"
+generated: "2026-11-24T20:00:12.661342102Z"
