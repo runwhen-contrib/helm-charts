@@ -56,8 +56,12 @@ service:
 */}}
 {{- $existing := lookup "v1" "ConfigMap" .Release.Namespace $cmName -}}
 {{- $relay := include "runner.otelCollectorBootstrapRelay" . -}}
-{{- if and $existing $existing.data (index $existing.data "relay") -}}
-{{- $relay = index $existing.data "relay" -}}
+{{- $existingData := dict -}}
+{{- if $existing -}}
+{{- $existingData = $existing.data | default dict -}}
+{{- end -}}
+{{- if index $existingData "relay" -}}
+{{- $relay = index $existingData "relay" -}}
 {{- end -}}
 apiVersion: v1
 kind: ConfigMap
