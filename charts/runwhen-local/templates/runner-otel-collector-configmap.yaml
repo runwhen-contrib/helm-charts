@@ -117,6 +117,7 @@ data:
                   regex: vault_token_cache_hits_total|vault_token_renewal_total|vault_token_ttl_seconds|vault_token_age_seconds|vault_auth_total|vault_auth_success_total|vault_auth_duration_seconds_bucket|worker_tasks_executed_total|worker_task_execution_seconds_bucket|go_goroutines|go_gc_duration_seconds|process_cpu_seconds_total|process_resident_memory_bytes|process_open_fds|process_start_time_seconds
 
     exporters:
+      {{- if ((.Values.runner.metrics).url) }}
       prometheusremotewrite:
         endpoint: {{ .Values.runner.metrics.url }}
         # Disable Prometheus naming normalization so metric names match
@@ -140,8 +141,15 @@ data:
           ca_file: "/etc/ssl/certs/proxy-ca.crt"
           {{- end }}
           insecure_skip_verify: true
+        {{- $wsName := include "runwhen-local.workspaceName" . | trim }}
+        {{- if $wsName }}
         external_labels:
-          workspace: {{ include "runwhen-local.workspaceName" . }}
+          workspace: {{ $wsName }}
+        {{- end }}
+      {{- else if not (((.Values.runner.metrics).otlp).enabled) }}
+      debug:
+        verbosity: basic
+      {{- end }}
 
       {{- if .Values.runner.metrics.otlp.enabled }}
       {{- $_ := required "runner.metrics.otlp.endpoint is required when runner.metrics.otlp.enabled=true" .Values.runner.metrics.otlp.endpoint -}}

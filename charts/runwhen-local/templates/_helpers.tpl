@@ -480,9 +480,10 @@ appends the opt-in OTLP exporter (`otlphttp/runwhen` for http/protobuf,
 `otlp/runwhen` for grpc) when `runner.metrics.otlp.enabled=true`.
 */}}
 {{- define "runwhen-local.runnerMetricsExporters" -}}
-{{- $otlp := .Values.runner.metrics.otlp | default dict -}}
+{{- $metrics := .Values.runner.metrics | default dict -}}
+{{- $otlp := $metrics.otlp | default dict -}}
 {{- $exporters := list -}}
-{{- if or (not $otlp.enabled) $otlp.keepCortex -}}
+{{- if and $metrics.url (or (not $otlp.enabled) $otlp.keepCortex) -}}
 {{- $exporters = append $exporters "prometheusremotewrite" -}}
 {{- end -}}
 {{- if $otlp.enabled -}}
@@ -491,6 +492,9 @@ appends the opt-in OTLP exporter (`otlphttp/runwhen` for http/protobuf,
 {{- else -}}
 {{- $exporters = append $exporters "otlphttp/runwhen" -}}
 {{- end -}}
+{{- end -}}
+{{- if eq (len $exporters) 0 -}}
+{{- $exporters = append $exporters "debug" -}}
 {{- end -}}
 {{- join ", " $exporters -}}
 {{- end }}
