@@ -4,7 +4,9 @@
 # Enables the opt-in OTLP logs exporter on the runner's bundled OTel collector.
 # The collector ships with no logs pipeline by default, so runner and worker
 # stdout logs cannot reach the platform's observability stack until this is on.
-# Metrics are left on their default (Cortex) path here.
+# Metrics are left on their defaults here: since chart 0.8.0 that means no
+# metrics destination (the deprecated Cortex `runner.metrics.url` is empty and
+# `runner.metrics.otlp` is off), so the metrics pipelines use `nop`.
 #
 # Render to inspect:
 #

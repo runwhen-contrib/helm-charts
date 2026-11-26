@@ -492,26 +492,33 @@ runner:
     tag: "r-2026-10-16.1"
   controlAddr: "https://runner.beta.runwhen.com"
   metrics:
-    url: "https://runner-cortex-tenant.beta.runwhen.com/push"
-    # -- Client certificate (mTLS) for the OTel collector's
-    # prometheusremotewrite exporter. Enabled by default — matches the
-    # SaaS service (most users). When enabled, the collector mounts the
-    # `runner-metrics-tls` Secret and presents a client cert to the
-    # metrics endpoint.
+    # -- DEPRECATED (chart 0.8.0): Cortex/Mimir remote-write endpoint
+    # (runner-metric-proxy). RunWhen has retired runner-metric-proxy and
+    # dep-strip runner images no longer send a metrics client-cert
+    # bundle, so the default is now empty. When empty, the chart renders
+    # no `prometheusremotewrite` exporter and no `metricsAddr` in the
+    # runner config. Use `runner.metrics.otlp` below instead.
     #
-    # Set to false when the platform chart has runner.mtls.enabled=false
-    # and also clear opentelemetry-collector.extraVolumes and
-    # extraVolumeMounts in your overlay.
+    # Old values still render: setting a URL here restores the Cortex
+    # exporter exactly as before (previous default:
+    # "https://runner-cortex-tenant.beta.runwhen.com/push").
+    url: ""
+    # -- DEPRECATED (chart 0.8.0): client certificate (mTLS) for the
+    # Cortex exporter. Only used when `url` is set. When enabled, the
+    # exporter reads its cert from /tls, so you must ALSO restore the
+    # `tls-secret-volume` entries in `opentelemetry-collector.extraVolumes`
+    # and `extraVolumeMounts` (see the commented example in that block
+    # below). The chart no longer mounts the `runner-metrics-tls` Secret by
+    # default, and dep-strip runners no longer write it.
     mtls:
-      enabled: true
+      enabled: false
 
     # -- Opt-in OTLP export path for runner metrics. When enabled, the
-    # bundled OTel collector ALSO exports to `otlp.endpoint` (the
-    # platform's in-cluster collector fronting OpenObserve, or the
-    # observability service directly), so an install can migrate off
-    # Cortex/Mimir. Disabled by default: the `prometheusremotewrite`
-    # exporter above stays the default destination and the rendered
-    # collector config is unchanged while this block is off.
+    # bundled OTel collector exports to `otlp.endpoint` (the platform's
+    # in-cluster collector fronting OpenObserve, or the observability
+    # service directly). Disabled by default. With this off and `url`
+    # empty (both defaults), the metrics pipelines have no destination
+    # and use the collector's `nop` exporter.
     otlp:
       enabled: false
 
@@ -534,11 +541,12 @@ runner:
       # Authorization header for an authenticated OpenObserve endpoint.
       headers: {}
 
-      # Keep exporting to Cortex alongside OTLP. `true` (default)
-      # migrates additively, leaving the existing
-      # `prometheusremotewrite` exporter in both pipelines. Set `false`
-      # to cut over so OTLP becomes the only metrics destination.
-      keepCortex: true
+      # DEPRECATED (chart 0.8.0): keep exporting to Cortex alongside
+      # OTLP. Only has an effect when `runner.metrics.url` is set. Default
+      # changed to `false` (was `true`), so OTLP is the only metrics
+      # destination when enabled. Set `true` to keep the
+      # `prometheusremotewrite` exporter in both pipelines as well.
+      keepCortex: false
 
   # -- Opt-in OTLP logs export path for the runner. Runner and worker
   # pods write their logs to stdout; with this enabled the bundled OTel
@@ -581,7 +589,17 @@ runner:
   # securityContext is used to set the security context for the runner pod
   # podSecurityContext: {}
 
-  # Extra environment variables for the runner container
+  # Extra environment variables for the runner container.
+  #
+  # DEPRECATED (chart 0.8.0): platform-Vault env vars. RunWhen's platform
+  # Vault is gone from the runner, worker and runner-control; secrets
+  # now come from PAPI (the runner defaults to RW_SECRETS_SOURCE=papi).
+  # The chart has never rendered RW_VAULT_* (e.g. RW_VAULT_ADDR_OVERRIDE)
+  # or VAULT_TOKEN_FILE itself. They appear only if you set them here,
+  # and dep-strip runners ignore them, so you can remove them from your
+  # values. This does NOT affect customer secret providers
+  # (`runEnvironment.secretProviders` with `type: vault`), which keep
+  # working unchanged.
   extraEnv: {}
 
   # Extra volumes for the runner container
@@ -842,9 +860,10 @@ runner:
 ##   - `configMap.existingName` is a TEMPLATE that stays truthy (the subchart
 ##     `_pod.tpl` gates the config volume + `--config=/conf/relay.yaml` on
 ##     it, and its `configName` helper tpl-renders it). Do NOT blank it.
-##   - `extraVolumes[].secret.secretName` is a template resolving to
-##     `{prefix}runner-metrics-tls`, matching what a prefix-aware
-##     runwhen-runner writes.
+##   - `extraVolumes` / `extraVolumeMounts` default to empty since 0.8.0.
+##     The deprecated Cortex mTLS volume (see the commented example below)
+##     uses a template resolving to `{prefix}runner-metrics-tls`, matching
+##     what a prefix-aware pre-dep-strip runwhen-runner writes.
 ##
 ## See README's "Multi-release deployments in one namespace" section for the
 ## full renamed-resource table.
@@ -906,13 +925,25 @@ opentelemetry-collector:
   #   # NO_PROXY environment variable
   #   - name: NO_PROXY
   #     value: "127.0.0.1,localhost,$(KUBERNETES_SERVICE_HOST)"
-  # -- TLS volume for the OTel collector's mTLS client cert. Clear
-  #    when runner.metrics.mtls.enabled=false — the runner-metrics-tls
-  #    Secret does not exist in that mode.
-  extraVolumes:
-    - name: tls-secret-volume
-      secret:
-        secretName: '{{ include "runwhen-local.runnerMetricsTls" . }}'
+  # -- Extra volumes for the collector. Empty by default since chart 0.8.0.
+  #
+  # DEPRECATED: Cortex mTLS client-cert volume. Before 0.8.0 the chart
+  # mounted the runner-written `runner-metrics-tls` Secret here by default.
+  # Dep-strip runners no longer write that Secret. If you still point
+  # `runner.metrics.url` at a Cortex endpoint with
+  # `runner.metrics.mtls.enabled=true`, restore BOTH entries (here and in
+  # extraVolumeMounts below), otherwise the collector cannot load
+  # /tls/tls.crt and fails to start:
+  #
+  # extraVolumes:
+  #   - name: tls-secret-volume
+  #     secret:
+  #       secretName: '{{ include "runwhen-local.runnerMetricsTls" . }}'
+  # extraVolumeMounts:
+  #   - name: tls-secret-volume
+  #     mountPath: /tls
+  #     readOnly: true
+  extraVolumes: []
     # # Note: must be configured when using .Values.ProxyCA -- can also be transitioned to
     # # a configMap if needed -- just match the values from .Values.ProxyCA.ConfigMapName and .Values.ProxyCA.Key
     # - name: proxy-ca-volume # DO NOT CHANGE
@@ -921,10 +952,7 @@ opentelemetry-collector:
     #     items:
     #       - key: ca.crt # Value from .Values.proxyCA.key
     #         path: proxy-ca.crt # DO NOT CHANGE
-  extraVolumeMounts:
-    - name: tls-secret-volume
-      mountPath: /tls
-      readOnly: true
+  extraVolumeMounts: []
     # # Note: must be used when using .Values.ProxyCA
     # - name: proxy-ca-volume
     #   mountPath: /etc/ssl/certs/proxy-ca.crt

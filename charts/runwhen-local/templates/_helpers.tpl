@@ -462,7 +462,10 @@ not fail with a nil-pointer error.
 
 {{/*
 Release-derived name of the mTLS cert-bundle Secret the OTel collector
-mounts (see `runner.metrics.mtls`). Matches the `{prefix}runner-metrics-tls`
+mounts (see `runner.metrics.mtls`). DEPRECATED (chart 0.8.0): dep-strip
+runners no longer write this Secret and the chart no longer mounts it by
+default; kept so values files that restore the TLS entry in
+`opentelemetry-collector.extraVolumes` still render. Matches the `{prefix}runner-metrics-tls`
 name written by a prefix-aware runwhen-runner. Used in the subchart's
 `extraVolumes[].secret.secretName`, which the subchart tpl-renders.
 */}}
@@ -474,15 +477,18 @@ name written by a prefix-aware runwhen-runner. Used in the subchart's
 Exporter list for the runner metrics pipelines. Kept in sync with the
 exporter definitions in runner-otel-collector-configmap.yaml.
 
-Includes the Cortex `prometheusremotewrite` exporter unless the install
-has opted to cut over via `runner.metrics.otlp.keepCortex=false`, and
-appends the opt-in OTLP exporter (`otlphttp/runwhen` for http/protobuf,
-`otlp/runwhen` for grpc) when `runner.metrics.otlp.enabled=true`.
+The deprecated Cortex `prometheusremotewrite` exporter is included only
+when `runner.metrics.url` is set (default "" since chart 0.8.0), and
+then only if OTLP is off or `runner.metrics.otlp.keepCortex=true`. The
+opt-in OTLP exporter (`otlphttp/runwhen` for http/protobuf,
+`otlp/runwhen` for grpc) is appended when `runner.metrics.otlp.enabled`.
+With neither configured the list is `nop`, because a collector pipeline
+must have at least one exporter.
 */}}
 {{- define "runwhen-local.runnerMetricsExporters" -}}
 {{- $otlp := .Values.runner.metrics.otlp | default dict -}}
 {{- $exporters := list -}}
-{{- if or (not $otlp.enabled) $otlp.keepCortex -}}
+{{- if and .Values.runner.metrics.url (or (not $otlp.enabled) $otlp.keepCortex) -}}
 {{- $exporters = append $exporters "prometheusremotewrite" -}}
 {{- end -}}
 {{- if $otlp.enabled -}}
@@ -492,7 +498,20 @@ appends the opt-in OTLP exporter (`otlphttp/runwhen` for http/protobuf,
 {{- $exporters = append $exporters "otlphttp/runwhen" -}}
 {{- end -}}
 {{- end -}}
+{{- if not $exporters -}}
+{{- $exporters = append $exporters "nop" -}}
+{{- end -}}
 {{- join ", " $exporters -}}
+{{- end }}
+
+{{/*
+"true" when the runner metrics pipelines have a real exporter (Cortex
+via runner.metrics.url, or OTLP), empty otherwise. Gates the `nop`
+exporter definition in runner-otel-collector-configmap.yaml.
+*/}}
+{{- define "runwhen-local.runnerMetricsHasExporter" -}}
+{{- $otlp := .Values.runner.metrics.otlp | default dict -}}
+{{- if or .Values.runner.metrics.url $otlp.enabled -}}true{{- end -}}
 {{- end }}
 
 {{/*

@@ -84,10 +84,48 @@ For more information see the [RunWhen Platform documentation](https://docs.runwh
 
 ### Runner metrics and logs export (Cortex → OTLP)
 
-By default the runner's bundled OTel collector exports SLI and runtime
+> **Chart 0.8.0: Cortex / runner-metric-proxy is off by default
+> (deprecated).** RunWhen has retired runner-metric-proxy (Cortex/Mimir
+> remote-write over mTLS), and dep-strip runner images no longer send a
+> metrics client-cert bundle. The defaults are now
+> `runner.metrics.url: ""`, `runner.metrics.mtls.enabled: false`,
+> `runner.metrics.otlp.keepCortex: false`, and empty
+> `opentelemetry-collector.extraVolumes` / `extraVolumeMounts` (no
+> `runner-metrics-tls` mount). With `url` empty the chart renders no
+> `prometheusremotewrite` exporter and no `metricsAddr` in the runner
+> config. If no OTLP export is enabled either, the metrics pipelines use the
+> collector's `nop` exporter.
+>
+> **Old values still render.** Setting `runner.metrics.url` restores the
+> Cortex exporter unchanged. If you also set `runner.metrics.mtls.enabled:
+> true`, you must restore the TLS volume yourself, because the chart no
+> longer mounts it:
+>
+> ```yaml
+> runner:
+>   metrics:
+>     url: "https://<your-cortex>/push"
+>     mtls:
+>       enabled: true
+> opentelemetry-collector:
+>   extraVolumes:
+>     - name: tls-secret-volume
+>       secret:
+>         secretName: '{{ include "runwhen-local.runnerMetricsTls" . }}'
+>   extraVolumeMounts:
+>     - name: tls-secret-volume
+>       mountPath: /tls
+>       readOnly: true
+> ```
+>
+> Without that volume the collector cannot read `/tls/tls.crt` and does not
+> start.
+
+Before 0.8.0 the runner's bundled OTel collector exported SLI and runtime
 metrics to RunWhen's Cortex/Mimir tenant over `prometheusremotewrite`
-(`runner.metrics.url`). Cortex/Mimir is being decommissioned in favor of
-RunWhen's OpenObserve-backed observability service, which ingests OTLP.
+(`runner.metrics.url`) by default. Cortex/Mimir has been decommissioned
+in favor of RunWhen's OpenObserve-backed observability service, which
+ingests OTLP.
 
 Both signals have an independent, opt-in OTLP export path:
 
@@ -98,8 +136,7 @@ Both signals have an independent, opt-in OTLP export path:
   were rejected by the receiver; enabling this adds the pipeline that
   accepts and forwards them.
 
-Each is disabled by default, so the rendered collector config is
-unchanged until you opt in.
+Each is disabled by default.
 
 #### Metrics
 
@@ -113,14 +150,13 @@ runner:
       endpoint: "http://<release>-otel-collector:4318"
       # headers:                  # optional auth for a secured endpoint
       #   Authorization: "Bearer <token>"
-      keepCortex: true           # default: export to Cortex AND OTLP
+      keepCortex: false          # default since 0.8.0 (deprecated knob)
 ```
 
-With `keepCortex: true` (the default) both the existing Cortex exporter
-and the new OTLP exporter receive metrics from the `metrics/otlp` and
-`metrics/prometheus` pipelines, so you can validate the OTLP path before
-removing Cortex. Set `keepCortex: false` to make OTLP the only metrics
-destination.
+With `keepCortex: false` (the default since 0.8.0) OTLP is the only
+metrics destination. `keepCortex: true` also keeps the deprecated Cortex
+exporter in the `metrics/otlp` and `metrics/prometheus` pipelines, but only
+when `runner.metrics.url` is set.
 
 #### Logs
 
@@ -208,10 +244,22 @@ runner:
   OTLP carries those names natively.
 
 When `runner.metrics.otlp.enabled` and `runner.logs.otlp.enabled` are
-both `false` (the defaults) the rendered collector config is unchanged
-from previous releases — Cortex remains the only destination.
+both `false` and `runner.metrics.url` is empty (the 0.8.0 defaults), the
+metrics pipelines export to `nop` and nothing leaves the collector.
 
-This is the supported migration path away from Cortex/Mimir. Renderable
+This is the supported replacement for Cortex/Mimir.
+
+### Platform Vault (deprecated, chart 0.8.0)
+
+RunWhen's platform Vault is gone from the runner, worker and
+runner-control. Secrets now come from PAPI, and the runner defaults to
+`RW_SECRETS_SOURCE=papi`, so the chart does not set it. The chart has never
+rendered `RW_VAULT_*` (for example `RW_VAULT_ADDR_OVERRIDE`) or
+`VAULT_TOKEN_FILE` itself. They only appear if you add them to
+`runner.extraEnv`, and dep-strip runners ignore them, so you can remove
+them from your values. This does not affect customer secret providers
+(`runner.runEnvironment.secretProviders` with `type: vault`), which work
+unchanged. Renderable
 overlays live in `examples/values-otlp-metrics.yaml` (metrics + logs) and
 `examples/values-otlp-logs.yaml` (logs with a per-signal endpoint).
 
@@ -297,7 +345,7 @@ Renamed resources (bare → release-derived):
 | `{namespace}-workspace-builder-view-crb` (cluster-scoped) | `{prefix}workspace-builder-view-crb` |
 | `uploadinfo` (Secret, runner-written) | `{prefix}uploadinfo` |
 | `kubeconfig` (Secret, workspace-builder-written; `custom.kubeconfig_secret_name`) | `{prefix}kubeconfig` |
-| `runner-metrics-tls` (Secret, runner-written) | `{prefix}runner-metrics-tls` |
+| `runner-metrics-tls` (Secret, runner-written; deprecated, not written by dep-strip runners) | `{prefix}runner-metrics-tls` |
 
 The trunc-32 budget on the prefix keeps every composed name within
 Kubernetes' 63-char DNS label limit. Deployment names
@@ -350,6 +398,8 @@ opentelemetry-collector:
   configMap:
     existingName: my-release-runwhen-local-otel-collector
   extraVolumes:
+    # Only if you still use the deprecated Cortex mTLS path (0.8.0+ mounts
+    # nothing here by default):
     - name: tls-secret-volume
       secret:
         secretName: my-release-runwhen-local-runner-metrics-tls
@@ -546,8 +596,9 @@ Upgrade steps:
 3. The bundled OTel subchart is auto-prefixed via parent-side shadows
    of its `fullname` / `serviceAccountName` templates, and its
    `configMap.existingName` / `extraVolumes[].secret.secretName`
-   default to release-derived templates — no override needed for the
-   default mTLS metrics setup (`runner.metrics.mtls.enabled=true`).
+   default to release-derived templates — no override needed. (Chart
+   0.8.0+ no longer mounts the deprecated `runner-metrics-tls` volume by
+   default; see "Runner metrics and logs export".)
    Pin any of those keys explicitly if your environment requires
    literal names (see "Multi-release OTel subchart" above).
 4. `helm upgrade [RELEASE_NAME] runwhen-contrib/runwhen-local --install`.

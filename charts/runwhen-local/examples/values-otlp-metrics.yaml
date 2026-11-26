@@ -12,9 +12,10 @@
 #     -f charts/runwhen-local/examples/values-otlp-metrics.yaml \
 #     | sed -n '/exporters:/,/processors:/p'
 #
-# The metrics defaults below are additive: Cortex keeps exporting to
-# `runner.metrics.url` while OTLP is also enabled, so the migration can be
-# validated before cutting over. Set `keepCortex: false` once verified.
+# Since chart 0.8.0 `runner.metrics.url` (deprecated Cortex) defaults to ""
+# and `keepCortex` to false, so OTLP is the only metrics destination. If you
+# still set `runner.metrics.url`, set `keepCortex: true` to export to both
+# while validating, then drop the Cortex URL.
 #
 # Logs are a separate opt-in. Here `runner.logs.otlp.endpoint` is left empty, so
 # it falls back to `runner.metrics.otlp.endpoint`: one collector endpoint serves
@@ -45,9 +46,10 @@ runner:
       # headers:
       #   Authorization: "Bearer <token>"
       headers: {}
-      # `true` (default): keep exporting to Cortex while also exporting
-      # OTLP. `false` cuts over so OTLP is the only destination.
-      keepCortex: true
+      # Deprecated. `false` (default): OTLP is the only destination.
+      # `true` also keeps the Cortex exporter, which only takes effect when
+      # runner.metrics.url is set.
+      keepCortex: false
 
   # Logs counterpart. Ships runner/worker stdout logs to the same OTLP
   # endpoint. Independent of metrics: its own endpoint/protocol/headers.
