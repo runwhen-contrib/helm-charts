@@ -272,19 +272,19 @@ opentelemetry-collector:
   #   name: byo-otel-collector-sa
 
   # CA-trust parity for the collector (mounts the same secret at the
-  # path the relay config's prometheusremotewrite exporter expects).
+  # path the relay config's exporters expect).
   # The runner-otel-collector-configmap.yaml relay automatically
   # switches its `ca_file` to /etc/ssl/certs/proxy-ca.crt when
   # .Values.proxyCA is set chart-wide.
   #
-  # Multi-release / new-runner override (chart 0.7.0+):
-  # A prefix-aware runner writes the metrics cert bundle as
-  # `{prefix}runner-metrics-tls`. The include below resolves to that
-  # release-derived name automatically, matching what the collector mounts.
+  # Chart 0.8.0+: the deprecated Cortex mTLS `tls-secret-volume`
+  # (`{prefix}runner-metrics-tls`) is no longer mounted. Add it back only if
+  # you still set runner.metrics.url with runner.metrics.mtls.enabled=true:
+  #   - name: tls-secret-volume
+  #     secret:
+  #       secretName: '{{ include "runwhen-local.runnerMetricsTls" . }}'
+  # plus the matching /tls entry under extraVolumeMounts.
   extraVolumes:
-    - name: tls-secret-volume
-      secret:
-        secretName: '{{ include "runwhen-local.runnerMetricsTls" . }}'
     - name: proxy-ca-volume
       secret:
         secretName: corporate-root-ca       # MUST match .proxyCA.secretName
@@ -292,9 +292,6 @@ opentelemetry-collector:
           - key: ca.crt                      # MUST match .proxyCA.key
             path: proxy-ca.crt               # DO NOT CHANGE — relay expects this filename
   extraVolumeMounts:
-    - name: tls-secret-volume
-      mountPath: /tls
-      readOnly: true
     - name: proxy-ca-volume
       mountPath: /etc/ssl/certs/proxy-ca.crt
       readOnly: true
